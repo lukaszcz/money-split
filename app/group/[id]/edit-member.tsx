@@ -4,9 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
 import {
   getGroupMember,
-  deleteGroupMember,
   updateGroupMember,
-  createGroupMember,
   getUserByEmail,
   sendInvitationEmail,
   getGroup,
@@ -58,75 +56,43 @@ export default function EditMemberScreen() {
     setLoading(true);
 
     try {
-      const newEmail = email.trim() || undefined;
-      const emailChanged = newEmail !== originalEmail;
+      let memberName = name.trim();
+      let memberEmail = email.trim() || undefined;
+      let connectedUserId: string | undefined;
+      const emailChanged = memberEmail !== originalEmail;
 
-      if (emailChanged) {
-        const member = await getGroupMember(memberId);
-        if (!member) {
-          Alert.alert('Error', 'Member not found');
-          setLoading(false);
-          return;
-        }
-
-        const deleted = await deleteGroupMember(memberId);
-        if (!deleted) {
-          Alert.alert('Error', 'Failed to update member');
-          setLoading(false);
-          return;
-        }
-
-        let memberName = name.trim();
-        let connectedUserId: string | undefined;
-
-        if (newEmail) {
-          const existingUser = await getUserByEmail(newEmail);
-          if (existingUser) {
-            connectedUserId = existingUser.id;
-            if (!memberName) {
-              memberName = existingUser.name;
-            }
-          } else {
-            if (!memberName) {
-              memberName = newEmail.split('@')[0];
-            }
+      if (memberEmail) {
+        const existingUser = await getUserByEmail(memberEmail);
+        if (existingUser) {
+          connectedUserId = existingUser.id;
+          if (!memberName) {
+            memberName = existingUser.name;
+          }
+        } else {
+          if (!memberName) {
+            memberName = memberEmail.split('@')[0];
+          }
+          if (emailChanged) {
             const group = await getGroup(id);
             if (group) {
-              sendInvitationEmail(newEmail, group.name);
+              sendInvitationEmail(memberEmail, group.name);
             }
           }
         }
+      }
 
-        if (!memberName) {
-          Alert.alert('Error', 'Could not determine member name');
-          setLoading(false);
-          return;
-        }
+      if (!memberName) {
+        Alert.alert('Error', 'Could not determine member name');
+        setLoading(false);
+        return;
+      }
 
-        const newMember = await createGroupMember(id, memberName, newEmail, connectedUserId);
+      const updatedMember = await updateGroupMember(memberId, memberName, memberEmail, connectedUserId);
 
-        if (newMember) {
-          router.back();
-        } else {
-          Alert.alert('Error', 'Failed to update member');
-        }
+      if (updatedMember) {
+        router.back();
       } else {
-        let connectedUserId: string | undefined;
-
-        if (newEmail) {
-          const existingUser = await getUserByEmail(newEmail);
-          if (existingUser) {
-            connectedUserId = existingUser.id;
-          }
-        }
-
-        const updatedMember = await updateGroupMember(memberId, name.trim(), newEmail, connectedUserId);
-
-        if (updatedMember) {
-          router.back();
-        } else {
-          Alert.alert('Error', 'Failed to update member');
-        }
+        Alert.alert('Error', 'Failed to update member');
       }
     } catch (error) {
       console.error('Error updating member:', error);
