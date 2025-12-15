@@ -527,6 +527,53 @@ export async function getGroupExpenses(groupId: string): Promise<Expense[]> {
   }
 }
 
+export async function deleteGroupMember(memberId: string): Promise<boolean> {
+  try {
+    const { error } = await supabase.from('group_members').delete().eq('id', memberId);
+
+    if (error) throw error;
+
+    return true;
+  } catch (error) {
+    console.error('Failed to delete group member:', error);
+    return false;
+  }
+}
+
+export async function updateGroupMember(
+  memberId: string,
+  name: string,
+  email?: string,
+  connectedUserId?: string
+): Promise<GroupMember | null> {
+  try {
+    const { data, error } = await supabase
+      .from('group_members')
+      .update({
+        name,
+        email: email || null,
+        connected_user_id: connectedUserId || null,
+      })
+      .eq('id', memberId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return {
+      id: data.id,
+      groupId: data.group_id,
+      name: data.name,
+      email: data.email || undefined,
+      connectedUserId: data.connected_user_id || undefined,
+      createdAt: data.created_at,
+    };
+  } catch (error) {
+    console.error('Failed to update group member:', error);
+    return null;
+  }
+}
+
 export async function sendInvitationEmail(email: string, groupName: string): Promise<boolean> {
   try {
     const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
