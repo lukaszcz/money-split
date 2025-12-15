@@ -1,13 +1,19 @@
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
-import { ArrowLeft, Plus } from 'lucide-react-native';
-import { getGroup, getGroupExpenses, getUser, Expense, GroupWithMembers } from '../../services/groupRepository';
+import { ArrowLeft, Plus, User, Mail, Link } from 'lucide-react-native';
+import {
+  getGroup,
+  getGroupExpenses,
+  Expense,
+  GroupWithMembers,
+  GroupMember,
+} from '../../services/groupRepository';
 import { computeBalances } from '../../services/settlementService';
-import { formatNumber, formatCurrency } from '../../utils/money';
+import { formatNumber } from '../../utils/money';
 import { getCurrencySymbol } from '../../utils/currencies';
 
-type Tab = 'expenses' | 'balances' | 'settle';
+type Tab = 'expenses' | 'balances' | 'members' | 'settle';
 
 export default function GroupDetailScreen() {
   const { id } = useLocalSearchParams();
@@ -50,6 +56,14 @@ export default function GroupDetailScreen() {
   const currencySymbol = getCurrencySymbol(group.mainCurrencyCode);
   const balances = computeBalances(expenses, group.members);
 
+  const handleAddPress = () => {
+    if (activeTab === 'expenses') {
+      router.push(`/group/${id}/add-expense` as any);
+    } else if (activeTab === 'members') {
+      router.push(`/group/${id}/add-member` as any);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -60,10 +74,8 @@ export default function GroupDetailScreen() {
           <Text style={styles.headerTitle}>{group.name}</Text>
           <Text style={styles.headerSubtitle}>{group.mainCurrencyCode}</Text>
         </View>
-        {activeTab === 'expenses' && (
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={() => router.push(`/group/${id}/add-expense` as any)}>
+        {(activeTab === 'expenses' || activeTab === 'members') && (
+          <TouchableOpacity style={styles.addButton} onPress={handleAddPress}>
             <Plus color="#ffffff" size={20} />
           </TouchableOpacity>
         )}
@@ -85,10 +97,17 @@ export default function GroupDetailScreen() {
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
+          style={[styles.tab, activeTab === 'members' && styles.tabActive]}
+          onPress={() => setActiveTab('members')}>
+          <Text style={[styles.tabText, activeTab === 'members' && styles.tabTextActive]}>
+            Members
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
           style={[styles.tab, activeTab === 'settle' && styles.tabActive]}
           onPress={() => setActiveTab('settle')}>
           <Text style={[styles.tabText, activeTab === 'settle' && styles.tabTextActive]}>
-            Settle Up
+            Settle
           </Text>
         </TouchableOpacity>
       </View>
@@ -100,6 +119,7 @@ export default function GroupDetailScreen() {
         {activeTab === 'balances' && (
           <BalancesTab balances={balances} members={group.members} currencySymbol={currencySymbol} />
         )}
+        {activeTab === 'members' && <MembersTab members={group.members} />}
         {activeTab === 'settle' && (
           <SettleTab expenses={expenses} members={group.members} currencySymbol={currencySymbol} />
         )}
@@ -111,27 +131,12 @@ export default function GroupDetailScreen() {
 function ExpensesTab({
   expenses,
   group,
-  reload,
 }: {
   expenses: Expense[];
   group: GroupWithMembers;
   reload: () => void;
 }) {
-  const [payerNames, setPayerNames] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    const loadPayers = async () => {
-      const names: Record<string, string> = {};
-      for (const expense of expenses) {
-        if (!names[expense.payerUserId]) {
-          const user = await getUser(expense.payerUserId);
-          names[expense.payerUserId] = user?.name || 'Unknown';
-        }
-      }
-      setPayerNames(names);
-    };
-    loadPayers();
-  }, [expenses]);
+  const memberMap = new Map(group.members.map((m) => [m.id, m]));
 
   if (expenses.length === 0) {
     return (
@@ -144,22 +149,23 @@ function ExpensesTab({
 
   return (
     <View style={styles.tabContent}>
-      {expenses.map(expense => (
-        <View key={expense.id} style={styles.expenseCard}>
-          <View style={styles.expenseHeader}>
-            <Text style={styles.expenseDescription}>{expense.description || 'Expense'}</Text>
-            <Text style={styles.expenseAmount}>
-              {expense.currencyCode} {formatNumber(expense.totalAmountScaled)}
+      {expenses.map((expense) => {
+        const payer = memberMap.get(expense.payerMemberId);
+        return (
+          <View key={expense.id} style={styles.expenseCard}>
+            <View style={styles.expenseHeader}>
+              <Text style={styles.expenseDescription}>{expense.description || 'Expense'}</Text>
+              <Text style={styles.expenseAmount}>
+                {expense.currencyCode} {formatNumber(expense.totalAmountScaled)}
+              </Text>
+            </View>
+            <Text style={styles.expenseDetails}>Paid by {payer?.name || 'Unknown'}</Text>
+            <Text style={styles.expenseDate}>
+              {new Date(expense.dateTime).toLocaleDateString()}
             </Text>
           </View>
-          <Text style={styles.expenseDetails}>
-            Paid by {payerNames[expense.payerUserId] || 'Loading...'}
-          </Text>
-          <Text style={styles.expenseDate}>
-            {new Date(expense.dateTime).toLocaleDateString()}
-          </Text>
-        </View>
-      ))}
+        );
+      })}
     </View>
   );
 }
@@ -170,12 +176,12 @@ function BalancesTab({
   currencySymbol,
 }: {
   balances: Map<string, bigint>;
-  members: any[];
+  members: GroupMember[];
   currencySymbol: string;
 }) {
   return (
     <View style={styles.tabContent}>
-      {members.map(member => {
+      {members.map((member) => {
         const balance = balances.get(member.id) || BigInt(0);
         const isPositive = balance > BigInt(0);
         const isZero = balance === BigInt(0);
@@ -200,13 +206,48 @@ function BalancesTab({
   );
 }
 
+function MembersTab({ members }: { members: GroupMember[] }) {
+  return (
+    <View style={styles.tabContent}>
+      {members.map((member) => (
+        <View key={member.id} style={styles.memberCard}>
+          <View style={styles.memberIcon}>
+            <User color={member.connectedUserId ? '#2563eb' : '#6b7280'} size={20} />
+          </View>
+          <View style={styles.memberInfo}>
+            <Text style={styles.memberName}>{member.name}</Text>
+            {member.email && (
+              <View style={styles.memberEmailRow}>
+                <Mail color="#9ca3af" size={12} />
+                <Text style={styles.memberEmail}>{member.email}</Text>
+              </View>
+            )}
+          </View>
+          {member.connectedUserId && (
+            <View style={styles.connectedBadge}>
+              <Link color="#059669" size={14} />
+              <Text style={styles.connectedText}>Connected</Text>
+            </View>
+          )}
+        </View>
+      ))}
+
+      {members.length === 0 && (
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyText}>No members yet</Text>
+          <Text style={styles.emptySubtext}>Add members to start splitting expenses</Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
 function SettleTab({
   expenses,
-  members,
   currencySymbol,
 }: {
   expenses: Expense[];
-  members: any[];
+  members: GroupMember[];
   currencySymbol: string;
 }) {
   const router = useRouter();
@@ -222,8 +263,8 @@ function SettleTab({
       </TouchableOpacity>
 
       <Text style={styles.settleInfo}>
-        Tap above to see who should pay whom and how much. You'll have the option to simplify
-        debts to reduce the number of transfers.
+        Tap above to see who should pay whom and how much. You'll have the option to simplify debts
+        to reduce the number of transfers.
       </Text>
     </View>
   );
@@ -282,7 +323,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#2563eb',
   },
   tabText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '500',
     color: '#6b7280',
   },
@@ -370,6 +411,57 @@ const styles = StyleSheet.create({
   },
   balanceNegative: {
     color: '#dc2626',
+  },
+  memberCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  memberIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#f3f4f6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  memberInfo: {
+    flex: 1,
+  },
+  memberName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  memberEmailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+  },
+  memberEmail: {
+    fontSize: 13,
+    color: '#9ca3af',
+  },
+  connectedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#ecfdf5',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  connectedText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#059669',
   },
   settleButton: {
     backgroundColor: '#2563eb',

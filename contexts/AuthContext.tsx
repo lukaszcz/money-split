@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
+import { connectUserToGroupMembers } from '@/services/groupRepository';
 
 interface AuthContextType {
   session: Session | null;
@@ -25,10 +26,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
       (async () => {
         setSession(session);
         setUser(session?.user ?? null);
+
+        if (event === 'SIGNED_IN' && session?.user?.email) {
+          await connectUserToGroupMembers(session.user.id, session.user.email);
+        }
       })();
     });
 

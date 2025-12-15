@@ -7,6 +7,15 @@ export interface User {
   createdAt: string;
 }
 
+export interface GroupMember {
+  id: string;
+  groupId: string;
+  name: string;
+  email?: string;
+  connectedUserId?: string;
+  createdAt: string;
+}
+
 export interface Group {
   id: string;
   name: string;
@@ -15,37 +24,7 @@ export interface Group {
 }
 
 export interface GroupWithMembers extends Group {
-  members: User[];
-}
-
-export async function createUser(name: string, email?: string): Promise<User | null> {
-  try {
-    const {
-      data: { user: authUser },
-    } = await supabase.auth.getUser();
-
-    if (!authUser) {
-      throw new Error('No authenticated user');
-    }
-
-    const { data, error } = await supabase
-      .from('users')
-      .insert({ id: authUser.id, name, email: email || authUser.email || null })
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    return {
-      id: data.id,
-      name: data.name,
-      email: data.email || undefined,
-      createdAt: data.created_at,
-    };
-  } catch (error) {
-    console.error('Failed to create user:', error);
-    return null;
-  }
+  members: GroupMember[];
 }
 
 export async function ensureUserProfile(name?: string): Promise<User | null> {
@@ -68,7 +47,7 @@ export async function ensureUserProfile(name?: string): Promise<User | null> {
       .insert({
         id: authUser.id,
         name: name || authUser.email?.split('@')[0] || 'User',
-        email: authUser.email || null
+        email: authUser.email || null,
       })
       .select()
       .single();
@@ -84,24 +63,6 @@ export async function ensureUserProfile(name?: string): Promise<User | null> {
   } catch (error) {
     console.error('Failed to ensure user profile:', error);
     return null;
-  }
-}
-
-export async function getAllUsers(): Promise<User[]> {
-  try {
-    const { data, error } = await supabase.from('users').select('*');
-
-    if (error) throw error;
-
-    return (data || []).map(u => ({
-      id: u.id,
-      name: u.name,
-      email: u.email || undefined,
-      createdAt: u.created_at,
-    }));
-  } catch (error) {
-    console.error('Failed to get all users:', error);
-    return [];
   }
 }
 
@@ -124,6 +85,29 @@ export async function getUser(userId: string): Promise<User | null> {
     };
   } catch (error) {
     console.error('Failed to get user:', error);
+    return null;
+  }
+}
+
+export async function getUserByEmail(email: string): Promise<User | null> {
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('email', email)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data) return null;
+
+    return {
+      id: data.id,
+      name: data.name,
+      email: data.email || undefined,
+      createdAt: data.created_at,
+    };
+  } catch (error) {
+    console.error('Failed to get user by email:', error);
     return null;
   }
 }
@@ -151,15 +135,154 @@ export async function updateUserName(userId: string, name: string): Promise<User
   }
 }
 
+export async function createGroupMember(
+  groupId: string,
+  name: string,
+  email?: string,
+  connectedUserId?: string
+): Promise<GroupMember | null> {
+  try {
+    const { data, error } = await supabase
+      .from('group_members')
+      .insert({
+        group_id: groupId,
+        name,
+        email: email || null,
+        connected_user_id: connectedUserId || null,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return {
+      id: data.id,
+      groupId: data.group_id,
+      name: data.name,
+      email: data.email || undefined,
+      connectedUserId: data.connected_user_id || undefined,
+      createdAt: data.created_at,
+    };
+  } catch (error) {
+    console.error('Failed to create group member:', error);
+    return null;
+  }
+}
+
+export async function getGroupMembers(groupId: string): Promise<GroupMember[]> {
+  try {
+    const { data, error } = await supabase
+      .from('group_members')
+      .select('*')
+      .eq('group_id', groupId)
+      .order('created_at', { ascending: true });
+
+    if (error) throw error;
+
+    return (data || []).map((m) => ({
+      id: m.id,
+      groupId: m.group_id,
+      name: m.name,
+      email: m.email || undefined,
+      connectedUserId: m.connected_user_id || undefined,
+      createdAt: m.created_at,
+    }));
+  } catch (error) {
+    console.error('Failed to get group members:', error);
+    return [];
+  }
+}
+
+export async function getGroupMember(memberId: string): Promise<GroupMember | null> {
+  try {
+    const { data, error } = await supabase
+      .from('group_members')
+      .select('*')
+      .eq('id', memberId)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data) return null;
+
+    return {
+      id: data.id,
+      groupId: data.group_id,
+      name: data.name,
+      email: data.email || undefined,
+      connectedUserId: data.connected_user_id || undefined,
+      createdAt: data.created_at,
+    };
+  } catch (error) {
+    console.error('Failed to get group member:', error);
+    return null;
+  }
+}
+
+export async function getCurrentUserMemberInGroup(groupId: string): Promise<GroupMember | null> {
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return null;
+
+    const { data, error } = await supabase
+      .from('group_members')
+      .select('*')
+      .eq('group_id', groupId)
+      .eq('connected_user_id', user.id)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data) return null;
+
+    return {
+      id: data.id,
+      groupId: data.group_id,
+      name: data.name,
+      email: data.email || undefined,
+      connectedUserId: data.connected_user_id || undefined,
+      createdAt: data.created_at,
+    };
+  } catch (error) {
+    console.error('Failed to get current user member:', error);
+    return null;
+  }
+}
+
+export async function connectUserToGroupMembers(userId: string, email: string): Promise<number> {
+  try {
+    const { data, error } = await supabase
+      .from('group_members')
+      .update({ connected_user_id: userId })
+      .eq('email', email)
+      .is('connected_user_id', null)
+      .select();
+
+    if (error) throw error;
+
+    return data?.length || 0;
+  } catch (error) {
+    console.error('Failed to connect user to group members:', error);
+    return 0;
+  }
+}
+
 export async function createGroup(
   name: string,
   mainCurrencyCode: string,
-  memberIds: string[]
+  initialMembers: Array<{ name: string; email?: string }>
 ): Promise<Group | null> {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) {
       throw new Error('No authenticated user');
+    }
+
+    const userProfile = await ensureUserProfile();
+    if (!userProfile) {
+      throw new Error('Failed to ensure user profile');
     }
 
     const { data: groupData, error: groupError } = await supabase
@@ -175,15 +298,31 @@ export async function createGroup(
 
     const groupId = groupData.id;
 
-    for (const userId of memberIds) {
-      const { error: memberError } = await supabase.from('group_members').insert({
-        group_id: groupId,
-        user_id: userId,
-      });
+    const creatorMember = await createGroupMember(
+      groupId,
+      userProfile.name,
+      userProfile.email,
+      user.id
+    );
 
-      if (memberError) {
-        console.warn(`Failed to add member ${userId} to group:`, memberError);
+    if (!creatorMember) {
+      console.warn('Failed to add creator as group member');
+    }
+
+    for (const member of initialMembers) {
+      let connectedUserId: string | undefined;
+
+      if (member.email) {
+        const existingUser = await getUserByEmail(member.email);
+        if (existingUser) {
+          connectedUserId = existingUser.id;
+        }
       }
+
+      const memberName =
+        member.name || (member.email ? member.email.split('@')[0] : 'Unknown');
+
+      await createGroupMember(groupId, memberName, member.email, connectedUserId);
     }
 
     return {
@@ -209,22 +348,7 @@ export async function getGroup(groupId: string): Promise<GroupWithMembers | null
     if (groupError) throw groupError;
     if (!groupData) return null;
 
-    const { data: memberData, error: memberError } = await supabase
-      .from('group_members')
-      .select('users(*)')
-      .eq('group_id', groupId);
-
-    if (memberError) throw memberError;
-
-    const members = (memberData || []).map(m => {
-      const u = m.users as any;
-      return {
-        id: u.id,
-        name: u.name,
-        email: u.email || undefined,
-        createdAt: u.created_at,
-      };
-    });
+    const members = await getGroupMembers(groupId);
 
     return {
       id: groupData.id,
@@ -251,20 +375,7 @@ export async function getAllGroups(): Promise<GroupWithMembers[]> {
     const groups: GroupWithMembers[] = [];
 
     for (const g of groupData || []) {
-      const { data: memberData } = await supabase
-        .from('group_members')
-        .select('users(*)')
-        .eq('group_id', g.id);
-
-      const members = (memberData || []).map(m => {
-        const u = m.users as any;
-        return {
-          id: u.id,
-          name: u.name,
-          email: u.email || undefined,
-          createdAt: u.created_at,
-        };
-      });
+      const members = await getGroupMembers(g.id);
 
       groups.push({
         id: g.id,
@@ -289,7 +400,7 @@ export interface Expense {
   dateTime: string;
   currencyCode: string;
   totalAmountScaled: bigint;
-  payerUserId: string;
+  payerMemberId: string;
   exchangeRateToMainScaled: bigint;
   totalInMainScaled: bigint;
   createdAt: string;
@@ -298,7 +409,7 @@ export interface Expense {
 
 export interface ExpenseShare {
   id: string;
-  userId: string;
+  memberId: string;
   shareAmountScaled: bigint;
   shareInMainScaled: bigint;
 }
@@ -309,10 +420,10 @@ export async function createExpense(
   dateTime: string,
   currencyCode: string,
   totalAmountScaled: bigint,
-  payerUserId: string,
+  payerMemberId: string,
   exchangeRateToMainScaled: bigint,
   totalInMainScaled: bigint,
-  shares: Array<{ userId: string; shareAmountScaled: bigint; shareInMainScaled: bigint }>
+  shares: Array<{ memberId: string; shareAmountScaled: bigint; shareInMainScaled: bigint }>
 ): Promise<Expense | null> {
   try {
     const { data: expenseData, error: expenseError } = await supabase
@@ -323,7 +434,8 @@ export async function createExpense(
         date_time: dateTime,
         currency_code: currencyCode,
         total_amount_scaled: Number(totalAmountScaled),
-        payer_user_id: payerUserId,
+        payer_user_id: payerMemberId,
+        payer_member_id: payerMemberId,
         exchange_rate_to_main_scaled: Number(exchangeRateToMainScaled),
         total_in_main_scaled: Number(totalInMainScaled),
       })
@@ -334,9 +446,10 @@ export async function createExpense(
 
     const expenseId = expenseData.id;
 
-    const shareRows = shares.map(s => ({
+    const shareRows = shares.map((s) => ({
       expense_id: expenseId,
-      user_id: s.userId,
+      user_id: s.memberId,
+      member_id: s.memberId,
       share_amount_scaled: Number(s.shareAmountScaled),
       share_in_main_scaled: Number(s.shareInMainScaled),
     }));
@@ -352,13 +465,13 @@ export async function createExpense(
       dateTime: expenseData.date_time,
       currencyCode: expenseData.currency_code,
       totalAmountScaled: BigInt(expenseData.total_amount_scaled),
-      payerUserId: expenseData.payer_user_id,
+      payerMemberId: expenseData.payer_member_id,
       exchangeRateToMainScaled: BigInt(expenseData.exchange_rate_to_main_scaled),
       totalInMainScaled: BigInt(expenseData.total_in_main_scaled),
       createdAt: expenseData.created_at,
-      shares: shares.map(s => ({
+      shares: shares.map((s) => ({
         id: '',
-        userId: s.userId,
+        memberId: s.memberId,
         shareAmountScaled: s.shareAmountScaled,
         shareInMainScaled: s.shareInMainScaled,
       })),
@@ -394,13 +507,13 @@ export async function getGroupExpenses(groupId: string): Promise<Expense[]> {
         dateTime: e.date_time,
         currencyCode: e.currency_code,
         totalAmountScaled: BigInt(e.total_amount_scaled),
-        payerUserId: e.payer_user_id,
+        payerMemberId: e.payer_member_id || e.payer_user_id,
         exchangeRateToMainScaled: BigInt(e.exchange_rate_to_main_scaled),
         totalInMainScaled: BigInt(e.total_in_main_scaled),
         createdAt: e.created_at,
-        shares: (shareData || []).map(s => ({
+        shares: (shareData || []).map((s) => ({
           id: s.id,
-          userId: s.user_id,
+          memberId: s.member_id || s.user_id,
           shareAmountScaled: BigInt(s.share_amount_scaled),
           shareInMainScaled: BigInt(s.share_in_main_scaled),
         })),
@@ -411,5 +524,31 @@ export async function getGroupExpenses(groupId: string): Promise<Expense[]> {
   } catch (error) {
     console.error('Failed to get group expenses:', error);
     return [];
+  }
+}
+
+export async function sendInvitationEmail(email: string, groupName: string): Promise<boolean> {
+  try {
+    const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.error('Missing Supabase configuration');
+      return false;
+    }
+
+    const response = await fetch(`${supabaseUrl}/functions/v1/send-invitation`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${supabaseAnonKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email, groupName }),
+    });
+
+    return response.ok;
+  } catch (error) {
+    console.error('Failed to send invitation email:', error);
+    return false;
   }
 }
