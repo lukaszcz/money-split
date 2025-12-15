@@ -119,7 +119,7 @@ export default function GroupDetailScreen() {
         {activeTab === 'balances' && (
           <BalancesTab balances={balances} members={group.members} currencySymbol={currencySymbol} />
         )}
-        {activeTab === 'members' && <MembersTab members={group.members} />}
+        {activeTab === 'members' && <MembersTab members={group.members} groupId={group.id} />}
         {activeTab === 'settle' && (
           <SettleTab expenses={expenses} members={group.members} currencySymbol={currencySymbol} />
         )}
@@ -206,11 +206,16 @@ function BalancesTab({
   );
 }
 
-function MembersTab({ members }: { members: GroupMember[] }) {
+function MembersTab({ members, groupId }: { members: GroupMember[]; groupId: string }) {
+  const router = useRouter();
+
   return (
     <View style={styles.tabContent}>
       {members.map((member) => (
-        <View key={member.id} style={styles.memberCard}>
+        <TouchableOpacity
+          key={member.id}
+          style={styles.memberCard}
+          onPress={() => router.push(`/group/${groupId}/edit-member?memberId=${member.id}` as any)}>
           <View style={styles.memberIcon}>
             <User color={member.connectedUserId ? '#2563eb' : '#6b7280'} size={20} />
           </View>
@@ -229,7 +234,7 @@ function MembersTab({ members }: { members: GroupMember[] }) {
               <Text style={styles.connectedText}>Connected</Text>
             </View>
           )}
-        </View>
+        </TouchableOpacity>
       ))}
 
       {members.length === 0 && (

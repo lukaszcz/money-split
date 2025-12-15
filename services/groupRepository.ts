@@ -434,7 +434,6 @@ export async function createExpense(
         date_time: dateTime,
         currency_code: currencyCode,
         total_amount_scaled: Number(totalAmountScaled),
-        payer_user_id: payerMemberId,
         payer_member_id: payerMemberId,
         exchange_rate_to_main_scaled: Number(exchangeRateToMainScaled),
         total_in_main_scaled: Number(totalInMainScaled),
@@ -448,7 +447,6 @@ export async function createExpense(
 
     const shareRows = shares.map((s) => ({
       expense_id: expenseId,
-      user_id: s.memberId,
       member_id: s.memberId,
       share_amount_scaled: Number(s.shareAmountScaled),
       share_in_main_scaled: Number(s.shareInMainScaled),
@@ -507,13 +505,13 @@ export async function getGroupExpenses(groupId: string): Promise<Expense[]> {
         dateTime: e.date_time,
         currencyCode: e.currency_code,
         totalAmountScaled: BigInt(e.total_amount_scaled),
-        payerMemberId: e.payer_member_id || e.payer_user_id,
+        payerMemberId: e.payer_member_id,
         exchangeRateToMainScaled: BigInt(e.exchange_rate_to_main_scaled),
         totalInMainScaled: BigInt(e.total_in_main_scaled),
         createdAt: e.created_at,
         shares: (shareData || []).map((s) => ({
           id: s.id,
-          memberId: s.member_id || s.user_id,
+          memberId: s.member_id,
           shareAmountScaled: BigInt(s.share_amount_scaled),
           shareInMainScaled: BigInt(s.share_in_main_scaled),
         })),
@@ -524,6 +522,53 @@ export async function getGroupExpenses(groupId: string): Promise<Expense[]> {
   } catch (error) {
     console.error('Failed to get group expenses:', error);
     return [];
+  }
+}
+
+export async function deleteGroupMember(memberId: string): Promise<boolean> {
+  try {
+    const { error } = await supabase.from('group_members').delete().eq('id', memberId);
+
+    if (error) throw error;
+
+    return true;
+  } catch (error) {
+    console.error('Failed to delete group member:', error);
+    return false;
+  }
+}
+
+export async function updateGroupMember(
+  memberId: string,
+  name: string,
+  email?: string,
+  connectedUserId?: string
+): Promise<GroupMember | null> {
+  try {
+    const { data, error } = await supabase
+      .from('group_members')
+      .update({
+        name,
+        email: email || null,
+        connected_user_id: connectedUserId || null,
+      })
+      .eq('id', memberId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return {
+      id: data.id,
+      groupId: data.group_id,
+      name: data.name,
+      email: data.email || undefined,
+      connectedUserId: data.connected_user_id || undefined,
+      createdAt: data.created_at,
+    };
+  } catch (error) {
+    console.error('Failed to update group member:', error);
+    return null;
   }
 }
 
