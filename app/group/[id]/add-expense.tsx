@@ -10,12 +10,7 @@ import {
 import { useState, useEffect } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { X, Check } from 'lucide-react-native';
-import {
-  getGroup,
-  createExpense,
-  GroupWithMembers,
-  User,
-} from '../../../services/groupRepository';
+import { getGroup, createExpense, GroupWithMembers } from '../../../services/groupRepository';
 import {
   toScaled,
   calculateEqualSplit,
@@ -158,8 +153,8 @@ export default function AddExpenseScreen() {
       const totalScaled = toScaled(parseFloat(amount));
       const totalInMainScaled = applyExchangeRate(totalScaled, rate.rateScaled);
 
-      const shareData = selectedParticipants.map((userId, idx) => ({
-        userId,
+      const shareData = selectedParticipants.map((memberId, idx) => ({
+        memberId,
         shareAmountScaled: shares[idx],
         shareInMainScaled: applyExchangeRate(shares[idx], rate.rateScaled),
       }));

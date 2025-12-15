@@ -9,64 +9,81 @@ import {
 } from 'react-native';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
-import { X, Plus, Check } from 'lucide-react-native';
-import { createGroup, createUser, getAllUsers, User, ensureUserProfile } from '../services/groupRepository';
+import { X, Plus, Check, Trash2, User, Mail } from 'lucide-react-native';
+import { createGroup, getUserByEmail, sendInvitationEmail, ensureUserProfile } from '../services/groupRepository';
 import { CURRENCIES } from '../utils/currencies';
 import { useAuth } from '@/contexts/AuthContext';
+
+interface PendingMember {
+  id: string;
+  name: string;
+  email?: string;
+}
 
 export default function CreateGroupScreen() {
   const router = useRouter();
   const { user: authUser } = useAuth();
   const [groupName, setGroupName] = useState('');
   const [mainCurrency, setMainCurrency] = useState('USD');
-  const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
-  const [allUsers, setAllUsers] = useState<User[]>([]);
   const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
+  const [pendingMembers, setPendingMembers] = useState<PendingMember[]>([]);
+  const [showAddMember, setShowAddMember] = useState(false);
   const [newMemberName, setNewMemberName] = useState('');
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [newMemberEmail, setNewMemberEmail] = useState('');
+  const [currentUserName, setCurrentUserName] = useState('');
 
   useEffect(() => {
-    loadUsers();
+    loadCurrentUser();
   }, []);
 
-  const loadUsers = async () => {
+  const loadCurrentUser = async () => {
     const userProfile = await ensureUserProfile();
     if (userProfile) {
-      setCurrentUser(userProfile);
-      setSelectedMembers([userProfile.id]);
-    }
-
-    const users = await getAllUsers();
-    setAllUsers(users);
-  };
-
-  const handleAddNewMember = async () => {
-    if (!newMemberName.trim()) {
-      Alert.alert('Error', 'Please enter a name');
-      return;
-    }
-
-    const newUser = await createUser(newMemberName.trim());
-    if (newUser) {
-      setAllUsers([...allUsers, newUser]);
-      setSelectedMembers([...selectedMembers, newUser.id]);
-      setNewMemberName('');
-    } else {
-      Alert.alert('Error', 'Failed to create user');
+      setCurrentUserName(userProfile.name);
     }
   };
 
-  const toggleMember = (userId: string) => {
-    if (userId === currentUser?.id) {
-      Alert.alert('Notice', 'You are always included in your groups');
+  const handleAddMember = async () => {
+    if (!newMemberName.trim() && !newMemberEmail.trim()) {
+      Alert.alert('Error', 'Please enter a name or email');
       return;
     }
 
-    if (selectedMembers.includes(userId)) {
-      setSelectedMembers(selectedMembers.filter(id => id !== userId));
-    } else {
-      setSelectedMembers([...selectedMembers, userId]);
+    let memberName = newMemberName.trim();
+    let memberEmail = newMemberEmail.trim() || undefined;
+
+    if (memberEmail) {
+      const existingUser = await getUserByEmail(memberEmail);
+      if (existingUser) {
+        if (!memberName) {
+          memberName = existingUser.name;
+        }
+      } else {
+        if (!memberName) {
+          memberName = memberEmail.split('@')[0];
+        }
+      }
     }
+
+    if (!memberName) {
+      Alert.alert('Error', 'Could not determine member name');
+      return;
+    }
+
+    const newMember: PendingMember = {
+      id: Date.now().toString(),
+      name: memberName,
+      email: memberEmail,
+    };
+
+    setPendingMembers([...pendingMembers, newMember]);
+    setNewMemberName('');
+    setNewMemberEmail('');
+    setShowAddMember(false);
+  };
+
+  const removeMember = (memberId: string) => {
+    setPendingMembers(pendingMembers.filter((m) => m.id !== memberId));
   };
 
   const handleCreate = async () => {
@@ -75,17 +92,22 @@ export default function CreateGroupScreen() {
       return;
     }
 
-    if (selectedMembers.length < 2) {
-      Alert.alert('Error', 'Please add at least 1 other member');
-      return;
-    }
+    const initialMembers = pendingMembers.map((m) => ({
+      name: m.name,
+      email: m.email,
+    }));
 
-    console.log('Auth user:', authUser ? 'authenticated' : 'not authenticated');
-    console.log('Creating group with members:', selectedMembers);
-
-    const group = await createGroup(groupName.trim(), mainCurrency, selectedMembers);
+    const group = await createGroup(groupName.trim(), mainCurrency, initialMembers);
 
     if (group) {
+      for (const member of pendingMembers) {
+        if (member.email) {
+          const existingUser = await getUserByEmail(member.email);
+          if (!existingUser) {
+            sendInvitationEmail(member.email, groupName.trim());
+          }
+        }
+      }
       router.back();
     } else {
       Alert.alert('Error', 'Failed to create group. Check console for details.');
@@ -124,7 +146,7 @@ export default function CreateGroupScreen() {
 
           {showCurrencyPicker && (
             <ScrollView style={styles.currencyList} nestedScrollEnabled>
-              {CURRENCIES.map(currency => (
+              {CURRENCIES.map((currency) => (
                 <TouchableOpacity
                   key={currency.code}
                   style={styles.currencyItem}
@@ -142,48 +164,95 @@ export default function CreateGroupScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.label}>Add New Member</Text>
-          <View style={styles.addMemberRow}>
-            <TextInput
-              style={[styles.input, styles.addMemberInput]}
-              value={newMemberName}
-              onChangeText={setNewMemberName}
-              placeholder="Member name"
-              placeholderTextColor="#9ca3af"
-            />
-            <TouchableOpacity style={styles.addMemberButton} onPress={handleAddNewMember}>
-              <Plus color="#ffffff" size={20} />
+          <View style={styles.sectionHeader}>
+            <Text style={styles.label}>Members</Text>
+            <TouchableOpacity
+              style={styles.addMemberToggle}
+              onPress={() => setShowAddMember(!showAddMember)}>
+              <Plus color="#2563eb" size={20} />
+              <Text style={styles.addMemberToggleText}>Add</Text>
             </TouchableOpacity>
           </View>
-        </View>
 
-        <View style={styles.section}>
-          <Text style={styles.label}>Select Members * (min. 2)</Text>
-          {allUsers.map(user => {
-            const isCurrentUser = user.id === currentUser?.id;
-            const isSelected = selectedMembers.includes(user.id);
-            return (
-              <TouchableOpacity
-                key={user.id}
-                style={[
-                  styles.memberItem,
-                  isSelected && styles.memberItemSelected,
-                ]}
-                onPress={() => toggleMember(user.id)}>
-                <View style={styles.memberInfo}>
-                  <Text
-                    style={[
-                      styles.memberName,
-                      isSelected && styles.memberNameSelected,
-                    ]}>
-                    {user.name}
-                  </Text>
-                  {isCurrentUser && <Text style={styles.youLabel}>(You)</Text>}
-                </View>
-                {isSelected && <Check color="#2563eb" size={20} />}
+          <View style={styles.memberCard}>
+            <View style={styles.memberIcon}>
+              <User color="#2563eb" size={16} />
+            </View>
+            <View style={styles.memberInfo}>
+              <Text style={styles.memberName}>{currentUserName || 'You'}</Text>
+              <Text style={styles.memberLabel}>You (creator)</Text>
+            </View>
+          </View>
+
+          {pendingMembers.map((member) => (
+            <View key={member.id} style={styles.memberCard}>
+              <View style={styles.memberIcon}>
+                <User color="#6b7280" size={16} />
+              </View>
+              <View style={styles.memberInfo}>
+                <Text style={styles.memberName}>{member.name}</Text>
+                {member.email && (
+                  <View style={styles.emailRow}>
+                    <Mail color="#9ca3af" size={12} />
+                    <Text style={styles.memberEmail}>{member.email}</Text>
+                  </View>
+                )}
+              </View>
+              <TouchableOpacity onPress={() => removeMember(member.id)} style={styles.removeButton}>
+                <Trash2 color="#ef4444" size={18} />
               </TouchableOpacity>
-            );
-          })}
+            </View>
+          ))}
+
+          {showAddMember && (
+            <View style={styles.addMemberForm}>
+              <Text style={styles.formLabel}>Name</Text>
+              <TextInput
+                style={styles.input}
+                value={newMemberName}
+                onChangeText={setNewMemberName}
+                placeholder="Member name"
+                placeholderTextColor="#9ca3af"
+              />
+
+              <Text style={[styles.formLabel, styles.formLabelSpaced]}>Email (optional)</Text>
+              <TextInput
+                style={styles.input}
+                value={newMemberEmail}
+                onChangeText={setNewMemberEmail}
+                placeholder="member@example.com"
+                placeholderTextColor="#9ca3af"
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+
+              <Text style={styles.formHint}>
+                If only email is provided, the name will be taken from the user's account or derived
+                from the email.
+              </Text>
+
+              <View style={styles.formButtons}>
+                <TouchableOpacity
+                  style={styles.formCancelButton}
+                  onPress={() => {
+                    setShowAddMember(false);
+                    setNewMemberName('');
+                    setNewMemberEmail('');
+                  }}>
+                  <Text style={styles.formCancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.formAddButton} onPress={handleAddMember}>
+                  <Text style={styles.formAddButtonText}>Add Member</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
+          {pendingMembers.length === 0 && !showAddMember && (
+            <Text style={styles.noMembersText}>
+              Add members to split expenses with. You can also add members later.
+            </Text>
+          )}
         </View>
       </ScrollView>
 
@@ -227,6 +296,12 @@ const styles = StyleSheet.create({
   },
   section: {
     padding: 16,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
   },
   label: {
     fontSize: 14,
@@ -281,52 +356,119 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     flex: 1,
   },
-  addMemberRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  addMemberInput: {
-    flex: 1,
-  },
-  addMemberButton: {
-    backgroundColor: '#2563eb',
-    width: 48,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 8,
-  },
-  memberItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 12,
-    backgroundColor: '#ffffff',
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 8,
-    marginBottom: 8,
-  },
-  memberItemSelected: {
-    borderColor: '#2563eb',
-    backgroundColor: '#eff6ff',
-  },
-  memberInfo: {
+  addMemberToggle: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 4,
+    padding: 8,
   },
-  memberName: {
-    fontSize: 16,
-    color: '#111827',
-  },
-  memberNameSelected: {
+  addMemberToggleText: {
+    fontSize: 14,
     fontWeight: '600',
     color: '#2563eb',
   },
-  youLabel: {
+  memberCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    marginBottom: 8,
+  },
+  memberIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#eff6ff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  memberInfo: {
+    flex: 1,
+  },
+  memberName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  memberLabel: {
+    fontSize: 13,
+    color: '#6b7280',
+    marginTop: 2,
+  },
+  emailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 2,
+  },
+  memberEmail: {
+    fontSize: 13,
+    color: '#9ca3af',
+  },
+  removeButton: {
+    padding: 8,
+  },
+  addMemberForm: {
+    backgroundColor: '#ffffff',
+    padding: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    marginTop: 8,
+  },
+  formLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 6,
+  },
+  formLabelSpaced: {
+    marginTop: 12,
+  },
+  formHint: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginTop: 8,
+    lineHeight: 16,
+  },
+  formButtons: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 16,
+  },
+  formCancelButton: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: '#f3f4f6',
+    alignItems: 'center',
+  },
+  formCancelButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6b7280',
+  },
+  formAddButton: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: '#2563eb',
+    alignItems: 'center',
+  },
+  formAddButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#ffffff',
+  },
+  noMembersText: {
     fontSize: 14,
     color: '#6b7280',
-    fontStyle: 'italic',
+    textAlign: 'center',
+    paddingVertical: 16,
   },
   footer: {
     padding: 16,

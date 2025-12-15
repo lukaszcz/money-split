@@ -1,12 +1,15 @@
-import { Expense, User } from './groupRepository';
+import { Expense, GroupMember } from './groupRepository';
 
 export interface Settlement {
-  from: User;
-  to: User;
+  from: GroupMember;
+  to: GroupMember;
   amountScaled: bigint;
 }
 
-export function computeBalances(expenses: Expense[], allMembers: User[]): Map<string, bigint> {
+export function computeBalances(
+  expenses: Expense[],
+  allMembers: GroupMember[]
+): Map<string, bigint> {
   const balances = new Map<string, bigint>();
 
   for (const member of allMembers) {
@@ -14,14 +17,14 @@ export function computeBalances(expenses: Expense[], allMembers: User[]): Map<st
   }
 
   for (const expense of expenses) {
-    const payerId = expense.payerUserId;
+    const payerId = expense.payerMemberId;
     const totalOwed = expense.totalInMainScaled;
 
     balances.set(payerId, (balances.get(payerId) || BigInt(0)) + totalOwed);
 
     for (const share of expense.shares) {
-      const userId = share.userId;
-      balances.set(userId, (balances.get(userId) || BigInt(0)) - share.shareInMainScaled);
+      const memberId = share.memberId;
+      balances.set(memberId, (balances.get(memberId) || BigInt(0)) - share.shareInMainScaled);
     }
   }
 
@@ -30,7 +33,7 @@ export function computeBalances(expenses: Expense[], allMembers: User[]): Map<st
 
 export function computeSettlementsNoSimplify(
   expenses: Expense[],
-  allMembers: User[]
+  allMembers: GroupMember[]
 ): Settlement[] {
   const debtMap = new Map<string, Map<string, bigint>>();
 
@@ -39,16 +42,16 @@ export function computeSettlementsNoSimplify(
   }
 
   for (const expense of expenses) {
-    const payerId = expense.payerUserId;
+    const payerId = expense.payerMemberId;
 
     for (const share of expense.shares) {
-      const userId = share.userId;
+      const memberId = share.memberId;
 
-      if (userId === payerId) {
+      if (memberId === payerId) {
         continue;
       }
 
-      const debtKey = debtMap.get(userId);
+      const debtKey = debtMap.get(memberId);
       if (debtKey) {
         debtKey.set(payerId, (debtKey.get(payerId) || BigInt(0)) + share.shareInMainScaled);
       }
@@ -84,7 +87,7 @@ export function computeSettlementsNoSimplify(
   }
 
   const settlements: Settlement[] = [];
-  const memberMap = new Map(allMembers.map(m => [m.id, m]));
+  const memberMap = new Map(allMembers.map((m) => [m.id, m]));
 
   for (const debtorId of debtMap.keys()) {
     const debtorDebts = debtMap.get(debtorId)!;
@@ -111,28 +114,28 @@ export function computeSettlementsNoSimplify(
 
 export function computeSettlementsSimplified(
   expenses: Expense[],
-  allMembers: User[]
+  allMembers: GroupMember[]
 ): Settlement[] {
   const balances = computeBalances(expenses, allMembers);
-  const memberMap = new Map(allMembers.map(m => [m.id, m]));
+  const memberMap = new Map(allMembers.map((m) => [m.id, m]));
 
-  const debtors: Array<{ userId: string; user: User; amountOwed: bigint }> = [];
-  const creditors: Array<{ userId: string; user: User; amountDue: bigint }> = [];
+  const debtors: Array<{ memberId: string; member: GroupMember; amountOwed: bigint }> = [];
+  const creditors: Array<{ memberId: string; member: GroupMember; amountDue: bigint }> = [];
 
-  for (const [userId, balance] of balances.entries()) {
-    const user = memberMap.get(userId);
-    if (!user) continue;
+  for (const [memberId, balance] of balances.entries()) {
+    const member = memberMap.get(memberId);
+    if (!member) continue;
 
     if (balance < BigInt(0)) {
       debtors.push({
-        userId,
-        user,
+        memberId,
+        member,
         amountOwed: -balance,
       });
     } else if (balance > BigInt(0)) {
       creditors.push({
-        userId,
-        user,
+        memberId,
+        member,
         amountDue: balance,
       });
     }
@@ -146,13 +149,12 @@ export function computeSettlementsSimplified(
     const debtor = debtors[debtorIdx];
     const creditor = creditors[creditorIdx];
 
-    const transferAmount = debtor.amountOwed <= creditor.amountDue
-      ? debtor.amountOwed
-      : creditor.amountDue;
+    const transferAmount =
+      debtor.amountOwed <= creditor.amountDue ? debtor.amountOwed : creditor.amountDue;
 
     settlements.push({
-      from: debtor.user,
-      to: creditor.user,
+      from: debtor.member,
+      to: creditor.member,
       amountScaled: transferAmount,
     });
 

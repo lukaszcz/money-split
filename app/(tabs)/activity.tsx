@@ -1,6 +1,6 @@
 import { View, Text, FlatList, StyleSheet, RefreshControl } from 'react-native';
 import { useState, useEffect, useCallback } from 'react';
-import { getAllGroups, getGroupExpenses, getUser, Expense } from '../../services/groupRepository';
+import { getAllGroups, getGroupExpenses, getGroupMember, Expense } from '../../services/groupRepository';
 import { formatNumber } from '../../utils/money';
 
 interface ActivityItem extends Expense {
@@ -21,7 +21,7 @@ export default function ActivityScreen() {
       const expenses = await getGroupExpenses(group.id);
 
       for (const expense of expenses) {
-        const payer = await getUser(expense.payerUserId);
+        const payer = await getGroupMember(expense.payerMemberId);
         allActivities.push({
           ...expense,
           groupName: group.name,
