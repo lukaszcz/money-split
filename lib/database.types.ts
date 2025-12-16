@@ -7,18 +7,21 @@ export type Database = {
           name: string;
           email: string | null;
           created_at: string;
+          last_login: string | null;
         };
         Insert: {
           id?: string;
           name: string;
           email?: string | null;
           created_at?: string;
+          last_login?: string | null;
         };
         Update: {
           id?: string;
           name?: string;
           email?: string | null;
           created_at?: string;
+          last_login?: string | null;
         };
       };
       groups: {
