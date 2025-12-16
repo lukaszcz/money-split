@@ -1,5 +1,5 @@
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { ArrowLeft, Plus, User, Mail, Link, Trash2 } from 'lucide-react-native';
 import {
@@ -14,6 +14,7 @@ import {
 import { computeBalances } from '../../services/settlementService';
 import { formatNumber } from '../../utils/money';
 import { getCurrencySymbol } from '../../utils/currencies';
+import { getExchangeRate } from '../../services/exchangeRateService';
 
 type Tab = 'expenses' | 'balances' | 'members' | 'settle';
 
@@ -175,7 +176,32 @@ function ExpensesTab({
   group: GroupWithMembers;
   reload: () => void;
 }) {
+  const router = useRouter();
   const memberMap = new Map(group.members.map((m) => [m.id, m]));
+  const [convertedAmounts, setConvertedAmounts] = useState<Map<string, bigint>>(new Map());
+  const groupCurrencySymbol = getCurrencySymbol(group.mainCurrencyCode);
+
+  useEffect(() => {
+    const fetchConversions = async () => {
+      const conversions = new Map<string, bigint>();
+
+      for (const expense of expenses) {
+        if (expense.currencyCode !== group.mainCurrencyCode) {
+          const rate = await getExchangeRate(expense.currencyCode, group.mainCurrencyCode);
+          if (rate) {
+            const converted = (expense.totalAmountScaled * rate.rateScaled) / BigInt(10000);
+            conversions.set(expense.id, converted);
+          }
+        }
+      }
+
+      setConvertedAmounts(conversions);
+    };
+
+    if (expenses.length > 0) {
+      fetchConversions();
+    }
+  }, [expenses, group.mainCurrencyCode]);
 
   if (expenses.length === 0) {
     return (
@@ -190,19 +216,32 @@ function ExpensesTab({
     <View style={styles.tabContent}>
       {expenses.map((expense) => {
         const payer = memberMap.get(expense.payerMemberId);
+        const convertedAmount = convertedAmounts.get(expense.id);
+        const showConversion = expense.currencyCode !== group.mainCurrencyCode && convertedAmount;
+
         return (
-          <View key={expense.id} style={styles.expenseCard}>
+          <TouchableOpacity
+            key={expense.id}
+            style={styles.expenseCard}
+            onPress={() => router.push(`/group/${group.id}/edit-expense?expenseId=${expense.id}` as any)}>
             <View style={styles.expenseHeader}>
               <Text style={styles.expenseDescription}>{expense.description || 'Expense'}</Text>
-              <Text style={styles.expenseAmount}>
-                {expense.currencyCode} {formatNumber(expense.totalAmountScaled)}
-              </Text>
+              <View style={styles.expenseAmountContainer}>
+                <Text style={styles.expenseAmount}>
+                  {expense.currencyCode} {formatNumber(expense.totalAmountScaled)}
+                </Text>
+                {showConversion && (
+                  <Text style={styles.expenseConverted}>
+                    ({groupCurrencySymbol}{formatNumber(convertedAmount)})
+                  </Text>
+                )}
+              </View>
             </View>
             <Text style={styles.expenseDetails}>Paid by {payer?.name || 'Unknown'}</Text>
             <Text style={styles.expenseDate}>
               {new Date(expense.dateTime).toLocaleDateString()}
             </Text>
-          </View>
+          </TouchableOpacity>
         );
       })}
     </View>
@@ -428,10 +467,19 @@ const styles = StyleSheet.create({
     color: '#111827',
     flex: 1,
   },
+  expenseAmountContainer: {
+    alignItems: 'flex-end',
+  },
   expenseAmount: {
     fontSize: 16,
     fontWeight: '600',
     color: '#2563eb',
+  },
+  expenseConverted: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#6b7280',
+    marginTop: 2,
   },
   expenseDetails: {
     fontSize: 14,

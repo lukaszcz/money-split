@@ -527,6 +527,140 @@ export async function getGroupExpenses(groupId: string): Promise<Expense[]> {
   }
 }
 
+export async function getExpense(expenseId: string): Promise<Expense | null> {
+  try {
+    const { data: expenseData, error: expenseError } = await supabase
+      .from('expenses')
+      .select('*')
+      .eq('id', expenseId)
+      .maybeSingle();
+
+    if (expenseError) throw expenseError;
+    if (!expenseData) return null;
+
+    const { data: shareData } = await supabase
+      .from('expense_shares')
+      .select('*')
+      .eq('expense_id', expenseData.id);
+
+    return {
+      id: expenseData.id,
+      groupId: expenseData.group_id,
+      description: expenseData.description || undefined,
+      dateTime: expenseData.date_time,
+      currencyCode: expenseData.currency_code,
+      totalAmountScaled: BigInt(expenseData.total_amount_scaled),
+      payerMemberId: expenseData.payer_member_id,
+      exchangeRateToMainScaled: BigInt(expenseData.exchange_rate_to_main_scaled),
+      totalInMainScaled: BigInt(expenseData.total_in_main_scaled),
+      createdAt: expenseData.created_at,
+      shares: (shareData || []).map((s) => ({
+        id: s.id,
+        memberId: s.member_id,
+        shareAmountScaled: BigInt(s.share_amount_scaled),
+        shareInMainScaled: BigInt(s.share_in_main_scaled),
+      })),
+    };
+  } catch (error) {
+    console.error('Failed to get expense:', error);
+    return null;
+  }
+}
+
+export async function updateExpense(
+  expenseId: string,
+  description: string | undefined,
+  dateTime: string,
+  currencyCode: string,
+  totalAmountScaled: bigint,
+  payerMemberId: string,
+  exchangeRateToMainScaled: bigint,
+  totalInMainScaled: bigint,
+  shares: Array<{ memberId: string; shareAmountScaled: bigint; shareInMainScaled: bigint }>
+): Promise<Expense | null> {
+  try {
+    const { data: expenseData, error: expenseError } = await supabase
+      .from('expenses')
+      .update({
+        description: description || null,
+        date_time: dateTime,
+        currency_code: currencyCode,
+        total_amount_scaled: Number(totalAmountScaled),
+        payer_member_id: payerMemberId,
+        exchange_rate_to_main_scaled: Number(exchangeRateToMainScaled),
+        total_in_main_scaled: Number(totalInMainScaled),
+      })
+      .eq('id', expenseId)
+      .select()
+      .single();
+
+    if (expenseError) throw expenseError;
+
+    const { error: deleteSharesError } = await supabase
+      .from('expense_shares')
+      .delete()
+      .eq('expense_id', expenseId);
+
+    if (deleteSharesError) throw deleteSharesError;
+
+    const shareRows = shares.map((s) => ({
+      expense_id: expenseId,
+      member_id: s.memberId,
+      share_amount_scaled: Number(s.shareAmountScaled),
+      share_in_main_scaled: Number(s.shareInMainScaled),
+    }));
+
+    const { error: shareError } = await supabase.from('expense_shares').insert(shareRows);
+
+    if (shareError) throw shareError;
+
+    return {
+      id: expenseData.id,
+      groupId: expenseData.group_id,
+      description: expenseData.description || undefined,
+      dateTime: expenseData.date_time,
+      currencyCode: expenseData.currency_code,
+      totalAmountScaled: BigInt(expenseData.total_amount_scaled),
+      payerMemberId: expenseData.payer_member_id,
+      exchangeRateToMainScaled: BigInt(expenseData.exchange_rate_to_main_scaled),
+      totalInMainScaled: BigInt(expenseData.total_in_main_scaled),
+      createdAt: expenseData.created_at,
+      shares: shares.map((s) => ({
+        id: '',
+        memberId: s.memberId,
+        shareAmountScaled: s.shareAmountScaled,
+        shareInMainScaled: s.shareInMainScaled,
+      })),
+    };
+  } catch (error) {
+    console.error('Failed to update expense:', error);
+    return null;
+  }
+}
+
+export async function deleteExpense(expenseId: string): Promise<boolean> {
+  try {
+    const { error: sharesError } = await supabase
+      .from('expense_shares')
+      .delete()
+      .eq('expense_id', expenseId);
+
+    if (sharesError) throw sharesError;
+
+    const { error: expenseError } = await supabase
+      .from('expenses')
+      .delete()
+      .eq('id', expenseId);
+
+    if (expenseError) throw expenseError;
+
+    return true;
+  } catch (error) {
+    console.error('Failed to delete expense:', error);
+    return false;
+  }
+}
+
 export async function deleteGroupMember(memberId: string): Promise<boolean> {
   try {
     const { error } = await supabase.from('group_members').delete().eq('id', memberId);
