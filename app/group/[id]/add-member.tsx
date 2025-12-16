@@ -47,7 +47,10 @@ export default function AddMemberScreen() {
           }
           const group = await getGroup(id);
           if (group) {
-            sendInvitationEmail(memberEmail, group.name);
+            const emailSent = await sendInvitationEmail(memberEmail, group.name);
+            if (!emailSent) {
+              console.warn('Failed to send invitation email, but continuing with member creation');
+            }
           }
         }
       }
