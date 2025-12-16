@@ -176,6 +176,7 @@ function ExpensesTab({
   group: GroupWithMembers;
   reload: () => void;
 }) {
+  const router = useRouter();
   const memberMap = new Map(group.members.map((m) => [m.id, m]));
   const [convertedAmounts, setConvertedAmounts] = useState<Map<string, bigint>>(new Map());
   const groupCurrencySymbol = getCurrencySymbol(group.mainCurrencyCode);
@@ -219,7 +220,10 @@ function ExpensesTab({
         const showConversion = expense.currencyCode !== group.mainCurrencyCode && convertedAmount;
 
         return (
-          <View key={expense.id} style={styles.expenseCard}>
+          <TouchableOpacity
+            key={expense.id}
+            style={styles.expenseCard}
+            onPress={() => router.push(`/group/${group.id}/edit-expense?expenseId=${expense.id}` as any)}>
             <View style={styles.expenseHeader}>
               <Text style={styles.expenseDescription}>{expense.description || 'Expense'}</Text>
               <View style={styles.expenseAmountContainer}>
@@ -237,7 +241,7 @@ function ExpensesTab({
             <Text style={styles.expenseDate}>
               {new Date(expense.dateTime).toLocaleDateString()}
             </Text>
-          </View>
+          </TouchableOpacity>
         );
       })}
     </View>
