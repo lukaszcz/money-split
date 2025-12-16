@@ -50,6 +50,22 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    const { error: publicUserError } = await supabaseClient
+      .from("users")
+      .delete()
+      .eq("id", user.id);
+
+    if (publicUserError) {
+      console.error("Failed to delete public user:", publicUserError);
+      return new Response(
+        JSON.stringify({ error: "Failed to delete user profile", details: publicUserError.message }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
     const { error: deleteError } = await supabaseClient.auth.admin.deleteUser(
       user.id
     );

@@ -682,28 +682,31 @@ export async function deleteUserAccount(): Promise<boolean> {
 
     if (disconnectError) throw disconnectError;
 
-    const { error: userError } = await supabase.from('users').delete().eq('id', user.id);
-
-    if (userError) throw userError;
-
     const {
       data: { session },
     } = await supabase.auth.getSession();
     const token = session?.access_token;
 
-    if (token) {
-      const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
-      const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+    if (!token) {
+      throw new Error('No session token available');
+    }
 
-      if (supabaseUrl && supabaseAnonKey) {
-        await fetch(`${supabaseUrl}/functions/v1/delete-user`, {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
-      }
+    const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+    if (!supabaseUrl) {
+      throw new Error('Supabase URL not configured');
+    }
+
+    const response = await fetch(`${supabaseUrl}/functions/v1/delete-user`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || 'Failed to delete user account');
     }
 
     await supabase.auth.signOut();
