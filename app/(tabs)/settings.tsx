@@ -1,10 +1,10 @@
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, TextInput } from 'react-native';
 import { useState, useEffect } from 'react';
-import { RefreshCw, LogOut, User, Edit2, Check, X } from 'lucide-react-native';
+import { RefreshCw, LogOut, User, Edit2, Check, X, Trash2 } from 'lucide-react-native';
 import { getLastRefreshTime, refreshAllRates, getCachedRates } from '../../services/exchangeRateService';
 import { useAuth } from '@/contexts/AuthContext';
 import { router } from 'expo-router';
-import { getUser, updateUserName } from '../../services/groupRepository';
+import { getUser, updateUserName, deleteUserAccount } from '../../services/groupRepository';
 
 export default function SettingsScreen() {
   const { user, signOut } = useAuth();
@@ -124,6 +124,47 @@ export default function SettingsScreen() {
     ]);
   };
 
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Delete Account',
+      'Are you absolutely sure you want to delete your account? This will:\n\n• Delete all groups you own\n• Remove all expenses in your groups\n• Disconnect you from groups you are a member of\n• Permanently erase all your data\n\nThis action cannot be undone.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete My Account',
+          style: 'destructive',
+          onPress: () => {
+            Alert.alert(
+              'Final Confirmation',
+              'This is your last chance. Are you sure you want to permanently delete your account and all associated data?',
+              [
+                {
+                  text: 'Cancel',
+                  style: 'cancel',
+                },
+                {
+                  text: 'Yes, Delete Forever',
+                  style: 'destructive',
+                  onPress: async () => {
+                    const success = await deleteUserAccount();
+                    if (success) {
+                      router.replace('/auth');
+                    } else {
+                      Alert.alert('Error', 'Failed to delete account. Please try again later.');
+                    }
+                  },
+                },
+              ]
+            );
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
@@ -177,6 +218,22 @@ export default function SettingsScreen() {
           <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
             <LogOut color="#ef4444" size={20} />
             <Text style={styles.logoutButtonText}>Logout</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Danger Zone</Text>
+
+        <View style={styles.card}>
+          <Text style={styles.dangerWarning}>
+            Deleting your account is permanent and cannot be undone. All groups you own and their
+            data will be permanently deleted.
+          </Text>
+
+          <TouchableOpacity style={styles.deleteAccountButton} onPress={handleDeleteAccount}>
+            <Trash2 color="#ffffff" size={20} />
+            <Text style={styles.deleteAccountButtonText}>Delete My Account</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -425,5 +482,25 @@ const styles = StyleSheet.create({
     backgroundColor: '#f3f4f6',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  dangerWarning: {
+    fontSize: 14,
+    color: '#dc2626',
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  deleteAccountButton: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: '#dc2626',
+  },
+  deleteAccountButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
   },
 });

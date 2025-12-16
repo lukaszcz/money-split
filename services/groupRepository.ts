@@ -54,6 +54,8 @@ export async function ensureUserProfile(name?: string): Promise<User | null> {
 
     if (error) throw error;
 
+    await reconnectGroupMembers();
+
     return {
       id: data.id,
       name: data.name,
@@ -650,6 +652,72 @@ export async function isGroupOwner(groupId: string): Promise<boolean> {
   } catch (error) {
     console.error('Failed to check group ownership:', error);
     return false;
+  }
+}
+
+export async function deleteUserAccount(): Promise<boolean> {
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('No authenticated user');
+    }
+
+    const { data: ownedGroups } = await supabase
+      .from('groups')
+      .select('id')
+      .eq('created_by', user.id);
+
+    if (ownedGroups && ownedGroups.length > 0) {
+      for (const group of ownedGroups) {
+        await deleteGroup(group.id);
+      }
+    }
+
+    const { error: disconnectError } = await supabase
+      .from('group_members')
+      .update({ connected_user_id: null })
+      .eq('connected_user_id', user.id);
+
+    if (disconnectError) throw disconnectError;
+
+    const { error: userError } = await supabase.from('users').delete().eq('id', user.id);
+
+    if (userError) throw userError;
+
+    const { error: authError } = await supabase.auth.admin.deleteUser(user.id);
+
+    if (authError) {
+      const { error: fallbackError } = await supabase.rpc('delete_user_auth');
+      if (fallbackError) {
+        console.error('Failed to delete auth user:', fallbackError);
+      }
+    }
+
+    await supabase.auth.signOut();
+
+    return true;
+  } catch (error) {
+    console.error('Failed to delete user account:', error);
+    return false;
+  }
+}
+
+export async function reconnectGroupMembers(): Promise<void> {
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user || !user.email) return;
+
+    await supabase
+      .from('group_members')
+      .update({ connected_user_id: user.id })
+      .eq('email', user.email)
+      .is('connected_user_id', null);
+  } catch (error) {
+    console.error('Failed to reconnect group members:', error);
   }
 }
 
