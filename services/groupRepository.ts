@@ -686,12 +686,23 @@ export async function deleteUserAccount(): Promise<boolean> {
 
     if (userError) throw userError;
 
-    const { error: authError } = await supabase.auth.admin.deleteUser(user.id);
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    const token = session?.access_token;
 
-    if (authError) {
-      const { error: fallbackError } = await supabase.rpc('delete_user_auth');
-      if (fallbackError) {
-        console.error('Failed to delete auth user:', fallbackError);
+    if (token) {
+      const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+      const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+
+      if (supabaseUrl && supabaseAnonKey) {
+        await fetch(`${supabaseUrl}/functions/v1/delete-user`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
       }
     }
 
