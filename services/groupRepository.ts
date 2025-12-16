@@ -669,19 +669,6 @@ export async function deleteUserAccount(): Promise<boolean> {
       .select('id')
       .eq('created_by', user.id);
 
-    if (ownedGroups && ownedGroups.length > 0) {
-      for (const group of ownedGroups) {
-        await deleteGroup(group.id);
-      }
-    }
-
-    const { error: disconnectError } = await supabase
-      .from('group_members')
-      .update({ connected_user_id: null })
-      .eq('connected_user_id', user.id);
-
-    if (disconnectError) throw disconnectError;
-
     const {
       data: { session },
     } = await supabase.auth.getSession();

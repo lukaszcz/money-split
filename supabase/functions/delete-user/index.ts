@@ -50,6 +50,49 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    const { data: ownedGroups } = await supabaseClient
+      .from("groups")
+      .select("id")
+      .eq("created_by", user.id);
+
+    if (ownedGroups && ownedGroups.length > 0) {
+      for (const group of ownedGroups) {
+        const { data: expenses } = await supabaseClient
+          .from("expenses")
+          .select("id")
+          .eq("group_id", group.id);
+
+        const expenseIds = (expenses || []).map(e => e.id);
+
+        if (expenseIds.length > 0) {
+          await supabaseClient
+            .from("expense_shares")
+            .delete()
+            .in("expense_id", expenseIds);
+        }
+
+        await supabaseClient
+          .from("expenses")
+          .delete()
+          .eq("group_id", group.id);
+
+        await supabaseClient
+          .from("group_members")
+          .delete()
+          .eq("group_id", group.id);
+
+        await supabaseClient
+          .from("groups")
+          .delete()
+          .eq("id", group.id);
+      }
+    }
+
+    await supabaseClient
+      .from("group_members")
+      .update({ connected_user_id: null })
+      .eq("connected_user_id", user.id);
+
     const { error: publicUserError } = await supabaseClient
       .from("users")
       .delete()
