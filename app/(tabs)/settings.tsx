@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, TextInput } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, TextInput, Modal, ActivityIndicator } from 'react-native';
 import { useState, useEffect } from 'react';
 import { RefreshCw, LogOut, User, Edit2, Check, X, Trash2 } from 'lucide-react-native';
 import { getLastRefreshTime, refreshAllRates, getCachedRates } from '../../services/exchangeRateService';
@@ -14,6 +14,7 @@ export default function SettingsScreen() {
   const [userName, setUserName] = useState<string>('');
   const [editingName, setEditingName] = useState(false);
   const [tempName, setTempName] = useState<string>('');
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
   useEffect(() => {
     loadRefreshInfo();
@@ -149,10 +150,12 @@ export default function SettingsScreen() {
                   text: 'Yes, Delete Forever',
                   style: 'destructive',
                   onPress: async () => {
+                    setDeletingAccount(true);
                     const success = await deleteUserAccount();
                     if (success) {
                       router.replace('/auth');
                     } else {
+                      setDeletingAccount(false);
                       Alert.alert('Error', 'Failed to delete account. Please try again later.');
                     }
                   },
@@ -166,10 +169,11 @@ export default function SettingsScreen() {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Settings</Text>
-      </View>
+    <>
+      <ScrollView style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Settings</Text>
+        </View>
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Profile</Text>
@@ -293,7 +297,18 @@ export default function SettingsScreen() {
           <Text style={styles.techDetail}>• Deterministic rounding with remainder distribution</Text>
         </View>
       </View>
-    </ScrollView>
+      </ScrollView>
+
+      <Modal visible={deletingAccount} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <ActivityIndicator size="large" color="#2563eb" />
+            <Text style={styles.modalText}>Deleting your account...</Text>
+            <Text style={styles.modalSubtext}>This may take a few moments</Text>
+          </View>
+        </View>
+      </Modal>
+    </>
   );
 }
 
@@ -502,5 +517,31 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginLeft: 8,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#ffffff',
+    padding: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    minWidth: 280,
+  },
+  modalText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#111827',
+    marginTop: 16,
+    textAlign: 'center',
+  },
+  modalSubtext: {
+    fontSize: 14,
+    color: '#6b7280',
+    marginTop: 8,
+    textAlign: 'center',
   },
 });
