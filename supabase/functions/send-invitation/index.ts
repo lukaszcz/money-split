@@ -12,8 +12,6 @@ interface InvitationRequest {
   groupName: string;
 }
 
-const RESEND_API_KEY = "re_LccRKe5U_512GfEDLxPPTmspEE3dnqGpC";
-
 Deno.serve(async (req: Request) => {
   try {
     if (req.method === "OPTIONS") {
@@ -37,6 +35,19 @@ Deno.serve(async (req: Request) => {
         JSON.stringify({ error: "Missing email or groupName" }),
         {
           status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
+
+    if (!RESEND_API_KEY) {
+      console.error("RESEND_API_KEY environment variable is not set");
+      return new Response(
+        JSON.stringify({ error: "Server configuration error: Missing API key" }),
+        {
+          status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
