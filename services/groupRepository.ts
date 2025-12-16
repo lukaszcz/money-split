@@ -705,20 +705,36 @@ export async function deleteUserAccount(): Promise<boolean> {
   }
 }
 
-export async function reconnectGroupMembers(): Promise<void> {
+export async function reconnectGroupMembers(): Promise<number> {
   try {
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    if (!user || !user.email) return;
+    if (!user || !user.email) {
+      console.log('No user or email found for reconnection');
+      return 0;
+    }
 
-    await supabase
+    console.log('Attempting to reconnect group members for email:', user.email);
+
+    const { data, error, count } = await supabase
       .from('group_members')
       .update({ connected_user_id: user.id })
       .eq('email', user.email)
-      .is('connected_user_id', null);
+      .is('connected_user_id', null)
+      .select();
+
+    if (error) {
+      console.error('Error reconnecting group members:', error);
+      throw error;
+    }
+
+    const connectedCount = data?.length || 0;
+    console.log(`Successfully connected ${connectedCount} group member(s)`);
+    return connectedCount;
   } catch (error) {
     console.error('Failed to reconnect group members:', error);
+    return 0;
   }
 }
 
