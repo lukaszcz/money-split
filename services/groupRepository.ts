@@ -572,6 +572,87 @@ export async function updateGroupMember(
   }
 }
 
+export async function deleteGroup(groupId: string): Promise<boolean> {
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('No authenticated user');
+    }
+
+    const group = await getGroup(groupId);
+    if (!group) {
+      throw new Error('Group not found');
+    }
+
+    const { data: groupData } = await supabase
+      .from('groups')
+      .select('created_by')
+      .eq('id', groupId)
+      .maybeSingle();
+
+    if (!groupData || groupData.created_by !== user.id) {
+      throw new Error('Only the group owner can delete the group');
+    }
+
+    const expenses = await getGroupExpenses(groupId);
+    const expenseIds = expenses.map((e) => e.id);
+
+    if (expenseIds.length > 0) {
+      const { error: sharesError } = await supabase
+        .from('expense_shares')
+        .delete()
+        .in('expense_id', expenseIds);
+
+      if (sharesError) throw sharesError;
+    }
+
+    const { error: expensesError } = await supabase
+      .from('expenses')
+      .delete()
+      .eq('group_id', groupId);
+
+    if (expensesError) throw expensesError;
+
+    const { error: membersError } = await supabase
+      .from('group_members')
+      .delete()
+      .eq('group_id', groupId);
+
+    if (membersError) throw membersError;
+
+    const { error: groupError } = await supabase.from('groups').delete().eq('id', groupId);
+
+    if (groupError) throw groupError;
+
+    return true;
+  } catch (error) {
+    console.error('Failed to delete group:', error);
+    return false;
+  }
+}
+
+export async function isGroupOwner(groupId: string): Promise<boolean> {
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return false;
+
+    const { data } = await supabase
+      .from('groups')
+      .select('created_by')
+      .eq('id', groupId)
+      .maybeSingle();
+
+    return data?.created_by === user.id;
+  } catch (error) {
+    console.error('Failed to check group ownership:', error);
+    return false;
+  }
+}
+
 export async function sendInvitationEmail(email: string, groupName: string): Promise<boolean> {
   try {
     const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;

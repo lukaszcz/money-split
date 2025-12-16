@@ -1,10 +1,12 @@
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
 import { useState, useCallback } from 'react';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
-import { ArrowLeft, Plus, User, Mail, Link } from 'lucide-react-native';
+import { ArrowLeft, Plus, User, Mail, Link, Trash2 } from 'lucide-react-native';
 import {
   getGroup,
   getGroupExpenses,
+  deleteGroup,
+  isGroupOwner,
   Expense,
   GroupWithMembers,
   GroupMember,
@@ -22,15 +24,18 @@ export default function GroupDetailScreen() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [activeTab, setActiveTab] = useState<Tab>('expenses');
   const [loading, setLoading] = useState(true);
+  const [isOwner, setIsOwner] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!id || typeof id !== 'string') return;
 
     const fetchedGroup = await getGroup(id);
     const fetchedExpenses = await getGroupExpenses(id);
+    const ownerStatus = await isGroupOwner(id);
 
     setGroup(fetchedGroup);
     setExpenses(fetchedExpenses);
+    setIsOwner(ownerStatus);
     setLoading(false);
   }, [id]);
 
@@ -64,6 +69,33 @@ export default function GroupDetailScreen() {
     }
   };
 
+  const handleDeleteGroup = () => {
+    Alert.alert(
+      'Delete Group',
+      'Are you sure you want to delete this group? This will permanently remove all expenses, members, and data associated with this group. This action cannot be undone.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            if (!id || typeof id !== 'string') return;
+
+            const success = await deleteGroup(id);
+            if (success) {
+              router.back();
+            } else {
+              Alert.alert('Error', 'Failed to delete group. You must be the group owner to delete it.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -74,11 +106,18 @@ export default function GroupDetailScreen() {
           <Text style={styles.headerTitle}>{group.name}</Text>
           <Text style={styles.headerSubtitle}>{group.mainCurrencyCode}</Text>
         </View>
-        {(activeTab === 'expenses' || activeTab === 'members') && (
-          <TouchableOpacity style={styles.addButton} onPress={handleAddPress}>
-            <Plus color="#ffffff" size={20} />
-          </TouchableOpacity>
-        )}
+        <View style={styles.headerActions}>
+          {isOwner && (
+            <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteGroup}>
+              <Trash2 color="#dc2626" size={20} />
+            </TouchableOpacity>
+          )}
+          {(activeTab === 'expenses' || activeTab === 'members') && (
+            <TouchableOpacity style={styles.addButton} onPress={handleAddPress}>
+              <Plus color="#ffffff" size={20} />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       <View style={styles.tabs}>
@@ -303,6 +342,19 @@ const styles = StyleSheet.create({
   headerSubtitle: {
     fontSize: 14,
     color: '#6b7280',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  deleteButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fee2e2',
   },
   addButton: {
     backgroundColor: '#2563eb',
