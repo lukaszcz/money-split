@@ -273,7 +273,7 @@ export default function SettingsScreen() {
         <Text style={styles.sectionTitle}>About</Text>
 
         <View style={styles.card}>
-          <Text style={styles.appName}>GroupSplit</Text>
+          <Text style={styles.appName}>MoneySplit</Text>
           <Text style={styles.appVersion}>Version 1.0.0</Text>
           <Text style={styles.appDescription}>
             Track shared expenses and debts with friends. All calculations use fixed-point
