@@ -54,6 +54,8 @@ export async function ensureUserProfile(name?: string): Promise<User | null> {
 
     if (error) throw error;
 
+    await reconnectGroupMembers();
+
     return {
       id: data.id,
       name: data.name,
@@ -569,6 +571,164 @@ export async function updateGroupMember(
   } catch (error) {
     console.error('Failed to update group member:', error);
     return null;
+  }
+}
+
+export async function deleteGroup(groupId: string): Promise<boolean> {
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('No authenticated user');
+    }
+
+    const group = await getGroup(groupId);
+    if (!group) {
+      throw new Error('Group not found');
+    }
+
+    const { data: groupData } = await supabase
+      .from('groups')
+      .select('created_by')
+      .eq('id', groupId)
+      .maybeSingle();
+
+    if (!groupData || groupData.created_by !== user.id) {
+      throw new Error('Only the group owner can delete the group');
+    }
+
+    const expenses = await getGroupExpenses(groupId);
+    const expenseIds = expenses.map((e) => e.id);
+
+    if (expenseIds.length > 0) {
+      const { error: sharesError } = await supabase
+        .from('expense_shares')
+        .delete()
+        .in('expense_id', expenseIds);
+
+      if (sharesError) throw sharesError;
+    }
+
+    const { error: expensesError } = await supabase
+      .from('expenses')
+      .delete()
+      .eq('group_id', groupId);
+
+    if (expensesError) throw expensesError;
+
+    const { error: membersError } = await supabase
+      .from('group_members')
+      .delete()
+      .eq('group_id', groupId);
+
+    if (membersError) throw membersError;
+
+    const { error: groupError } = await supabase.from('groups').delete().eq('id', groupId);
+
+    if (groupError) throw groupError;
+
+    return true;
+  } catch (error) {
+    console.error('Failed to delete group:', error);
+    return false;
+  }
+}
+
+export async function isGroupOwner(groupId: string): Promise<boolean> {
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return false;
+
+    const { data } = await supabase
+      .from('groups')
+      .select('created_by')
+      .eq('id', groupId)
+      .maybeSingle();
+
+    return data?.created_by === user.id;
+  } catch (error) {
+    console.error('Failed to check group ownership:', error);
+    return false;
+  }
+}
+
+export async function deleteUserAccount(): Promise<boolean> {
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('No authenticated user');
+    }
+
+    const { data: ownedGroups } = await supabase
+      .from('groups')
+      .select('id')
+      .eq('created_by', user.id);
+
+    if (ownedGroups && ownedGroups.length > 0) {
+      for (const group of ownedGroups) {
+        await deleteGroup(group.id);
+      }
+    }
+
+    const { error: disconnectError } = await supabase
+      .from('group_members')
+      .update({ connected_user_id: null })
+      .eq('connected_user_id', user.id);
+
+    if (disconnectError) throw disconnectError;
+
+    const { error: userError } = await supabase.from('users').delete().eq('id', user.id);
+
+    if (userError) throw userError;
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    const token = session?.access_token;
+
+    if (token) {
+      const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+      const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+
+      if (supabaseUrl && supabaseAnonKey) {
+        await fetch(`${supabaseUrl}/functions/v1/delete-user`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+      }
+    }
+
+    await supabase.auth.signOut();
+
+    return true;
+  } catch (error) {
+    console.error('Failed to delete user account:', error);
+    return false;
+  }
+}
+
+export async function reconnectGroupMembers(): Promise<void> {
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user || !user.email) return;
+
+    await supabase
+      .from('group_members')
+      .update({ connected_user_id: user.id })
+      .eq('email', user.email)
+      .is('connected_user_id', null);
+  } catch (error) {
+    console.error('Failed to reconnect group members:', error);
   }
 }
 

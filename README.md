@@ -1,4 +1,4 @@
-# GroupSplit
+# MoneySplit
 
 A React Native/Expo mobile app for tracking shared expenses and debts among groups of friends, similar to Splitwise.
 
