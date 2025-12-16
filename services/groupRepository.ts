@@ -669,41 +669,31 @@ export async function deleteUserAccount(): Promise<boolean> {
       .select('id')
       .eq('created_by', user.id);
 
-    if (ownedGroups && ownedGroups.length > 0) {
-      for (const group of ownedGroups) {
-        await deleteGroup(group.id);
-      }
-    }
-
-    const { error: disconnectError } = await supabase
-      .from('group_members')
-      .update({ connected_user_id: null })
-      .eq('connected_user_id', user.id);
-
-    if (disconnectError) throw disconnectError;
-
-    const { error: userError } = await supabase.from('users').delete().eq('id', user.id);
-
-    if (userError) throw userError;
-
     const {
       data: { session },
     } = await supabase.auth.getSession();
     const token = session?.access_token;
 
-    if (token) {
-      const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
-      const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+    if (!token) {
+      throw new Error('No session token available');
+    }
 
-      if (supabaseUrl && supabaseAnonKey) {
-        await fetch(`${supabaseUrl}/functions/v1/delete-user`, {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
-      }
+    const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+    if (!supabaseUrl) {
+      throw new Error('Supabase URL not configured');
+    }
+
+    const response = await fetch(`${supabaseUrl}/functions/v1/delete-user`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || 'Failed to delete user account');
     }
 
     await supabase.auth.signOut();
@@ -715,20 +705,36 @@ export async function deleteUserAccount(): Promise<boolean> {
   }
 }
 
-export async function reconnectGroupMembers(): Promise<void> {
+export async function reconnectGroupMembers(): Promise<number> {
   try {
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    if (!user || !user.email) return;
+    if (!user || !user.email) {
+      console.log('No user or email found for reconnection');
+      return 0;
+    }
 
-    await supabase
+    console.log('Attempting to reconnect group members for email:', user.email);
+
+    const { data, error, count } = await supabase
       .from('group_members')
       .update({ connected_user_id: user.id })
       .eq('email', user.email)
-      .is('connected_user_id', null);
+      .is('connected_user_id', null)
+      .select();
+
+    if (error) {
+      console.error('Error reconnecting group members:', error);
+      throw error;
+    }
+
+    const connectedCount = data?.length || 0;
+    console.log(`Successfully connected ${connectedCount} group member(s)`);
+    return connectedCount;
   } catch (error) {
     console.error('Failed to reconnect group members:', error);
+    return 0;
   }
 }
 
