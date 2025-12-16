@@ -141,7 +141,7 @@ Deno.serve(async (req: Request) => {
     `;
 
     const { data, error } = await resend.emails.send({
-      from: "onboarding@resend.dev",
+      from: "moneysplit@moneysplit.polapp.pl",
       to: email,
       subject: `You're invited to join "${groupName}"`,
       html: emailHtml,
