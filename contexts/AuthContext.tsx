@@ -50,6 +50,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       password,
     });
     if (error) throw error;
+
+    const { data: userData } = await supabase.auth.getUser();
+    if (userData.user?.id) {
+      const now = new Date().toISOString();
+      // @ts-ignore
+      await supabase
+        .from('users')
+        .update({ last_login: now })
+        .eq('id', userData.user.id);
+    }
   };
 
   const signUp = async (email: string, password: string) => {
