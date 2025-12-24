@@ -6,8 +6,8 @@ import {
   StyleSheet,
   ScrollView,
   Alert,
-  SafeAreaView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { X, Plus, Check, Trash2, User, Mail } from 'lucide-react-native';

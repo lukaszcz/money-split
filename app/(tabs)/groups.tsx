@@ -1,4 +1,5 @@
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useCallback } from 'react';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Plus } from 'lucide-react-native';
@@ -46,7 +47,7 @@ export default function GroupsScreen() {
   );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Groups</Text>
         <TouchableOpacity
@@ -74,7 +75,7 @@ export default function GroupsScreen() {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 

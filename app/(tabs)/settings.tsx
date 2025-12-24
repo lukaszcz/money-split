@@ -1,4 +1,5 @@
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, TextInput, Modal, ActivityIndicator, SafeAreaView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, TextInput, Modal, ActivityIndicator } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useEffect } from 'react';
 import { RefreshCw, LogOut, User, Edit2, Check, X, Trash2 } from 'lucide-react-native';
 import { getLastRefreshTime, refreshAllRates, getCachedRates } from '../../services/exchangeRateService';

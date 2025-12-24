@@ -1,4 +1,5 @@
-import { View, Text, FlatList, StyleSheet, RefreshControl, SafeAreaView } from 'react-native';
+import { View, Text, FlatList, StyleSheet, RefreshControl } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useEffect, useCallback } from 'react';
 import { getAllGroups, getGroupExpenses, getGroupMember, Expense } from '../../services/groupRepository';
 import { formatNumber } from '../../utils/money';
