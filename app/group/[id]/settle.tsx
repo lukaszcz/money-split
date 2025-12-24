@@ -201,7 +201,7 @@ export default function SettleScreen() {
         {isAnimating && animationSteps.length > 0 && currentStepIndex < animationSteps.length && (() => {
           const currentStep = animationSteps[currentStepIndex];
           const hasHighlights = currentStep.highlightedIndices.length > 0;
-          const hasResults = (currentStep.resultIndices || []).length > 0;
+          const hasResults = currentStep.resultIndices.length > 0;
           const stepNumber = currentStepIndex + 1;
           const totalSteps = animationSteps.length;
 
