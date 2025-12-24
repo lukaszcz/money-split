@@ -382,6 +382,7 @@ export function computeSimplificationSteps(
   steps.push({
     settlements: cloneSettlements(currentSettlements),
     highlightedIndices: [],
+    resultIndices: [],
   });
 
   let pair = findSimplificationPair(currentSettlements);
@@ -390,6 +391,7 @@ export function computeSimplificationSteps(
     steps.push({
       settlements: cloneSettlements(currentSettlements),
       highlightedIndices: [pair.firstIdx, pair.secondIdx],
+      resultIndices: [],
     });
 
     const [newSettlements, resultIndices] = applySimplification(currentSettlements, pair);
