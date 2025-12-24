@@ -201,28 +201,32 @@ export default function SettleScreen() {
         {isAnimating && animationSteps.length > 0 && currentStepIndex < animationSteps.length && (() => {
           const currentStep = animationSteps[currentStepIndex];
           const hasHighlights = currentStep.highlightedIndices.length > 0;
-          const hasResult = currentStep.resultIndex !== undefined;
+          const hasResults = currentStep.resultIndices.length > 0;
           const stepNumber = currentStepIndex + 1;
           const totalSteps = animationSteps.length;
 
           let stepTitle = '';
           let stepDescription = '';
 
-          if (stepNumber === 1 && !hasHighlights && !hasResult) {
+          if (stepNumber === 1 && !hasHighlights && !hasResults) {
             stepTitle = 'Initial transfers';
             stepDescription = `${currentStep.settlements.length} transfer${currentStep.settlements.length !== 1 ? 's' : ''} before simplification`;
           } else if (hasHighlights) {
             stepTitle = 'Next step';
             stepDescription = 'Highlighted transfers will be combined';
-          } else if (hasResult) {
+          } else if (hasResults) {
+            const isLastStep = currentStepIndex === animationSteps.length - 1;
+            stepTitle = isLastStep ? 'Final result' : 'Result';
+            const resultCount = currentStep.resultIndices.length;
+            stepDescription = isLastStep
+              ? `Simplified to ${currentStep.settlements.length} transfer${currentStep.settlements.length !== 1 ? 's' : ''}`
+              : `${resultCount} new transfer${resultCount !== 1 ? 's' : ''} highlighted in green`;
+          } else {
             const isLastStep = currentStepIndex === animationSteps.length - 1;
             stepTitle = isLastStep ? 'Final result' : 'Result';
             stepDescription = isLastStep
               ? `Simplified to ${currentStep.settlements.length} transfer${currentStep.settlements.length !== 1 ? 's' : ''}`
-              : 'New transfer highlighted in green';
-          } else {
-            stepTitle = 'Final result';
-            stepDescription = `${currentStep.settlements.length} transfer${currentStep.settlements.length !== 1 ? 's' : ''} remaining`;
+              : `${currentStep.settlements.length} transfer${currentStep.settlements.length !== 1 ? 's' : ''} remaining`;
           }
 
           return (
@@ -236,7 +240,7 @@ export default function SettleScreen() {
 
               {currentStep.settlements.map((settlement, idx) => {
                 const isHighlighted = currentStep.highlightedIndices.includes(idx);
-                const isResult = currentStep.resultIndex === idx;
+                const isResult = currentStep.resultIndices.includes(idx);
                 return (
                   <View
                     key={`${currentStepIndex}-${settlement.from.id}-${settlement.to.id}-${idx}`}
