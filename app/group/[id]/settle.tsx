@@ -114,7 +114,7 @@ export default function SettleScreen() {
     const steps = computeSimplificationSteps(expenses, group.members);
 
     console.log(`Generated ${steps.length} animation steps:`);
-    steps.forEach((step, idx) => {
+    steps.forEach((step, idx, _) => {
       console.log(`  Step ${idx}: ${step.settlements.length} settlements, highlights: [${step.highlightedIndices.join(', ')}]`);
       step.settlements.forEach((s, sidx) => {
         console.log(`    ${sidx}: ${s.from.name} → ${s.to.name}: ${formatNumber(s.amountScaled)}`);
