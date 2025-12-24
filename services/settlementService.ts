@@ -242,6 +242,10 @@ interface SimplificationPair {
   type: 'merge' | 'opposite' | 'chain';
 }
 
+function getResultIndex(pair: SimplificationPair): number {
+  return Math.min(pair.firstIdx, pair.secondIdx);
+}
+
 function findSimplificationPair(settlements: Settlement[]): SimplificationPair | null {
   for (let i = 0; i < settlements.length; i++) {
     for (let j = 0; j < settlements.length; j++) {
@@ -289,7 +293,7 @@ function applySimplification(
   const first = settlements[firstIdx];
   const second = settlements[secondIdx];
   const newSettlements = settlements.filter((_, idx) => idx !== firstIdx && idx !== secondIdx);
-  const resultIdx = Math.min(firstIdx, secondIdx);
+  const resultIdx = getResultIndex(pair);
 
   if (type === 'merge') {
     const net = first.amountScaled + second.amountScaled;
