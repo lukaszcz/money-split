@@ -111,6 +111,30 @@ export async function getOrderedGroups(groups: Group[]): Promise<Group[]> {
     .filter((g) => !groupOrder.includes(g.id))
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
+  if (newGroups.length > 0) {
+    const newGroupIds = newGroups.map((g) => g.id);
+    const updatedOrder = [...newGroupIds, ...groupOrder];
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (user) {
+      await supabase
+        .from('user_group_preferences')
+        .upsert(
+          {
+            user_id: user.id,
+            group_order: updatedOrder,
+            updated_at: new Date().toISOString(),
+          },
+          {
+            onConflict: 'user_id',
+          }
+        );
+    }
+  }
+
   newGroups.forEach((g) => {
     orderedGroups.push(g);
     groupsInOrder.add(g.id);
