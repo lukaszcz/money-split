@@ -289,10 +289,11 @@ function applySimplification(
   const first = settlements[firstIdx];
   const second = settlements[secondIdx];
   const newSettlements = settlements.filter((_, idx) => idx !== firstIdx && idx !== secondIdx);
+  const resultIdx = Math.min(firstIdx, secondIdx);
 
   if (type === 'merge') {
     const net = first.amountScaled + second.amountScaled;
-    newSettlements.push({
+    newSettlements.splice(resultIdx, 0, {
       from: first.from,
       to: first.to,
       amountScaled: net,
@@ -300,13 +301,13 @@ function applySimplification(
   } else if (type === 'opposite') {
     const net = first.amountScaled - second.amountScaled;
     if (net > BigInt(0)) {
-      newSettlements.push({
+      newSettlements.splice(resultIdx, 0, {
         from: first.from,
         to: first.to,
         amountScaled: net,
       });
     } else if (net < BigInt(0)) {
-      newSettlements.push({
+      newSettlements.splice(resultIdx, 0, {
         from: second.from,
         to: second.to,
         amountScaled: -net,
@@ -321,7 +322,7 @@ function applySimplification(
     const remainingSecond = second.amountScaled - transferAmount;
 
     if (remainingFirst > BigInt(0)) {
-      newSettlements.push({
+      newSettlements.splice(resultIdx, 0, {
         from: first.from,
         to: first.to,
         amountScaled: remainingFirst,
@@ -329,14 +330,14 @@ function applySimplification(
     }
 
     if (remainingSecond > BigInt(0)) {
-      newSettlements.push({
+      newSettlements.splice(resultIdx, 0, {
         from: second.from,
         to: second.to,
         amountScaled: remainingSecond,
       });
     }
 
-    newSettlements.push({
+    newSettlements.splice(resultIdx, 0, {
       from: first.from,
       to: second.to,
       amountScaled: transferAmount,
@@ -344,42 +345,6 @@ function applySimplification(
   }
 
   return newSettlements;
-}
-
-function findNewTransferIndex(
-  oldSettlements: Settlement[],
-  newSettlements: Settlement[],
-  pair: SimplificationPair
-): number | undefined {
-  if (pair.type === 'merge') {
-    const first = oldSettlements[pair.firstIdx];
-    for (let i = 0; i < newSettlements.length; i++) {
-      const s = newSettlements[i];
-      if (s.from.id === first.from.id && s.to.id === first.to.id) {
-        return i;
-      }
-    }
-  } else if (pair.type === 'opposite') {
-    const first = oldSettlements[pair.firstIdx];
-    const second = oldSettlements[pair.secondIdx];
-    for (let i = 0; i < newSettlements.length; i++) {
-      const s = newSettlements[i];
-      if ((s.from.id === first.from.id && s.to.id === first.to.id) ||
-          (s.from.id === second.from.id && s.to.id === second.to.id)) {
-        return i;
-      }
-    }
-  } else if (pair.type === 'chain') {
-    const first = oldSettlements[pair.firstIdx];
-    const second = oldSettlements[pair.secondIdx];
-    for (let i = 0; i < newSettlements.length; i++) {
-      const s = newSettlements[i];
-      if (s.from.id === first.from.id && s.to.id === second.to.id) {
-        return i;
-      }
-    }
-  }
-  return undefined;
 }
 
 export function computeSimplificationSteps(
@@ -397,10 +362,9 @@ export function computeSimplificationSteps(
       highlightedIndices: [pair.firstIdx, pair.secondIdx],
     });
 
-    const oldSettlements = currentSettlements;
     currentSettlements = applySimplification(currentSettlements, pair);
 
-    const resultIndex = findNewTransferIndex(oldSettlements, currentSettlements, pair);
+    const resultIndex = Math.min(pair.firstIdx, pair.secondIdx);
     steps.push({
       settlements: cloneSettlements(currentSettlements),
       highlightedIndices: [],
