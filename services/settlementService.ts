@@ -314,7 +314,7 @@ function applySimplification(
   const first = settlements[firstIdx];
   const second = settlements[secondIdx];
   const newSettlements = settlements.filter((_, idx) => idx !== firstIdx && idx !== secondIdx);
-  const resultIndices = getResultIndex(settlements, pair);
+  const resultIndices = getResultIndices(settlements, pair);
 
   if (type === 'merge') {
     const net = first.amountScaled + second.amountScaled;
