@@ -11,8 +11,8 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { X, Plus, Check, Trash2, User, Mail } from 'lucide-react-native';
 import { createGroup, getUserByEmail, sendInvitationEmail, ensureUserProfile } from '../services/groupRepository';
-import { CURRENCIES } from '../utils/currencies';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCurrencyOrder } from '../hooks/useCurrencyOrder';
 
 interface PendingMember {
   id: string;
@@ -31,6 +31,8 @@ export default function CreateGroupScreen() {
   const [newMemberName, setNewMemberName] = useState('');
   const [newMemberEmail, setNewMemberEmail] = useState('');
   const [currentUserName, setCurrentUserName] = useState('');
+
+  const { currencies: orderedCurrencies, selectCurrency } = useCurrencyOrder();
 
   useEffect(() => {
     loadCurrentUser();
@@ -146,12 +148,13 @@ export default function CreateGroupScreen() {
 
           {showCurrencyPicker && (
             <ScrollView style={styles.currencyList} nestedScrollEnabled>
-              {CURRENCIES.map((currency) => (
+              {orderedCurrencies.map((currency) => (
                 <TouchableOpacity
                   key={currency.code}
                   style={styles.currencyItem}
                   onPress={() => {
                     setMainCurrency(currency.code);
+                    selectCurrency(currency.code);
                     setShowCurrencyPicker(false);
                   }}>
                   <Text style={styles.currencyCode}>{currency.code}</Text>
