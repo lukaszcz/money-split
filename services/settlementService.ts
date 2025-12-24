@@ -368,7 +368,7 @@ export function computeSimplificationSteps(
 
     currentSettlements = applySimplification(currentSettlements, pair);
 
-    const resultIndex = Math.min(pair.firstIdx, pair.secondIdx);
+    const resultIndex = getResultIndex(pair);
     steps.push({
       settlements: cloneSettlements(currentSettlements),
       highlightedIndices: [],
