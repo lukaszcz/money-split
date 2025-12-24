@@ -129,12 +129,13 @@ export default function EditMemberScreen() {
 
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}>
         <ScrollView
           style={styles.content}
           contentContainerStyle={styles.contentContainer}
-          keyboardShouldPersistTaps="handled">
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={true}>
           <View style={styles.section}>
             <Text style={styles.label}>Name</Text>
             <TextInput
@@ -211,6 +212,7 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: 16,
+    paddingBottom: 100,
   },
   section: {
     marginBottom: 24,
