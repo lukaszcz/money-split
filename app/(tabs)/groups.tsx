@@ -27,7 +27,7 @@ export default function GroupsScreen() {
 
     const balances = computeBalances(expenses, group.members);
 
-    const allBalancesZero = balances.every(balance => balance.balanceInMain === 0n);
+    const allBalancesZero = Array.from(balances.values()).every(balance => balance === 0n);
 
     return allBalancesZero;
   };
