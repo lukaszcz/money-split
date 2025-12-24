@@ -113,6 +113,19 @@ export default function SettleScreen() {
     const expenses = await getGroupExpenses(id);
     const steps = computeSimplificationSteps(expenses, group.members);
 
+    console.log(`Generated ${steps.length} animation steps:`);
+    steps.forEach((step, idx) => {
+      console.log(`  Step ${idx}: ${step.settlements.length} settlements, highlights: [${step.highlightedIndices.join(', ')}]`);
+      step.settlements.forEach((s, sidx) => {
+        console.log(`    ${sidx}: ${s.from.name} → ${s.to.name}: ${formatNumber(s.amountScaled)}`);
+      });
+    });
+
+    if (steps.length <= 1) {
+      Alert.alert('No Simplification', 'There are no simplification steps to show for these debts.');
+      return;
+    }
+
     setAnimationSteps(steps);
     setCurrentStepIndex(0);
     setIsAnimating(true);
@@ -123,12 +136,19 @@ export default function SettleScreen() {
 
     if (currentStepIndex >= animationSteps.length) {
       setIsAnimating(false);
+      if (animationSteps.length > 0) {
+        setSettlements(animationSteps[animationSteps.length - 1].settlements);
+      }
       return;
     }
 
+    const currentStep = animationSteps[currentStepIndex];
+    const hasHighlights = currentStep.highlightedIndices.length > 0;
+    const delay = hasHighlights ? 3000 : 2000;
+
     animationTimerRef.current = setTimeout(() => {
       setCurrentStepIndex(prev => prev + 1);
-    }, 1500);
+    }, delay);
 
     return () => {
       if (animationTimerRef.current) {
@@ -183,7 +203,11 @@ export default function SettleScreen() {
         {isAnimating && animationSteps.length > 0 && currentStepIndex < animationSteps.length && (
           <>
             <View style={styles.infoBox}>
-              <Text style={styles.infoText}>Simplifying debts</Text>
+              <Text style={styles.infoText}>
+                {animationSteps[currentStepIndex].highlightedIndices.length > 0
+                  ? 'Identifying transfers to simplify...'
+                  : 'Applying simplification...'}
+              </Text>
               <Text style={styles.infoSubtext}>
                 Step {currentStepIndex + 1} of {animationSteps.length}
               </Text>
@@ -193,7 +217,7 @@ export default function SettleScreen() {
               const isHighlighted = animationSteps[currentStepIndex].highlightedIndices.includes(idx);
               return (
                 <View
-                  key={idx}
+                  key={`${settlement.from.id}-${settlement.to.id}-${idx}`}
                   style={[
                     styles.settlementCard,
                     isHighlighted && styles.settlementCardHighlighted,
