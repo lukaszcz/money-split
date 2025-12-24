@@ -177,56 +177,6 @@ export interface SimplificationStep {
   highlightedIndices: number[];
 }
 
-function computeRawDebts(
-  expenses: Expense[],
-  allMembers: GroupMember[]
-): Settlement[] {
-  const debtMap = new Map<string, Map<string, bigint>>();
-  const memberMap = new Map(allMembers.map((m) => [m.id, m]));
-
-  for (const member of allMembers) {
-    debtMap.set(member.id, new Map<string, bigint>());
-  }
-
-  for (const expense of expenses) {
-    const payerId = expense.payerMemberId;
-
-    for (const share of expense.shares) {
-      const memberId = share.memberId;
-      if (memberId === payerId) continue;
-
-      const debtKey = debtMap.get(memberId);
-      if (debtKey) {
-        debtKey.set(payerId, (debtKey.get(payerId) || BigInt(0)) + share.shareInMainScaled);
-      }
-    }
-  }
-
-  const settlements: Settlement[] = [];
-
-  for (const debtorId of debtMap.keys()) {
-    const debtorDebts = debtMap.get(debtorId)!;
-
-    for (const creditorId of debtorDebts.keys()) {
-      const amount = debtorDebts.get(creditorId);
-      if (!amount || amount <= BigInt(0)) continue;
-
-      const debtor = memberMap.get(debtorId);
-      const creditor = memberMap.get(creditorId);
-
-      if (debtor && creditor) {
-        settlements.push({
-          from: debtor,
-          to: creditor,
-          amountScaled: amount,
-        });
-      }
-    }
-  }
-
-  return settlements;
-}
-
 function cloneSettlements(settlements: Settlement[]): Settlement[] {
   return settlements.map(s => ({
     from: s.from,
@@ -331,7 +281,7 @@ export function computeSimplificationSteps(
   allMembers: GroupMember[]
 ): SimplificationStep[] {
   const steps: SimplificationStep[] = [];
-  let currentSettlements = computeRawDebts(expenses, allMembers);
+  let currentSettlements = computeSettlementsNoSimplify(expenses, allMembers);
 
   let pair = findSimplificationPair(currentSettlements);
 
