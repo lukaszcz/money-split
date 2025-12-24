@@ -358,6 +358,11 @@ export function computeSimplificationSteps(
   const steps: SimplificationStep[] = [];
   let currentSettlements = computeRawDebts(expenses, allMembers);
 
+  steps.push({
+    settlements: cloneSettlements(currentSettlements),
+    highlightedIndices: [],
+  });
+
   let pair = findSimplificationPair(currentSettlements);
 
   while (pair !== null) {

@@ -208,8 +208,11 @@ export default function SettleScreen() {
           let stepTitle = '';
           let stepDescription = '';
 
-          if (hasHighlights) {
-            stepTitle = stepNumber === 1 ? 'Initial transfers' : `After previous step`;
+          if (stepNumber === 1 && !hasHighlights && !hasResult) {
+            stepTitle = 'Initial transfers';
+            stepDescription = `${currentStep.settlements.length} transfer${currentStep.settlements.length !== 1 ? 's' : ''} before simplification`;
+          } else if (hasHighlights) {
+            stepTitle = 'Next step';
             stepDescription = 'Highlighted transfers will be combined';
           } else if (hasResult) {
             const isLastStep = currentStepIndex === animationSteps.length - 1;
