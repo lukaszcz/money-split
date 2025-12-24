@@ -16,6 +16,7 @@ import { computeBalances } from '../../services/settlementService';
 import { formatNumber } from '../../utils/money';
 import { getCurrencySymbol } from '../../utils/currencies';
 import { getExchangeRate } from '../../services/exchangeRateService';
+import { recordGroupVisit } from '../../services/groupPreferenceService';
 
 type Tab = 'payments' | 'balances' | 'members' | 'settle';
 
@@ -39,6 +40,8 @@ export default function GroupDetailScreen() {
     setExpenses(fetchedExpenses);
     setIsOwner(ownerStatus);
     setLoading(false);
+
+    await recordGroupVisit(id);
   }, [id]);
 
   useFocusEffect(

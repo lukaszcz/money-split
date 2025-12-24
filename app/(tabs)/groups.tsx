@@ -7,6 +7,7 @@ import { getAllGroups, GroupWithMembers } from '../../services/groupRepository';
 import { getGroupExpenses } from '../../services/groupRepository';
 import { computeBalances } from '../../services/settlementService';
 import { formatCurrency } from '../../utils/money';
+import { getOrderedGroups } from '../../services/groupPreferenceService';
 
 interface GroupWithSettledStatus extends GroupWithMembers {
   isSettled?: boolean;
@@ -18,29 +19,68 @@ export default function GroupsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const checkIfGroupIsSettled = async (group: GroupWithMembers): Promise<boolean> => {
-    const expenses = await getGroupExpenses(group.id);
-
-    if (expenses.length === 0) {
-      return false;
-    }
-
-    const balances = computeBalances(expenses, group.members);
-
-    const allBalancesZero = Array.from(balances.values()).every(balance => balance === 0n);
-
-    return allBalancesZero;
-  };
-
   const loadGroups = useCallback(async () => {
     const fetchedGroups = await getAllGroups();
+    const orderedGroups = await getOrderedGroups(fetchedGroups);
 
-    const groupsWithSettledStatus = await Promise.all(
-      fetchedGroups.map(async (group) => ({
+    const groupIds = orderedGroups.map(g => g.id);
+
+    const allExpensesMap = new Map<string, any[]>();
+
+    if (groupIds.length > 0) {
+      const { data: allExpenses } = await (await import('../../lib/supabase')).supabase
+        .from('expenses')
+        .select(`
+          *,
+          expense_shares (
+            id,
+            member_id,
+            share_amount_scaled,
+            share_in_main_scaled
+          )
+        `)
+        .in('group_id', groupIds);
+
+      (allExpenses || []).forEach((e: any) => {
+        if (!allExpensesMap.has(e.group_id)) {
+          allExpensesMap.set(e.group_id, []);
+        }
+        allExpensesMap.get(e.group_id)!.push({
+          id: e.id,
+          groupId: e.group_id,
+          description: e.description || undefined,
+          dateTime: e.date_time,
+          currencyCode: e.currency_code,
+          totalAmountScaled: BigInt(e.total_amount_scaled),
+          payerMemberId: e.payer_member_id,
+          exchangeRateToMainScaled: BigInt(e.exchange_rate_to_main_scaled),
+          totalInMainScaled: BigInt(e.total_in_main_scaled),
+          createdAt: e.created_at,
+          paymentType: e.payment_type || 'expense',
+          shares: (e.expense_shares || []).map((s: any) => ({
+            id: s.id,
+            memberId: s.member_id,
+            shareAmountScaled: BigInt(s.share_amount_scaled),
+            shareInMainScaled: BigInt(s.share_in_main_scaled),
+          })),
+        });
+      });
+    }
+
+    const groupsWithSettledStatus = orderedGroups.map((group) => {
+      const expenses = allExpensesMap.get(group.id) || [];
+
+      let isSettled = false;
+      if (expenses.length > 0) {
+        const balances = computeBalances(expenses, group.members);
+        isSettled = Array.from(balances.values()).every(balance => balance === 0n);
+      }
+
+      return {
         ...group,
-        isSettled: await checkIfGroupIsSettled(group),
-      }))
-    );
+        isSettled,
+      };
+    });
 
     setGroups(groupsWithSettledStatus);
     setLoading(false);

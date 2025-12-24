@@ -369,24 +369,37 @@ export async function getAllGroups(): Promise<GroupWithMembers[]> {
   try {
     const { data: groupData, error: groupError } = await supabase
       .from('groups')
-      .select('*')
+      .select(`
+        *,
+        group_members (
+          id,
+          group_id,
+          name,
+          email,
+          connected_user_id,
+          created_at
+        )
+      `)
       .order('created_at', { ascending: false });
 
     if (groupError) throw groupError;
 
-    const groups: GroupWithMembers[] = [];
-
-    for (const g of groupData || []) {
-      const members = await getGroupMembers(g.id);
-
-      groups.push({
-        id: g.id,
-        name: g.name,
-        mainCurrencyCode: g.main_currency_code,
-        createdAt: g.created_at,
-        members,
-      });
-    }
+    const groups: GroupWithMembers[] = (groupData || []).map((g: any) => ({
+      id: g.id,
+      name: g.name,
+      mainCurrencyCode: g.main_currency_code,
+      createdAt: g.created_at,
+      members: (g.group_members || []).map((m: any) => ({
+        id: m.id,
+        groupId: m.group_id,
+        name: m.name,
+        email: m.email || undefined,
+        connectedUserId: m.connected_user_id || undefined,
+        createdAt: m.created_at,
+      })).sort((a: any, b: any) =>
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      ),
+    }));
 
     return groups;
   } catch (error) {
@@ -489,40 +502,39 @@ export async function getGroupExpenses(groupId: string): Promise<Expense[]> {
   try {
     const { data: expenseData, error: expenseError } = await supabase
       .from('expenses')
-      .select('*')
+      .select(`
+        *,
+        expense_shares (
+          id,
+          member_id,
+          share_amount_scaled,
+          share_in_main_scaled
+        )
+      `)
       .eq('group_id', groupId)
       .order('date_time', { ascending: false });
 
     if (expenseError) throw expenseError;
 
-    const expenses: Expense[] = [];
-
-    for (const e of expenseData || []) {
-      const { data: shareData } = await supabase
-        .from('expense_shares')
-        .select('*')
-        .eq('expense_id', e.id);
-
-      expenses.push({
-        id: e.id,
-        groupId: e.group_id,
-        description: e.description || undefined,
-        dateTime: e.date_time,
-        currencyCode: e.currency_code,
-        totalAmountScaled: BigInt(e.total_amount_scaled),
-        payerMemberId: e.payer_member_id,
-        exchangeRateToMainScaled: BigInt(e.exchange_rate_to_main_scaled),
-        totalInMainScaled: BigInt(e.total_in_main_scaled),
-        createdAt: e.created_at,
-        paymentType: e.payment_type || 'expense',
-        shares: (shareData || []).map((s) => ({
-          id: s.id,
-          memberId: s.member_id,
-          shareAmountScaled: BigInt(s.share_amount_scaled),
-          shareInMainScaled: BigInt(s.share_in_main_scaled),
-        })),
-      });
-    }
+    const expenses: Expense[] = (expenseData || []).map((e: any) => ({
+      id: e.id,
+      groupId: e.group_id,
+      description: e.description || undefined,
+      dateTime: e.date_time,
+      currencyCode: e.currency_code,
+      totalAmountScaled: BigInt(e.total_amount_scaled),
+      payerMemberId: e.payer_member_id,
+      exchangeRateToMainScaled: BigInt(e.exchange_rate_to_main_scaled),
+      totalInMainScaled: BigInt(e.total_in_main_scaled),
+      createdAt: e.created_at,
+      paymentType: e.payment_type || 'expense',
+      shares: (e.expense_shares || []).map((s: any) => ({
+        id: s.id,
+        memberId: s.member_id,
+        shareAmountScaled: BigInt(s.share_amount_scaled),
+        shareInMainScaled: BigInt(s.share_in_main_scaled),
+      })),
+    }));
 
     return expenses;
   } catch (error) {
