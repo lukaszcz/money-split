@@ -1,12 +1,14 @@
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Modal, Alert } from 'react-native';
-import { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
+import { useState, useEffect, useRef } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, ArrowRight } from 'lucide-react-native';
+import { ArrowLeft, ArrowRight, Play, CheckSquare, Square } from 'lucide-react-native';
 import { getGroup, getGroupExpenses, GroupWithMembers, createExpense } from '../../../services/groupRepository';
 import {
   computeSettlementsNoSimplify,
   computeSettlementsSimplified,
   Settlement,
+  computeSimplificationSteps,
+  SimplificationStep,
 } from '../../../services/settlementService';
 import { formatNumber, toScaled, applyExchangeRate } from '../../../utils/money';
 import { getCurrencySymbol } from '../../../utils/currencies';
@@ -17,9 +19,12 @@ export default function SettleScreen() {
   const router = useRouter();
   const [group, setGroup] = useState<GroupWithMembers | null>(null);
   const [settlements, setSettlements] = useState<Settlement[]>([]);
-  const [showDialog, setShowDialog] = useState(true);
-  const [simplified, setSimplified] = useState(false);
+  const [simplified, setSimplified] = useState(true);
   const [loading, setLoading] = useState(true);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [animationSteps, setAnimationSteps] = useState<SimplificationStep[]>([]);
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const animationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     loadData();
@@ -32,27 +37,28 @@ export default function SettleScreen() {
     if (!fetchedGroup) return;
 
     const expenses = await getGroupExpenses(id);
+    const settlementsSimplified = computeSettlementsSimplified(expenses, fetchedGroup.members);
 
     setGroup(fetchedGroup);
+    setSettlements(settlementsSimplified);
     setLoading(false);
   };
 
-  const handleSimplifyChoice = async (simplify: boolean) => {
+  const toggleSimplified = async () => {
     if (!group || !id || typeof id !== 'string') return;
 
     const expenses = await getGroupExpenses(id);
+    const newSimplified = !simplified;
 
-    if (simplify) {
+    if (newSimplified) {
       const settlementsSimplified = computeSettlementsSimplified(expenses, group.members);
       setSettlements(settlementsSimplified);
-      setSimplified(true);
     } else {
       const settlementsNormal = computeSettlementsNoSimplify(expenses, group.members);
       setSettlements(settlementsNormal);
-      setSimplified(false);
     }
 
-    setShowDialog(false);
+    setSimplified(newSimplified);
   };
 
   const handleAddTransfer = async (settlement: Settlement) => {
@@ -101,6 +107,62 @@ export default function SettleScreen() {
     }
   };
 
+  const startAnimation = async () => {
+    if (!group || !id || typeof id !== 'string') return;
+
+    const expenses = await getGroupExpenses(id);
+    const steps = computeSimplificationSteps(expenses, group.members);
+
+    console.log(`Generated ${steps.length} animation steps:`);
+    steps.forEach((step, idx, _) => {
+      console.log(`  Step ${idx}: ${step.settlements.length} settlements, highlights: [${step.highlightedIndices.join(', ')}]`);
+      step.settlements.forEach((s, sidx) => {
+        console.log(`    ${sidx}: ${s.from.name} → ${s.to.name}: ${formatNumber(s.amountScaled)}`);
+      });
+    });
+
+    if (steps.length <= 1) {
+      Alert.alert('No Simplification', 'There are no simplification steps to show for these debts.');
+      return;
+    }
+
+    setAnimationSteps(steps);
+    setCurrentStepIndex(0);
+    setIsAnimating(true);
+  };
+
+  useEffect(() => {
+    if (!isAnimating || animationSteps.length === 0) return;
+
+    if (currentStepIndex >= animationSteps.length) {
+      setIsAnimating(false);
+      if (animationSteps.length > 0) {
+        setSettlements(animationSteps[animationSteps.length - 1].settlements);
+      }
+      return;
+    }
+
+    const delay = 3000;
+
+    animationTimerRef.current = setTimeout(() => {
+      setCurrentStepIndex(prev => prev + 1);
+    }, delay);
+
+    return () => {
+      if (animationTimerRef.current) {
+        clearTimeout(animationTimerRef.current);
+      }
+    };
+  }, [currentStepIndex, isAnimating, animationSteps]);
+
+  useEffect(() => {
+    return () => {
+      if (animationTimerRef.current) {
+        clearTimeout(animationTimerRef.current);
+      }
+    };
+  }, []);
+
   if (loading || !group) {
     return (
       <View style={styles.container}>
@@ -129,14 +191,85 @@ export default function SettleScreen() {
       </View>
 
       <ScrollView style={styles.content}>
-        {settlements.length === 0 && !showDialog && (
+        {settlements.length === 0 && !isAnimating && (
           <View style={styles.emptyState}>
             <Text style={styles.emptyText}>All settled up!</Text>
             <Text style={styles.emptySubtext}>No outstanding balances</Text>
           </View>
         )}
 
-        {settlements.length > 0 && (
+        {isAnimating && animationSteps.length > 0 && currentStepIndex < animationSteps.length && (() => {
+          const currentStep = animationSteps[currentStepIndex];
+          const hasHighlights = currentStep.highlightedIndices.length > 0;
+          const hasResults = currentStep.resultIndices.length > 0;
+          const stepNumber = currentStepIndex + 1;
+          const totalSteps = animationSteps.length;
+
+          let stepTitle = '';
+          let stepDescription = '';
+
+          if (stepNumber === 1 && !hasHighlights && !hasResults) {
+            stepTitle = 'Initial transfers';
+            stepDescription = `${currentStep.settlements.length} transfer${currentStep.settlements.length !== 1 ? 's' : ''} before simplification`;
+          } else if (hasHighlights) {
+            stepTitle = 'Next step';
+            stepDescription = 'Highlighted transfers will be combined';
+          } else if (hasResults) {
+            const isLastStep = currentStepIndex === animationSteps.length - 1;
+            stepTitle = isLastStep ? 'Final result' : 'Result';
+            const resultCount = (currentStep.resultIndices || []).length;
+            stepDescription = isLastStep
+              ? `Simplified to ${currentStep.settlements.length} transfer${currentStep.settlements.length !== 1 ? 's' : ''}`
+              : `${resultCount} new transfer${resultCount !== 1 ? 's' : ''} highlighted in green`;
+          } else {
+            const isLastStep = currentStepIndex === animationSteps.length - 1;
+            stepTitle = isLastStep ? 'Final result' : 'Result';
+            stepDescription = isLastStep
+              ? `Simplified to ${currentStep.settlements.length} transfer${currentStep.settlements.length !== 1 ? 's' : ''}`
+              : `${currentStep.settlements.length} transfer${currentStep.settlements.length !== 1 ? 's' : ''} remaining`;
+          }
+
+          return (
+            <>
+              <View style={styles.infoBox}>
+                <Text style={styles.infoText}>{stepTitle}</Text>
+                <Text style={styles.infoSubtext}>
+                  {stepDescription} ({stepNumber}/{totalSteps})
+                </Text>
+              </View>
+
+              {currentStep.settlements.map((settlement, idx) => {
+                const isHighlighted = currentStep.highlightedIndices.includes(idx);
+                const isResult = (currentStep.resultIndices || []).includes(idx);
+                return (
+                  <View
+                    key={`${currentStepIndex}-${settlement.from.id}-${settlement.to.id}-${idx}`}
+                    style={[
+                      styles.settlementCard,
+                      isHighlighted && styles.settlementCardHighlighted,
+                      isResult && styles.settlementCardResult,
+                    ]}>
+                    <View style={styles.settlementContent}>
+                      <View style={styles.settlementInfo}>
+                        <View style={styles.settlementRow}>
+                          <Text style={styles.fromUser}>{settlement.from.name}</Text>
+                          <Text style={styles.arrow}>→</Text>
+                          <Text style={styles.toUser}>{settlement.to.name}</Text>
+                        </View>
+                        <Text style={styles.amount}>
+                          {currencySymbol}
+                          {formatNumber(settlement.amountScaled)}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                );
+              })}
+            </>
+          );
+        })()}
+
+        {!isAnimating && settlements.length > 0 && (
           <>
             <View style={styles.infoBox}>
               <Text style={styles.infoText}>
@@ -172,38 +305,27 @@ export default function SettleScreen() {
             ))}
 
             <TouchableOpacity
-              style={styles.recalculateButton}
-              onPress={() => setShowDialog(true)}>
-              <Text style={styles.recalculateButtonText}>Recalculate</Text>
+              style={styles.checkboxContainer}
+              onPress={toggleSimplified}>
+              {simplified ? (
+                <CheckSquare color="#2563eb" size={24} />
+              ) : (
+                <Square color="#6b7280" size={24} />
+              )}
+              <Text style={styles.checkboxLabel}>Simplify debts</Text>
             </TouchableOpacity>
+
+            {simplified && (
+              <TouchableOpacity
+                style={styles.explainButton}
+                onPress={startAnimation}>
+                <Play color="#059669" size={16} />
+                <Text style={styles.explainButtonText}>Explain Debts</Text>
+              </TouchableOpacity>
+            )}
           </>
         )}
       </ScrollView>
-
-      <Modal visible={showDialog} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Simplify debts?</Text>
-            <Text style={styles.modalMessage}>
-              Simplifying reduces the number of transfers, but may change who pays whom compared
-              to individual expenses.
-            </Text>
-
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonSecondary]}
-                onPress={() => handleSimplifyChoice(false)}>
-                <Text style={styles.modalButtonTextSecondary}>Not now</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonPrimary]}
-                onPress={() => handleSimplifyChoice(true)}>
-                <Text style={styles.modalButtonTextPrimary}>Simplify</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -281,36 +403,49 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e5e7eb',
   },
+  settlementCardHighlighted: {
+    backgroundColor: '#fef3c7',
+    borderColor: '#fbbf24',
+    borderWidth: 2,
+  },
+  settlementCardResult: {
+    backgroundColor: '#d1fae5',
+    borderColor: '#059669',
+    borderWidth: 2,
+  },
   settlementContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 12,
   },
   settlementInfo: {
     flex: 1,
+    minWidth: 0,
   },
   settlementRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 8,
+    flexWrap: 'wrap',
   },
   fromUser: {
     fontSize: 16,
     fontWeight: '600',
     color: '#111827',
-    flex: 1,
+    flexShrink: 0,
   },
   arrow: {
     fontSize: 16,
     color: '#6b7280',
     marginHorizontal: 8,
+    flexShrink: 0,
   },
   toUser: {
     fontSize: 16,
     fontWeight: '600',
     color: '#111827',
-    flex: 1,
-    textAlign: 'right',
+    flexShrink: 0,
   },
   amount: {
     fontSize: 20,
@@ -333,70 +468,37 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#2563eb',
   },
-  recalculateButton: {
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#ffffff',
     padding: 16,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#2563eb',
-    alignItems: 'center',
+    borderColor: '#e5e7eb',
     marginTop: 8,
-  },
-  recalculateButtonText: {
-    color: '#2563eb',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  modalContent: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 24,
-    width: '100%',
-    maxWidth: 400,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#111827',
-    marginBottom: 12,
-  },
-  modalMessage: {
-    fontSize: 14,
-    color: '#6b7280',
-    lineHeight: 20,
-    marginBottom: 24,
-  },
-  modalButtons: {
-    flexDirection: 'row',
     gap: 12,
   },
-  modalButton: {
-    flex: 1,
-    padding: 14,
-    borderRadius: 8,
+  checkboxLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#111827',
+  },
+  explainButton: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ffffff',
+    padding: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#059669',
+    marginTop: 8,
+    gap: 8,
   },
-  modalButtonSecondary: {
-    backgroundColor: '#f3f4f6',
-  },
-  modalButtonPrimary: {
-    backgroundColor: '#2563eb',
-  },
-  modalButtonTextSecondary: {
+  explainButtonText: {
+    color: '#059669',
     fontSize: 16,
     fontWeight: '600',
-    color: '#374151',
-  },
-  modalButtonTextPrimary: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#ffffff',
   },
 });
