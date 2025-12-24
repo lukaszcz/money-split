@@ -162,7 +162,7 @@ export default function GroupDetailScreen() {
         )}
         {activeTab === 'members' && <MembersTab members={group.members} groupId={group.id} />}
         {activeTab === 'settle' && (
-          <SettleTab expenses={expenses} members={group.members} currencySymbol={currencySymbol} />
+          <SettleTab expenses={expenses} members={group.members} currencySymbol={currencySymbol} groupId={group.id} />
         )}
       </ScrollView>
     </SafeAreaView>
@@ -333,10 +333,12 @@ function MembersTab({ members, groupId }: { members: GroupMember[]; groupId: str
 function SettleTab({
   expenses,
   currencySymbol,
+  groupId,
 }: {
   expenses: Expense[];
   members: GroupMember[];
   currencySymbol: string;
+  groupId: string;
 }) {
   const router = useRouter();
 
@@ -345,7 +347,7 @@ function SettleTab({
       <TouchableOpacity
         style={styles.settleButton}
         onPress={() => {
-          router.push(`/group/${expenses[0]?.groupId}/settle` as any);
+          router.push(`/group/${groupId}/settle` as any);
         }}>
         <Text style={styles.settleButtonText}>Compute Settlements</Text>
       </TouchableOpacity>
