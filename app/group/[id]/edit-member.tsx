@@ -129,9 +129,12 @@ export default function EditMemberScreen() {
 
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}>
-        <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}>
+        <ScrollView
+          style={styles.content}
+          contentContainerStyle={styles.contentContainer}
+          keyboardShouldPersistTaps="handled">
           <View style={styles.section}>
             <Text style={styles.label}>Name</Text>
             <TextInput
@@ -161,16 +164,16 @@ export default function EditMemberScreen() {
             </Text>
           </View>
         </ScrollView>
-      </KeyboardAvoidingView>
 
-      <View style={styles.footer}>
-        <TouchableOpacity
-          style={[styles.updateButton, loading && styles.updateButtonDisabled]}
-          onPress={handleUpdateMember}
-          disabled={loading}>
-          <Text style={styles.updateButtonText}>{loading ? 'Updating...' : 'Update Member'}</Text>
-        </TouchableOpacity>
-      </View>
+        <View style={styles.footer}>
+          <TouchableOpacity
+            style={[styles.updateButton, loading && styles.updateButtonDisabled]}
+            onPress={handleUpdateMember}
+            disabled={loading}>
+            <Text style={styles.updateButtonText}>{loading ? 'Updating...' : 'Update Member'}</Text>
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
