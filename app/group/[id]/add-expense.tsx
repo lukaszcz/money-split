@@ -19,8 +19,8 @@ import {
   sumScaled,
   applyExchangeRate,
 } from '../../../utils/money';
-import { CURRENCIES } from '../../../utils/currencies';
 import { getExchangeRate } from '../../../services/exchangeRateService';
+import { useCurrencyOrder } from '../../../hooks/useCurrencyOrder';
 
 type SplitMethod = 'equal' | 'percentage' | 'exact';
 
@@ -41,6 +41,10 @@ export default function AddExpenseScreen() {
 
   const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  const { currencies: orderedCurrencies, selectCurrency } = useCurrencyOrder(
+    group?.mainCurrencyCode
+  );
 
   useEffect(() => {
     loadGroup();
@@ -237,12 +241,13 @@ export default function AddExpenseScreen() {
 
           {showCurrencyPicker && (
             <ScrollView style={styles.currencyList} nestedScrollEnabled>
-              {CURRENCIES.map(curr => (
+              {orderedCurrencies.map(curr => (
                 <TouchableOpacity
                   key={curr.code}
                   style={styles.currencyItem}
                   onPress={() => {
                     setCurrency(curr.code);
+                    selectCurrency(curr.code);
                     setShowCurrencyPicker(false);
                   }}>
                   <Text style={styles.currencyCode}>{curr.code}</Text>

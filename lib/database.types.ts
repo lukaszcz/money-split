@@ -157,6 +157,29 @@ export type Database = {
           fetched_at?: string;
         };
       };
+      user_currency_preferences: {
+        Row: {
+          id: string;
+          user_id: string;
+          currency_order: string[];
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          currency_order?: string[];
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          currency_order?: string[];
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

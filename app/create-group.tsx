@@ -11,8 +11,8 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { X, Plus, Check, Trash2, User, Mail } from 'lucide-react-native';
 import { createGroup, getUserByEmail, sendInvitationEmail, ensureUserProfile } from '../services/groupRepository';
-import { CURRENCIES } from '../utils/currencies';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCurrencyOrder } from '../hooks/useCurrencyOrder';
 
 interface PendingMember {
   id: string;
@@ -24,7 +24,7 @@ export default function CreateGroupScreen() {
   const router = useRouter();
   const { user: authUser } = useAuth();
   const [groupName, setGroupName] = useState('');
-  const [mainCurrency, setMainCurrency] = useState('USD');
+  const [mainCurrency, setMainCurrency] = useState('');
   const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
   const [pendingMembers, setPendingMembers] = useState<PendingMember[]>([]);
   const [showAddMember, setShowAddMember] = useState(false);
@@ -32,9 +32,17 @@ export default function CreateGroupScreen() {
   const [newMemberEmail, setNewMemberEmail] = useState('');
   const [currentUserName, setCurrentUserName] = useState('');
 
+  const { currencies: orderedCurrencies, selectCurrency, loading: currenciesLoading } = useCurrencyOrder();
+
   useEffect(() => {
     loadCurrentUser();
   }, []);
+
+  useEffect(() => {
+    if (!currenciesLoading && orderedCurrencies.length > 0 && !mainCurrency) {
+      setMainCurrency(orderedCurrencies[0].code);
+    }
+  }, [orderedCurrencies, currenciesLoading, mainCurrency]);
 
   const loadCurrentUser = async () => {
     const userProfile = await ensureUserProfile();
@@ -141,17 +149,18 @@ export default function CreateGroupScreen() {
           <TouchableOpacity
             style={styles.currencyButton}
             onPress={() => setShowCurrencyPicker(!showCurrencyPicker)}>
-            <Text style={styles.currencyButtonText}>{mainCurrency}</Text>
+            <Text style={styles.currencyButtonText}>{mainCurrency || 'Loading...'}</Text>
           </TouchableOpacity>
 
           {showCurrencyPicker && (
             <ScrollView style={styles.currencyList} nestedScrollEnabled>
-              {CURRENCIES.map((currency) => (
+              {orderedCurrencies.map((currency) => (
                 <TouchableOpacity
                   key={currency.code}
                   style={styles.currencyItem}
                   onPress={() => {
                     setMainCurrency(currency.code);
+                    selectCurrency(currency.code);
                     setShowCurrencyPicker(false);
                   }}>
                   <Text style={styles.currencyCode}>{currency.code}</Text>
