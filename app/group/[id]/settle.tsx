@@ -142,9 +142,7 @@ export default function SettleScreen() {
       return;
     }
 
-    const currentStep = animationSteps[currentStepIndex];
-    const hasHighlights = currentStep.highlightedIndices.length > 0;
-    const delay = hasHighlights ? 3000 : 2000;
+    const delay = 1500;
 
     animationTimerRef.current = setTimeout(() => {
       setCurrentStepIndex(prev => prev + 1);
