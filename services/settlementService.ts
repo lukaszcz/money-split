@@ -175,6 +175,57 @@ export function computeSettlementsSimplified(
 export interface SimplificationStep {
   settlements: Settlement[];
   highlightedIndices: number[];
+  resultIndex?: number;
+}
+
+function computeRawDebts(
+  expenses: Expense[],
+  allMembers: GroupMember[]
+): Settlement[] {
+  const debtMap = new Map<string, Map<string, bigint>>();
+  const memberMap = new Map(allMembers.map((m) => [m.id, m]));
+
+  for (const member of allMembers) {
+    debtMap.set(member.id, new Map<string, bigint>());
+  }
+
+  for (const expense of expenses) {
+    const payerId = expense.payerMemberId;
+
+    for (const share of expense.shares) {
+      const memberId = share.memberId;
+      if (memberId === payerId) continue;
+
+      const debtKey = debtMap.get(memberId);
+      if (debtKey) {
+        debtKey.set(payerId, (debtKey.get(payerId) || BigInt(0)) + share.shareInMainScaled);
+      }
+    }
+  }
+
+  const settlements: Settlement[] = [];
+
+  for (const debtorId of debtMap.keys()) {
+    const debtorDebts = debtMap.get(debtorId)!;
+
+    for (const creditorId of debtorDebts.keys()) {
+      const amount = debtorDebts.get(creditorId);
+      if (!amount || amount <= BigInt(0)) continue;
+
+      const debtor = memberMap.get(debtorId);
+      const creditor = memberMap.get(creditorId);
+
+      if (debtor && creditor) {
+        settlements.push({
+          from: debtor,
+          to: creditor,
+          amountScaled: amount,
+        });
+      }
+    }
+  }
+
+  return settlements;
 }
 
 function cloneSettlements(settlements: Settlement[]): Settlement[] {
@@ -295,12 +346,48 @@ function applySimplification(
   return newSettlements;
 }
 
+function findNewTransferIndex(
+  oldSettlements: Settlement[],
+  newSettlements: Settlement[],
+  pair: SimplificationPair
+): number | undefined {
+  if (pair.type === 'merge') {
+    const first = oldSettlements[pair.firstIdx];
+    for (let i = 0; i < newSettlements.length; i++) {
+      const s = newSettlements[i];
+      if (s.from.id === first.from.id && s.to.id === first.to.id) {
+        return i;
+      }
+    }
+  } else if (pair.type === 'opposite') {
+    const first = oldSettlements[pair.firstIdx];
+    const second = oldSettlements[pair.secondIdx];
+    for (let i = 0; i < newSettlements.length; i++) {
+      const s = newSettlements[i];
+      if ((s.from.id === first.from.id && s.to.id === first.to.id) ||
+          (s.from.id === second.from.id && s.to.id === second.to.id)) {
+        return i;
+      }
+    }
+  } else if (pair.type === 'chain') {
+    const first = oldSettlements[pair.firstIdx];
+    const second = oldSettlements[pair.secondIdx];
+    for (let i = 0; i < newSettlements.length; i++) {
+      const s = newSettlements[i];
+      if (s.from.id === first.from.id && s.to.id === second.to.id) {
+        return i;
+      }
+    }
+  }
+  return undefined;
+}
+
 export function computeSimplificationSteps(
   expenses: Expense[],
   allMembers: GroupMember[]
 ): SimplificationStep[] {
   const steps: SimplificationStep[] = [];
-  let currentSettlements = computeSettlementsNoSimplify(expenses, allMembers);
+  let currentSettlements = computeRawDebts(expenses, allMembers);
 
   let pair = findSimplificationPair(currentSettlements);
 
@@ -310,15 +397,18 @@ export function computeSimplificationSteps(
       highlightedIndices: [pair.firstIdx, pair.secondIdx],
     });
 
+    const oldSettlements = currentSettlements;
     currentSettlements = applySimplification(currentSettlements, pair);
+
+    const resultIndex = findNewTransferIndex(oldSettlements, currentSettlements, pair);
+    steps.push({
+      settlements: cloneSettlements(currentSettlements),
+      highlightedIndices: [],
+      resultIndex,
+    });
 
     pair = findSimplificationPair(currentSettlements);
   }
-
-  steps.push({
-    settlements: cloneSettlements(currentSettlements),
-    highlightedIndices: [],
-  });
 
   return steps;
 }

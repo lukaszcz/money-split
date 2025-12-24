@@ -201,6 +201,7 @@ export default function SettleScreen() {
         {isAnimating && animationSteps.length > 0 && currentStepIndex < animationSteps.length && (() => {
           const currentStep = animationSteps[currentStepIndex];
           const hasHighlights = currentStep.highlightedIndices.length > 0;
+          const hasResult = currentStep.resultIndex !== undefined;
           const stepNumber = currentStepIndex + 1;
           const totalSteps = animationSteps.length;
 
@@ -208,8 +209,14 @@ export default function SettleScreen() {
           let stepDescription = '';
 
           if (hasHighlights) {
-            stepTitle = stepNumber === 1 ? 'Initial transfers' : `After step ${stepNumber - 1}`;
+            stepTitle = stepNumber === 1 ? 'Initial transfers' : `After previous step`;
             stepDescription = 'Highlighted transfers will be combined';
+          } else if (hasResult) {
+            const isLastStep = currentStepIndex === animationSteps.length - 1;
+            stepTitle = isLastStep ? 'Final result' : 'Result';
+            stepDescription = isLastStep
+              ? `Simplified to ${currentStep.settlements.length} transfer${currentStep.settlements.length !== 1 ? 's' : ''}`
+              : 'New transfer highlighted in green';
           } else {
             stepTitle = 'Final result';
             stepDescription = `${currentStep.settlements.length} transfer${currentStep.settlements.length !== 1 ? 's' : ''} remaining`;
@@ -226,12 +233,14 @@ export default function SettleScreen() {
 
               {currentStep.settlements.map((settlement, idx) => {
                 const isHighlighted = currentStep.highlightedIndices.includes(idx);
+                const isResult = currentStep.resultIndex === idx;
                 return (
                   <View
                     key={`${currentStepIndex}-${settlement.from.id}-${settlement.to.id}-${idx}`}
                     style={[
                       styles.settlementCard,
                       isHighlighted && styles.settlementCardHighlighted,
+                      isResult && styles.settlementCardResult,
                     ]}>
                     <View style={styles.settlementContent}>
                       <View style={styles.settlementInfo}>
@@ -410,6 +419,11 @@ const styles = StyleSheet.create({
   settlementCardHighlighted: {
     backgroundColor: '#fef3c7',
     borderColor: '#fbbf24',
+    borderWidth: 2,
+  },
+  settlementCardResult: {
+    backgroundColor: '#d1fae5',
+    borderColor: '#059669',
     borderWidth: 2,
   },
   settlementContent: {
