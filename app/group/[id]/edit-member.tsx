@@ -1,4 +1,4 @@
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useEffect } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -127,36 +127,41 @@ export default function EditMemberScreen() {
         <View style={styles.placeholder} />
       </View>
 
-      <View style={styles.content}>
-        <View style={styles.section}>
-          <Text style={styles.label}>Name</Text>
-          <TextInput
-            style={styles.input}
-            value={name}
-            onChangeText={setName}
-            placeholder="Member name"
-            placeholderTextColor="#9ca3af"
-          />
-        </View>
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}>
+        <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
+          <View style={styles.section}>
+            <Text style={styles.label}>Name</Text>
+            <TextInput
+              style={styles.input}
+              value={name}
+              onChangeText={setName}
+              placeholder="Member name"
+              placeholderTextColor="#9ca3af"
+            />
+          </View>
 
-        <View style={styles.section}>
-          <Text style={styles.label}>Email</Text>
-          <TextInput
-            style={styles.input}
-            value={email}
-            onChangeText={setEmail}
-            placeholder="member@example.com"
-            placeholderTextColor="#9ca3af"
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
-          <Text style={styles.hint}>
-            Changing the email will disconnect this member and reconnect them with the new email. If
-            the new email matches an existing user, they will be connected automatically. Otherwise,
-            an invitation will be sent.
-          </Text>
-        </View>
-      </View>
+          <View style={styles.section}>
+            <Text style={styles.label}>Email</Text>
+            <TextInput
+              style={styles.input}
+              value={email}
+              onChangeText={setEmail}
+              placeholder="member@example.com"
+              placeholderTextColor="#9ca3af"
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+            <Text style={styles.hint}>
+              Changing the email will disconnect this member and reconnect them with the new email. If
+              the new email matches an existing user, they will be connected automatically. Otherwise,
+              an invitation will be sent.
+            </Text>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       <View style={styles.footer}>
         <TouchableOpacity
@@ -195,8 +200,13 @@ const styles = StyleSheet.create({
   placeholder: {
     width: 32,
   },
+  keyboardAvoidingView: {
+    flex: 1,
+  },
   content: {
     flex: 1,
+  },
+  contentContainer: {
     padding: 16,
   },
   section: {

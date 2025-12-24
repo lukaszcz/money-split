@@ -6,6 +6,8 @@ import {
   StyleSheet,
   ScrollView,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useEffect } from 'react';
@@ -133,9 +135,13 @@ export default function CreateGroupScreen() {
         <View style={styles.placeholder} />
       </View>
 
-      <ScrollView style={styles.content}>
-        <View style={styles.section}>
-          <Text style={styles.label}>Group Name *</Text>
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}>
+        <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
+          <View style={styles.section}>
+            <Text style={styles.label}>Group Name *</Text>
           <TextInput
             style={styles.input}
             value={groupName}
@@ -264,7 +270,8 @@ export default function CreateGroupScreen() {
             </Text>
           )}
         </View>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       <View style={styles.footer}>
         <TouchableOpacity style={styles.createButton} onPress={handleCreate}>
@@ -300,8 +307,14 @@ const styles = StyleSheet.create({
   placeholder: {
     width: 32,
   },
+  keyboardAvoidingView: {
+    flex: 1,
+  },
   content: {
     flex: 1,
+  },
+  contentContainer: {
+    paddingBottom: 20,
   },
   section: {
     padding: 16,

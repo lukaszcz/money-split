@@ -6,6 +6,8 @@ import {
   StyleSheet,
   ScrollView,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useEffect } from 'react';
@@ -578,10 +580,15 @@ export default function AddExpenseScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.content}>
-        {paymentType === 'expense' && renderExpenseForm()}
-        {paymentType === 'transfer' && renderTransferForm()}
-      </ScrollView>
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}>
+        <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
+          {paymentType === 'expense' && renderExpenseForm()}
+          {paymentType === 'transfer' && renderTransferForm()}
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       <View style={styles.footer}>
         <TouchableOpacity
@@ -648,8 +655,14 @@ const styles = StyleSheet.create({
     color: '#2563eb',
     fontWeight: '600',
   },
+  keyboardAvoidingView: {
+    flex: 1,
+  },
   content: {
     flex: 1,
+  },
+  contentContainer: {
+    paddingBottom: 20,
   },
   section: {
     padding: 16,

@@ -6,6 +6,8 @@ import {
   StyleSheet,
   ScrollView,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useEffect } from 'react';
@@ -276,9 +278,13 @@ export default function EditExpenseScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.content}>
-        <View style={styles.section}>
-          <Text style={styles.label}>Description</Text>
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}>
+        <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
+          <View style={styles.section}>
+            <Text style={styles.label}>Description</Text>
           <TextInput
             style={styles.input}
             value={description}
@@ -449,7 +455,8 @@ export default function EditExpenseScreen() {
             ))}
           </View>
         )}
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       <View style={styles.footer}>
         <TouchableOpacity
@@ -491,8 +498,14 @@ const styles = StyleSheet.create({
   placeholder: {
     width: 32,
   },
+  keyboardAvoidingView: {
+    flex: 1,
+  },
   content: {
     flex: 1,
+  },
+  contentContainer: {
+    paddingBottom: 20,
   },
   section: {
     padding: 16,
