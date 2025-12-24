@@ -7,6 +7,7 @@ import { getAllGroups, GroupWithMembers } from '../../services/groupRepository';
 import { getGroupExpenses } from '../../services/groupRepository';
 import { computeBalances } from '../../services/settlementService';
 import { formatCurrency } from '../../utils/money';
+import { getOrderedGroups } from '../../services/groupPreferenceService';
 
 interface GroupWithSettledStatus extends GroupWithMembers {
   isSettled?: boolean;
@@ -34,9 +35,10 @@ export default function GroupsScreen() {
 
   const loadGroups = useCallback(async () => {
     const fetchedGroups = await getAllGroups();
+    const orderedGroups = await getOrderedGroups(fetchedGroups);
 
     const groupsWithSettledStatus = await Promise.all(
-      fetchedGroups.map(async (group) => ({
+      orderedGroups.map(async (group) => ({
         ...group,
         isSettled: await checkIfGroupIsSettled(group),
       }))
