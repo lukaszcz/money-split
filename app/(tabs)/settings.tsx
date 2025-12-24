@@ -1,4 +1,5 @@
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, TextInput, Modal, ActivityIndicator } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useEffect } from 'react';
 import { RefreshCw, LogOut, User, Edit2, Check, X, Trash2 } from 'lucide-react-native';
 import { getLastRefreshTime, refreshAllRates, getCachedRates } from '../../services/exchangeRateService';
@@ -169,8 +170,8 @@ export default function SettingsScreen() {
   };
 
   return (
-    <>
-      <ScrollView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <ScrollView>
         <View style={styles.header}>
           <Text style={styles.title}>Settings</Text>
         </View>
@@ -299,7 +300,7 @@ export default function SettingsScreen() {
       </View>
       </ScrollView>
 
-      <Modal visible={deletingAccount} transparent animationType="fade">
+      <Modal visible={deletingAccount} transparent animationType="fade" presentationStyle="overFullScreen">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <ActivityIndicator size="large" color="#2563eb" />
@@ -308,7 +309,7 @@ export default function SettingsScreen() {
           </View>
         </View>
       </Modal>
-    </>
+    </SafeAreaView>
   );
 }
 
@@ -319,7 +320,6 @@ const styles = StyleSheet.create({
   },
   header: {
     padding: 20,
-    paddingTop: 60,
     backgroundColor: '#ffffff',
     borderBottomWidth: 1,
     borderBottomColor: '#e5e7eb',

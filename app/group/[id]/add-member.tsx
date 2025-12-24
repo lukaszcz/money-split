@@ -1,4 +1,5 @@
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
@@ -77,7 +78,7 @@ export default function AddMemberScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <ArrowLeft color="#111827" size={24} />
@@ -86,49 +87,58 @@ export default function AddMemberScreen() {
         <View style={styles.placeholder} />
       </View>
 
-      <View style={styles.content}>
-        <View style={styles.section}>
-          <Text style={styles.label}>Name</Text>
-          <TextInput
-            style={styles.input}
-            value={name}
-            onChangeText={setName}
-            placeholder="Member name"
-            placeholderTextColor="#9ca3af"
-          />
-          <Text style={styles.hint}>
-            Required if email is not provided. If email matches an existing user, their name will be
-            used if you leave this blank.
-          </Text>
-        </View>
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}>
+        <ScrollView
+          style={styles.content}
+          contentContainerStyle={styles.contentContainer}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={true}>
+          <View style={styles.section}>
+            <Text style={styles.label}>Name</Text>
+            <TextInput
+              style={styles.input}
+              value={name}
+              onChangeText={setName}
+              placeholder="Member name"
+              placeholderTextColor="#9ca3af"
+            />
+            <Text style={styles.hint}>
+              Required if email is not provided. If email matches an existing user, their name will be
+              used if you leave this blank.
+            </Text>
+          </View>
 
-        <View style={styles.section}>
-          <Text style={styles.label}>Email (optional)</Text>
-          <TextInput
-            style={styles.input}
-            value={email}
-            onChangeText={setEmail}
-            placeholder="member@example.com"
-            placeholderTextColor="#9ca3af"
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
-          <Text style={styles.hint}>
-            If provided, the member will be connected to their account when they register. An
-            invitation email will be sent if they don't have an account yet.
-          </Text>
-        </View>
-      </View>
+          <View style={styles.section}>
+            <Text style={styles.label}>Email (optional)</Text>
+            <TextInput
+              style={styles.input}
+              value={email}
+              onChangeText={setEmail}
+              placeholder="member@example.com"
+              placeholderTextColor="#9ca3af"
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+            <Text style={styles.hint}>
+              If provided, the member will be connected to their account when they register. An
+              invitation email will be sent if they don't have an account yet.
+            </Text>
+          </View>
+        </ScrollView>
 
-      <View style={styles.footer}>
-        <TouchableOpacity
-          style={[styles.addButton, loading && styles.addButtonDisabled]}
-          onPress={handleAddMember}
-          disabled={loading}>
-          <Text style={styles.addButtonText}>{loading ? 'Adding...' : 'Add Member'}</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+        <View style={styles.footer}>
+          <TouchableOpacity
+            style={[styles.addButton, loading && styles.addButtonDisabled]}
+            onPress={handleAddMember}
+            disabled={loading}>
+            <Text style={styles.addButtonText}>{loading ? 'Adding...' : 'Add Member'}</Text>
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
@@ -142,7 +152,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 16,
-    paddingTop: 60,
     backgroundColor: '#ffffff',
     borderBottomWidth: 1,
     borderBottomColor: '#e5e7eb',
@@ -158,9 +167,15 @@ const styles = StyleSheet.create({
   placeholder: {
     width: 32,
   },
+  keyboardAvoidingView: {
+    flex: 1,
+  },
   content: {
     flex: 1,
+  },
+  contentContainer: {
     padding: 16,
+    paddingBottom: 100,
   },
   section: {
     marginBottom: 24,

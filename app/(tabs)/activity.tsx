@@ -1,4 +1,5 @@
 import { View, Text, FlatList, StyleSheet, RefreshControl } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useEffect, useCallback } from 'react';
 import { getAllGroups, getGroupExpenses, getGroupMember, Expense } from '../../services/groupRepository';
 import { formatNumber } from '../../utils/money';
@@ -76,7 +77,7 @@ export default function ActivityScreen() {
   );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <Text style={styles.title}>Activity</Text>
       </View>
@@ -99,7 +100,7 @@ export default function ActivityScreen() {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -110,7 +111,6 @@ const styles = StyleSheet.create({
   },
   header: {
     padding: 20,
-    paddingTop: 60,
     backgroundColor: '#ffffff',
     borderBottomWidth: 1,
     borderBottomColor: '#e5e7eb',

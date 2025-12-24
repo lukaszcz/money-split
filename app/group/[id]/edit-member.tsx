@@ -1,4 +1,5 @@
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useEffect } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
@@ -104,7 +105,7 @@ export default function EditMemberScreen() {
 
   if (initialLoading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <ArrowLeft color="#111827" size={24} />
@@ -112,12 +113,12 @@ export default function EditMemberScreen() {
           <Text style={styles.title}>Loading...</Text>
           <View style={styles.placeholder} />
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <ArrowLeft color="#111827" size={24} />
@@ -126,46 +127,55 @@ export default function EditMemberScreen() {
         <View style={styles.placeholder} />
       </View>
 
-      <View style={styles.content}>
-        <View style={styles.section}>
-          <Text style={styles.label}>Name</Text>
-          <TextInput
-            style={styles.input}
-            value={name}
-            onChangeText={setName}
-            placeholder="Member name"
-            placeholderTextColor="#9ca3af"
-          />
-        </View>
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}>
+        <ScrollView
+          style={styles.content}
+          contentContainerStyle={styles.contentContainer}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={true}>
+          <View style={styles.section}>
+            <Text style={styles.label}>Name</Text>
+            <TextInput
+              style={styles.input}
+              value={name}
+              onChangeText={setName}
+              placeholder="Member name"
+              placeholderTextColor="#9ca3af"
+            />
+          </View>
 
-        <View style={styles.section}>
-          <Text style={styles.label}>Email</Text>
-          <TextInput
-            style={styles.input}
-            value={email}
-            onChangeText={setEmail}
-            placeholder="member@example.com"
-            placeholderTextColor="#9ca3af"
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
-          <Text style={styles.hint}>
-            Changing the email will disconnect this member and reconnect them with the new email. If
-            the new email matches an existing user, they will be connected automatically. Otherwise,
-            an invitation will be sent.
-          </Text>
-        </View>
-      </View>
+          <View style={styles.section}>
+            <Text style={styles.label}>Email</Text>
+            <TextInput
+              style={styles.input}
+              value={email}
+              onChangeText={setEmail}
+              placeholder="member@example.com"
+              placeholderTextColor="#9ca3af"
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+            <Text style={styles.hint}>
+              Changing the email will disconnect this member and reconnect them with the new email. If
+              the new email matches an existing user, they will be connected automatically. Otherwise,
+              an invitation will be sent.
+            </Text>
+          </View>
+        </ScrollView>
 
-      <View style={styles.footer}>
-        <TouchableOpacity
-          style={[styles.updateButton, loading && styles.updateButtonDisabled]}
-          onPress={handleUpdateMember}
-          disabled={loading}>
-          <Text style={styles.updateButtonText}>{loading ? 'Updating...' : 'Update Member'}</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+        <View style={styles.footer}>
+          <TouchableOpacity
+            style={[styles.updateButton, loading && styles.updateButtonDisabled]}
+            onPress={handleUpdateMember}
+            disabled={loading}>
+            <Text style={styles.updateButtonText}>{loading ? 'Updating...' : 'Update Member'}</Text>
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
@@ -179,7 +189,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 16,
-    paddingTop: 60,
     backgroundColor: '#ffffff',
     borderBottomWidth: 1,
     borderBottomColor: '#e5e7eb',
@@ -195,9 +204,15 @@ const styles = StyleSheet.create({
   placeholder: {
     width: 32,
   },
+  keyboardAvoidingView: {
+    flex: 1,
+  },
   content: {
     flex: 1,
+  },
+  contentContainer: {
     padding: 16,
+    paddingBottom: 100,
   },
   section: {
     marginBottom: 24,

@@ -1,4 +1,5 @@
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useCallback, useEffect } from 'react';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { ArrowLeft, Plus, User, Mail, Link, Trash2 } from 'lucide-react-native';
@@ -48,14 +49,14 @@ export default function GroupDetailScreen() {
 
   if (loading || !group) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()}>
             <ArrowLeft color="#111827" size={24} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Loading...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
@@ -98,7 +99,7 @@ export default function GroupDetailScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <ArrowLeft color="#111827" size={24} />
@@ -161,10 +162,10 @@ export default function GroupDetailScreen() {
         )}
         {activeTab === 'members' && <MembersTab members={group.members} groupId={group.id} />}
         {activeTab === 'settle' && (
-          <SettleTab expenses={expenses} members={group.members} currencySymbol={currencySymbol} />
+          <SettleTab expenses={expenses} members={group.members} currencySymbol={currencySymbol} groupId={group.id} balances={balances} />
         )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -332,19 +333,34 @@ function MembersTab({ members, groupId }: { members: GroupMember[]; groupId: str
 function SettleTab({
   expenses,
   currencySymbol,
+  groupId,
+  balances,
 }: {
   expenses: Expense[];
   members: GroupMember[];
   currencySymbol: string;
+  groupId: string;
+  balances: Map<string, bigint>;
 }) {
   const router = useRouter();
+
+  const hasNonZeroBalances = Array.from(balances.values()).some((balance) => balance !== 0n);
+
+  if (!hasNonZeroBalances) {
+    return (
+      <View style={styles.emptyState}>
+        <Text style={styles.settledUpText}>All settled up!</Text>
+        <Text style={styles.settledUpSubtext}>No outstanding balances</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.tabContent}>
       <TouchableOpacity
         style={styles.settleButton}
         onPress={() => {
-          router.push(`/group/${expenses[0]?.groupId}/settle` as any);
+          router.push(`/group/${groupId}/settle` as any);
         }}>
         <Text style={styles.settleButtonText}>Compute Settlements</Text>
       </TouchableOpacity>
@@ -366,7 +382,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
-    paddingTop: 60,
     backgroundColor: '#ffffff',
     borderBottomWidth: 1,
     borderBottomColor: '#e5e7eb',
@@ -450,6 +465,16 @@ const styles = StyleSheet.create({
   emptySubtext: {
     fontSize: 14,
     color: '#9ca3af',
+  },
+  settledUpText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#059669',
+    marginBottom: 8,
+  },
+  settledUpSubtext: {
+    fontSize: 14,
+    color: '#6b7280',
   },
   expenseCard: {
     backgroundColor: '#ffffff',

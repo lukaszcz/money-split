@@ -6,7 +6,10 @@ import {
   StyleSheet,
   ScrollView,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useEffect } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { X, Check } from 'lucide-react-native';
@@ -551,7 +554,7 @@ export default function AddExpenseScreen() {
   );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.closeButton}>
           <X color="#111827" size={24} />
@@ -577,22 +580,31 @@ export default function AddExpenseScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.content}>
-        {paymentType === 'expense' && renderExpenseForm()}
-        {paymentType === 'transfer' && renderTransferForm()}
-      </ScrollView>
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}>
+        <ScrollView
+          style={styles.content}
+          contentContainerStyle={styles.contentContainer}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={true}>
+          {paymentType === 'expense' && renderExpenseForm()}
+          {paymentType === 'transfer' && renderTransferForm()}
+        </ScrollView>
 
-      <View style={styles.footer}>
-        <TouchableOpacity
-          style={[styles.saveButton, saving && styles.saveButtonDisabled]}
-          onPress={handleSave}
-          disabled={saving}>
-          <Text style={styles.saveButtonText}>
-            {saving ? 'Saving...' : paymentType === 'expense' ? 'Save Expense' : 'Save Transfer'}
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+        <View style={styles.footer}>
+          <TouchableOpacity
+            style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+            onPress={handleSave}
+            disabled={saving}>
+            <Text style={styles.saveButtonText}>
+              {saving ? 'Saving...' : paymentType === 'expense' ? 'Save Expense' : 'Save Transfer'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
@@ -606,7 +618,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 16,
-    paddingTop: 60,
     backgroundColor: '#ffffff',
     borderBottomWidth: 1,
     borderBottomColor: '#e5e7eb',
@@ -648,8 +659,14 @@ const styles = StyleSheet.create({
     color: '#2563eb',
     fontWeight: '600',
   },
+  keyboardAvoidingView: {
+    flex: 1,
+  },
   content: {
     flex: 1,
+  },
+  contentContainer: {
+    paddingBottom: 100,
   },
   section: {
     padding: 16,
