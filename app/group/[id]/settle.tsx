@@ -1,7 +1,7 @@
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Modal, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
 import { useState, useEffect, useRef } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, ArrowRight, Play } from 'lucide-react-native';
+import { ArrowLeft, ArrowRight, Play, CheckSquare, Square } from 'lucide-react-native';
 import { getGroup, getGroupExpenses, GroupWithMembers, createExpense } from '../../../services/groupRepository';
 import {
   computeSettlementsNoSimplify,
@@ -19,8 +19,7 @@ export default function SettleScreen() {
   const router = useRouter();
   const [group, setGroup] = useState<GroupWithMembers | null>(null);
   const [settlements, setSettlements] = useState<Settlement[]>([]);
-  const [showDialog, setShowDialog] = useState(true);
-  const [simplified, setSimplified] = useState(false);
+  const [simplified, setSimplified] = useState(true);
   const [loading, setLoading] = useState(true);
   const [isAnimating, setIsAnimating] = useState(false);
   const [animationSteps, setAnimationSteps] = useState<SimplificationStep[]>([]);
@@ -38,27 +37,28 @@ export default function SettleScreen() {
     if (!fetchedGroup) return;
 
     const expenses = await getGroupExpenses(id);
+    const settlementsSimplified = computeSettlementsSimplified(expenses, fetchedGroup.members);
 
     setGroup(fetchedGroup);
+    setSettlements(settlementsSimplified);
     setLoading(false);
   };
 
-  const handleSimplifyChoice = async (simplify: boolean) => {
+  const toggleSimplified = async () => {
     if (!group || !id || typeof id !== 'string') return;
 
     const expenses = await getGroupExpenses(id);
+    const newSimplified = !simplified;
 
-    if (simplify) {
+    if (newSimplified) {
       const settlementsSimplified = computeSettlementsSimplified(expenses, group.members);
       setSettlements(settlementsSimplified);
-      setSimplified(true);
     } else {
       const settlementsNormal = computeSettlementsNoSimplify(expenses, group.members);
       setSettlements(settlementsNormal);
-      setSimplified(false);
     }
 
-    setShowDialog(false);
+    setSimplified(newSimplified);
   };
 
   const handleAddTransfer = async (settlement: Settlement) => {
@@ -191,7 +191,7 @@ export default function SettleScreen() {
       </View>
 
       <ScrollView style={styles.content}>
-        {settlements.length === 0 && !showDialog && !isAnimating && (
+        {settlements.length === 0 && !isAnimating && (
           <View style={styles.emptyState}>
             <Text style={styles.emptyText}>All settled up!</Text>
             <Text style={styles.emptySubtext}>No outstanding balances</Text>
@@ -304,6 +304,17 @@ export default function SettleScreen() {
               </View>
             ))}
 
+            <TouchableOpacity
+              style={styles.checkboxContainer}
+              onPress={toggleSimplified}>
+              {simplified ? (
+                <CheckSquare color="#2563eb" size={24} />
+              ) : (
+                <Square color="#6b7280" size={24} />
+              )}
+              <Text style={styles.checkboxLabel}>Simplify debts</Text>
+            </TouchableOpacity>
+
             {simplified && (
               <TouchableOpacity
                 style={styles.explainButton}
@@ -312,40 +323,9 @@ export default function SettleScreen() {
                 <Text style={styles.explainButtonText}>Explain Debts</Text>
               </TouchableOpacity>
             )}
-
-            <TouchableOpacity
-              style={styles.recalculateButton}
-              onPress={() => setShowDialog(true)}>
-              <Text style={styles.recalculateButtonText}>Recalculate</Text>
-            </TouchableOpacity>
           </>
         )}
       </ScrollView>
-
-      <Modal visible={showDialog} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Simplify debts?</Text>
-            <Text style={styles.modalMessage}>
-              Simplifying reduces the number of transfers, but may change who pays whom compared
-              to individual expenses.
-            </Text>
-
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonSecondary]}
-                onPress={() => handleSimplifyChoice(false)}>
-                <Text style={styles.modalButtonTextSecondary}>Not now</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonPrimary]}
-                onPress={() => handleSimplifyChoice(true)}>
-                <Text style={styles.modalButtonTextPrimary}>Simplify</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -488,6 +468,22 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#2563eb',
   },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    padding: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    marginTop: 8,
+    gap: 12,
+  },
+  checkboxLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#111827',
+  },
   explainButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -504,71 +500,5 @@ const styles = StyleSheet.create({
     color: '#059669',
     fontSize: 16,
     fontWeight: '600',
-  },
-  recalculateButton: {
-    backgroundColor: '#ffffff',
-    padding: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#2563eb',
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  recalculateButtonText: {
-    color: '#2563eb',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  modalContent: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 24,
-    width: '100%',
-    maxWidth: 400,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#111827',
-    marginBottom: 12,
-  },
-  modalMessage: {
-    fontSize: 14,
-    color: '#6b7280',
-    lineHeight: 20,
-    marginBottom: 24,
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  modalButton: {
-    flex: 1,
-    padding: 14,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  modalButtonSecondary: {
-    backgroundColor: '#f3f4f6',
-  },
-  modalButtonPrimary: {
-    backgroundColor: '#2563eb',
-  },
-  modalButtonTextSecondary: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#374151',
-  },
-  modalButtonTextPrimary: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#ffffff',
   },
 });
