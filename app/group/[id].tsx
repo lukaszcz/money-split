@@ -218,12 +218,16 @@ function ExpensesTab({
         const payer = memberMap.get(expense.payerMemberId);
         const convertedAmount = convertedAmounts.get(expense.id);
         const showConversion = expense.currencyCode !== group.mainCurrencyCode && convertedAmount;
+        const isTransfer = expense.paymentType === 'transfer';
+        const editRoute = isTransfer
+          ? `/group/${group.id}/edit-transfer?expenseId=${expense.id}`
+          : `/group/${group.id}/edit-expense?expenseId=${expense.id}`;
 
         return (
           <TouchableOpacity
             key={expense.id}
             style={styles.expenseCard}
-            onPress={() => router.push(`/group/${group.id}/edit-expense?expenseId=${expense.id}` as any)}>
+            onPress={() => router.push(editRoute as any)}>
             <View style={styles.expenseHeader}>
               <Text style={styles.expenseDescription}>{expense.description || 'Expense'}</Text>
               <View style={styles.expenseAmountContainer}>
