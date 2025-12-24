@@ -175,7 +175,7 @@ export function computeSettlementsSimplified(
 export interface SimplificationStep {
   settlements: Settlement[];
   highlightedIndices: number[];
-  resultIndex?: number;
+  resultIndices: number[];
 }
 
 function computeRawDebts(
@@ -242,10 +242,6 @@ interface SimplificationPair {
   type: 'merge' | 'opposite' | 'chain';
 }
 
-function getResultIndex(pair: SimplificationPair): number {
-  return Math.min(pair.firstIdx, pair.secondIdx);
-}
-
 function findSimplificationPair(settlements: Settlement[]): SimplificationPair | null {
   for (let i = 0; i < settlements.length; i++) {
     for (let j = 0; j < settlements.length; j++) {
@@ -285,19 +281,44 @@ function findSimplificationPair(settlements: Settlement[]): SimplificationPair |
   return null;
 }
 
+function getResultIndices(
+  settlements: Settlement[],
+  pair: SimplificationPair
+): number[] {
+  const { firstIdx, secondIdx, type } = pair;
+  const first = settlements[firstIdx];
+  const second = settlements[secondIdx];
+  const idx = Math.min(firstIdx, secondIdx);
+  if (type === 'merge') {
+    return [idx];
+  } else if (type === 'opposite') {
+    if (first.amountScaled == second.amountScaled) {
+      return [];
+    } else {
+      return [idx];
+    }
+  } else {
+    if (first.amountScaled == second.amountScaled) {
+      return [idx];
+    } else {
+      return [idx, idx + 1];
+    }
+  }
+}
+
 function applySimplification(
   settlements: Settlement[],
   pair: SimplificationPair
-): Settlement[] {
+): [Settlement[], number[]] {
   const { firstIdx, secondIdx, type } = pair;
   const first = settlements[firstIdx];
   const second = settlements[secondIdx];
   const newSettlements = settlements.filter((_, idx) => idx !== firstIdx && idx !== secondIdx);
-  const resultIdx = getResultIndex(pair);
+  const resultIndices = getResultIndex(settlements, pair);
 
   if (type === 'merge') {
     const net = first.amountScaled + second.amountScaled;
-    newSettlements.splice(resultIdx, 0, {
+    newSettlements.splice(resultIndices[0], 0, {
       from: first.from,
       to: first.to,
       amountScaled: net,
@@ -305,13 +326,13 @@ function applySimplification(
   } else if (type === 'opposite') {
     const net = first.amountScaled - second.amountScaled;
     if (net > BigInt(0)) {
-      newSettlements.splice(resultIdx, 0, {
+      newSettlements.splice(resultIndices[0], 0, {
         from: first.from,
         to: first.to,
         amountScaled: net,
       });
     } else if (net < BigInt(0)) {
-      newSettlements.splice(resultIdx, 0, {
+      newSettlements.splice(resultIndices[0], 0, {
         from: second.from,
         to: second.to,
         amountScaled: -net,
@@ -325,8 +346,8 @@ function applySimplification(
     const remainingFirst = first.amountScaled - transferAmount;
     const remainingSecond = second.amountScaled - transferAmount;
 
-    if (remainingFirst > BigInt(0)) {
-      newSettlements.splice(resultIdx, 0, {
+    if (remainingFirst > BinInt(0)) {
+      newSettlements.splice(resultIndices[0], 0, {
         from: first.from,
         to: first.to,
         amountScaled: remainingFirst,
@@ -334,21 +355,21 @@ function applySimplification(
     }
 
     if (remainingSecond > BigInt(0)) {
-      newSettlements.splice(resultIdx, 0, {
+      newSettlements.splice(resultIndices[0], 0, {
         from: second.from,
         to: second.to,
         amountScaled: remainingSecond,
       });
     }
 
-    newSettlements.splice(resultIdx, 0, {
+    newSettlements.splice(resultIndices.at(-1), 0, {
       from: first.from,
       to: second.to,
       amountScaled: transferAmount,
     });
   }
 
-  return newSettlements;
+  return [newSettlements, resultIndices];
 }
 
 export function computeSimplificationSteps(
@@ -371,15 +392,15 @@ export function computeSimplificationSteps(
       highlightedIndices: [pair.firstIdx, pair.secondIdx],
     });
 
-    currentSettlements = applySimplification(currentSettlements, pair);
+    const [newSettlements, resultIndices] = applySimplification(currentSettlements, pair);
 
-    const resultIndex = getResultIndex(pair);
     steps.push({
-      settlements: cloneSettlements(currentSettlements),
+      settlements: cloneSettlements(newSettlements),
       highlightedIndices: [],
-      resultIndex,
+      resultIndices,
     });
 
+    currentSettlements = newSettlements;
     pair = findSimplificationPair(currentSettlements);
   }
 
