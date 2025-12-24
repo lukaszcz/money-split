@@ -142,7 +142,7 @@ export default function SettleScreen() {
       return;
     }
 
-    const delay = 1500;
+    const delay = 2500;
 
     animationTimerRef.current = setTimeout(() => {
       setCurrentStepIndex(prev => prev + 1);
