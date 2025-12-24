@@ -1,12 +1,14 @@
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Modal, Alert } from 'react-native';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, ArrowRight } from 'lucide-react-native';
+import { ArrowLeft, ArrowRight, Play } from 'lucide-react-native';
 import { getGroup, getGroupExpenses, GroupWithMembers, createExpense } from '../../../services/groupRepository';
 import {
   computeSettlementsNoSimplify,
   computeSettlementsSimplified,
   Settlement,
+  computeSimplificationSteps,
+  SimplificationStep,
 } from '../../../services/settlementService';
 import { formatNumber, toScaled, applyExchangeRate } from '../../../utils/money';
 import { getCurrencySymbol } from '../../../utils/currencies';
@@ -20,6 +22,10 @@ export default function SettleScreen() {
   const [showDialog, setShowDialog] = useState(true);
   const [simplified, setSimplified] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [animationSteps, setAnimationSteps] = useState<SimplificationStep[]>([]);
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const animationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     loadData();
@@ -101,6 +107,44 @@ export default function SettleScreen() {
     }
   };
 
+  const startAnimation = async () => {
+    if (!group || !id || typeof id !== 'string') return;
+
+    const expenses = await getGroupExpenses(id);
+    const steps = computeSimplificationSteps(expenses, group.members);
+
+    setAnimationSteps(steps);
+    setCurrentStepIndex(0);
+    setIsAnimating(true);
+  };
+
+  useEffect(() => {
+    if (!isAnimating || animationSteps.length === 0) return;
+
+    if (currentStepIndex >= animationSteps.length) {
+      setIsAnimating(false);
+      return;
+    }
+
+    animationTimerRef.current = setTimeout(() => {
+      setCurrentStepIndex(prev => prev + 1);
+    }, 1500);
+
+    return () => {
+      if (animationTimerRef.current) {
+        clearTimeout(animationTimerRef.current);
+      }
+    };
+  }, [currentStepIndex, isAnimating, animationSteps]);
+
+  useEffect(() => {
+    return () => {
+      if (animationTimerRef.current) {
+        clearTimeout(animationTimerRef.current);
+      }
+    };
+  }, []);
+
   if (loading || !group) {
     return (
       <View style={styles.container}>
@@ -129,14 +173,51 @@ export default function SettleScreen() {
       </View>
 
       <ScrollView style={styles.content}>
-        {settlements.length === 0 && !showDialog && (
+        {settlements.length === 0 && !showDialog && !isAnimating && (
           <View style={styles.emptyState}>
             <Text style={styles.emptyText}>All settled up!</Text>
             <Text style={styles.emptySubtext}>No outstanding balances</Text>
           </View>
         )}
 
-        {settlements.length > 0 && (
+        {isAnimating && animationSteps.length > 0 && currentStepIndex < animationSteps.length && (
+          <>
+            <View style={styles.infoBox}>
+              <Text style={styles.infoText}>Simplifying debts</Text>
+              <Text style={styles.infoSubtext}>
+                Step {currentStepIndex + 1} of {animationSteps.length}
+              </Text>
+            </View>
+
+            {animationSteps[currentStepIndex].settlements.map((settlement, idx) => {
+              const isHighlighted = animationSteps[currentStepIndex].highlightedIndices.includes(idx);
+              return (
+                <View
+                  key={idx}
+                  style={[
+                    styles.settlementCard,
+                    isHighlighted && styles.settlementCardHighlighted,
+                  ]}>
+                  <View style={styles.settlementContent}>
+                    <View style={styles.settlementInfo}>
+                      <View style={styles.settlementRow}>
+                        <Text style={styles.fromUser}>{settlement.from.name}</Text>
+                        <Text style={styles.arrow}>→</Text>
+                        <Text style={styles.toUser}>{settlement.to.name}</Text>
+                      </View>
+                      <Text style={styles.amount}>
+                        {currencySymbol}
+                        {formatNumber(settlement.amountScaled)}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              );
+            })}
+          </>
+        )}
+
+        {!isAnimating && settlements.length > 0 && (
           <>
             <View style={styles.infoBox}>
               <Text style={styles.infoText}>
@@ -170,6 +251,15 @@ export default function SettleScreen() {
                 </View>
               </View>
             ))}
+
+            {simplified && (
+              <TouchableOpacity
+                style={styles.explainButton}
+                onPress={startAnimation}>
+                <Play color="#059669" size={16} />
+                <Text style={styles.explainButtonText}>Explain Debts</Text>
+              </TouchableOpacity>
+            )}
 
             <TouchableOpacity
               style={styles.recalculateButton}
@@ -281,6 +371,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e5e7eb',
   },
+  settlementCardHighlighted: {
+    backgroundColor: '#fef3c7',
+    borderColor: '#fbbf24',
+    borderWidth: 2,
+  },
   settlementContent: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -335,6 +430,23 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#2563eb',
+  },
+  explainButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ffffff',
+    padding: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#059669',
+    marginTop: 8,
+    gap: 8,
+  },
+  explainButtonText: {
+    color: '#059669',
+    fontSize: 16,
+    fontWeight: '600',
   },
   recalculateButton: {
     backgroundColor: '#ffffff',

@@ -171,3 +171,111 @@ export function computeSettlementsSimplified(
 
   return settlements;
 }
+
+export interface SimplificationStep {
+  settlements: Settlement[];
+  highlightedIndices: number[];
+}
+
+function settlementsEqual(s1: Settlement, s2: Settlement): boolean {
+  return s1.from.id === s2.from.id && s1.to.id === s2.to.id && s1.amountScaled === s2.amountScaled;
+}
+
+export function computeSimplificationSteps(
+  expenses: Expense[],
+  allMembers: GroupMember[]
+): SimplificationStep[] {
+  const steps: SimplificationStep[] = [];
+
+  let currentSettlements = computeSettlementsNoSimplify(expenses, allMembers);
+
+  steps.push({
+    settlements: [...currentSettlements],
+    highlightedIndices: [],
+  });
+
+  let changed = true;
+  while (changed) {
+    changed = false;
+
+    for (let i = 0; i < currentSettlements.length && !changed; i++) {
+      for (let j = i + 1; j < currentSettlements.length && !changed; j++) {
+        const s1 = currentSettlements[i];
+        const s2 = currentSettlements[j];
+
+        if (s1.from.id === s2.to.id && s2.from.id === s1.to.id) {
+          steps.push({
+            settlements: [...currentSettlements],
+            highlightedIndices: [i, j],
+          });
+
+          const net = s1.amountScaled - s2.amountScaled;
+          const newSettlements = currentSettlements.filter((_, idx) => idx !== i && idx !== j);
+
+          if (net > BigInt(0)) {
+            newSettlements.push({
+              from: s1.from,
+              to: s1.to,
+              amountScaled: net,
+            });
+          } else if (net < BigInt(0)) {
+            newSettlements.push({
+              from: s2.from,
+              to: s2.to,
+              amountScaled: -net,
+            });
+          }
+
+          currentSettlements = newSettlements;
+          changed = true;
+        }
+        else if (s1.to.id === s2.from.id && s1.from.id !== s2.to.id) {
+          steps.push({
+            settlements: [...currentSettlements],
+            highlightedIndices: [i, j],
+          });
+
+          const newS1Amount = s1.amountScaled <= s2.amountScaled ? BigInt(0) : s1.amountScaled - s2.amountScaled;
+          const newS2Amount = s2.amountScaled <= s1.amountScaled ? BigInt(0) : s2.amountScaled - s1.amountScaled;
+          const newTransferAmount = s1.amountScaled <= s2.amountScaled ? s1.amountScaled : s2.amountScaled;
+
+          const newSettlements = currentSettlements.filter((_, idx) => idx !== i && idx !== j);
+
+          if (newS1Amount > BigInt(0)) {
+            newSettlements.push({
+              from: s1.from,
+              to: s1.to,
+              amountScaled: newS1Amount,
+            });
+          }
+
+          if (newS2Amount > BigInt(0)) {
+            newSettlements.push({
+              from: s2.from,
+              to: s2.to,
+              amountScaled: newS2Amount,
+            });
+          }
+
+          newSettlements.push({
+            from: s1.from,
+            to: s2.to,
+            amountScaled: newTransferAmount,
+          });
+
+          currentSettlements = newSettlements;
+          changed = true;
+        }
+      }
+    }
+
+    if (changed) {
+      steps.push({
+        settlements: [...currentSettlements],
+        highlightedIndices: [],
+      });
+    }
+  }
+
+  return steps;
+}
