@@ -191,7 +191,7 @@ export default function SettleScreen() {
         </View>
       </View>
 
-      <ScrollView style={styles.content}>
+      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
         {settlements.length === 0 && !isAnimating && (
           <View style={styles.emptyState}>
             <Text style={styles.emptyText}>All settled up!</Text>
@@ -363,6 +363,9 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: 16,
+  },
+  contentContainer: {
+    paddingBottom: 40,
   },
   emptyState: {
     alignItems: 'center',
