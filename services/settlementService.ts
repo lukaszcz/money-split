@@ -346,7 +346,7 @@ function applySimplification(
     const remainingFirst = first.amountScaled - transferAmount;
     const remainingSecond = second.amountScaled - transferAmount;
 
-    if (remainingFirst > BinInt(0)) {
+    if (remainingFirst > BigInt(0)) {
       newSettlements.splice(resultIndices[0], 0, {
         from: first.from,
         to: first.to,
