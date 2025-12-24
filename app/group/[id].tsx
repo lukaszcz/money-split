@@ -162,7 +162,7 @@ export default function GroupDetailScreen() {
         )}
         {activeTab === 'members' && <MembersTab members={group.members} groupId={group.id} />}
         {activeTab === 'settle' && (
-          <SettleTab expenses={expenses} members={group.members} currencySymbol={currencySymbol} groupId={group.id} />
+          <SettleTab expenses={expenses} members={group.members} currencySymbol={currencySymbol} groupId={group.id} balances={balances} />
         )}
       </ScrollView>
     </SafeAreaView>
@@ -334,13 +334,26 @@ function SettleTab({
   expenses,
   currencySymbol,
   groupId,
+  balances,
 }: {
   expenses: Expense[];
   members: GroupMember[];
   currencySymbol: string;
   groupId: string;
+  balances: Map<string, bigint>;
 }) {
   const router = useRouter();
+
+  const hasNonZeroBalances = Array.from(balances.values()).some((balance) => balance !== 0n);
+
+  if (!hasNonZeroBalances) {
+    return (
+      <View style={styles.emptyState}>
+        <Text style={styles.settledUpText}>All settled up!</Text>
+        <Text style={styles.settledUpSubtext}>No outstanding balances</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.tabContent}>
@@ -452,6 +465,16 @@ const styles = StyleSheet.create({
   emptySubtext: {
     fontSize: 14,
     color: '#9ca3af',
+  },
+  settledUpText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#059669',
+    marginBottom: 8,
+  },
+  settledUpSubtext: {
+    fontSize: 14,
+    color: '#6b7280',
   },
   expenseCard: {
     backgroundColor: '#ffffff',
