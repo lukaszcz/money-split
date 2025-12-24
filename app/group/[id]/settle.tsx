@@ -285,32 +285,35 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 12,
   },
   settlementInfo: {
     flex: 1,
+    minWidth: 0,
   },
   settlementRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 8,
+    flexWrap: 'wrap',
   },
   fromUser: {
     fontSize: 16,
     fontWeight: '600',
     color: '#111827',
-    flex: 1,
+    flexShrink: 0,
   },
   arrow: {
     fontSize: 16,
     color: '#6b7280',
     marginHorizontal: 8,
+    flexShrink: 0,
   },
   toUser: {
     fontSize: 16,
     fontWeight: '600',
     color: '#111827',
-    flex: 1,
-    textAlign: 'right',
+    flexShrink: 0,
   },
   amount: {
     fontSize: 20,
