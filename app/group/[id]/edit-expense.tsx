@@ -6,6 +6,7 @@ import {
   StyleSheet,
   ScrollView,
   Alert,
+  SafeAreaView,
 } from 'react-native';
 import { useState, useEffect } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -264,7 +265,7 @@ export default function EditExpenseScreen() {
   const participants = group.members.filter((m) => selectedParticipants.includes(m.id));
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.closeButton}>
           <X color="#111827" size={24} />
@@ -458,7 +459,7 @@ export default function EditExpenseScreen() {
           <Text style={styles.saveButtonText}>{saving ? 'Saving...' : 'Update Expense'}</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 

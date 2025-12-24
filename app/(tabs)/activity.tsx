@@ -1,4 +1,4 @@
-import { View, Text, FlatList, StyleSheet, RefreshControl } from 'react-native';
+import { View, Text, FlatList, StyleSheet, RefreshControl, SafeAreaView } from 'react-native';
 import { useState, useEffect, useCallback } from 'react';
 import { getAllGroups, getGroupExpenses, getGroupMember, Expense } from '../../services/groupRepository';
 import { formatNumber } from '../../utils/money';
@@ -76,7 +76,7 @@ export default function ActivityScreen() {
   );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Activity</Text>
       </View>
@@ -99,7 +99,7 @@ export default function ActivityScreen() {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
