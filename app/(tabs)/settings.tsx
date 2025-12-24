@@ -170,7 +170,7 @@ export default function SettingsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView>
         <View style={styles.header}>
           <Text style={styles.title}>Settings</Text>
