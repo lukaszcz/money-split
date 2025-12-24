@@ -200,46 +200,60 @@ export default function SettleScreen() {
           </View>
         )}
 
-        {isAnimating && animationSteps.length > 0 && currentStepIndex < animationSteps.length && (
-          <>
-            <View style={styles.infoBox}>
-              <Text style={styles.infoText}>
-                {animationSteps[currentStepIndex].highlightedIndices.length > 0
-                  ? 'Identifying transfers to simplify...'
-                  : 'Applying simplification...'}
-              </Text>
-              <Text style={styles.infoSubtext}>
-                Step {currentStepIndex + 1} of {animationSteps.length}
-              </Text>
-            </View>
+        {isAnimating && animationSteps.length > 0 && currentStepIndex < animationSteps.length && (() => {
+          const currentStep = animationSteps[currentStepIndex];
+          const hasHighlights = currentStep.highlightedIndices.length > 0;
+          const stepNumber = currentStepIndex + 1;
+          const totalSteps = animationSteps.length;
 
-            {animationSteps[currentStepIndex].settlements.map((settlement, idx) => {
-              const isHighlighted = animationSteps[currentStepIndex].highlightedIndices.includes(idx);
-              return (
-                <View
-                  key={`${settlement.from.id}-${settlement.to.id}-${idx}`}
-                  style={[
-                    styles.settlementCard,
-                    isHighlighted && styles.settlementCardHighlighted,
-                  ]}>
-                  <View style={styles.settlementContent}>
-                    <View style={styles.settlementInfo}>
-                      <View style={styles.settlementRow}>
-                        <Text style={styles.fromUser}>{settlement.from.name}</Text>
-                        <Text style={styles.arrow}>→</Text>
-                        <Text style={styles.toUser}>{settlement.to.name}</Text>
+          let stepTitle = '';
+          let stepDescription = '';
+
+          if (hasHighlights) {
+            stepTitle = stepNumber === 1 ? 'Initial transfers' : `After step ${stepNumber - 1}`;
+            stepDescription = 'Highlighted transfers will be combined';
+          } else {
+            stepTitle = 'Final result';
+            stepDescription = `${currentStep.settlements.length} transfer${currentStep.settlements.length !== 1 ? 's' : ''} remaining`;
+          }
+
+          return (
+            <>
+              <View style={styles.infoBox}>
+                <Text style={styles.infoText}>{stepTitle}</Text>
+                <Text style={styles.infoSubtext}>
+                  {stepDescription} ({stepNumber}/{totalSteps})
+                </Text>
+              </View>
+
+              {currentStep.settlements.map((settlement, idx) => {
+                const isHighlighted = currentStep.highlightedIndices.includes(idx);
+                return (
+                  <View
+                    key={`${currentStepIndex}-${settlement.from.id}-${settlement.to.id}-${idx}`}
+                    style={[
+                      styles.settlementCard,
+                      isHighlighted && styles.settlementCardHighlighted,
+                    ]}>
+                    <View style={styles.settlementContent}>
+                      <View style={styles.settlementInfo}>
+                        <View style={styles.settlementRow}>
+                          <Text style={styles.fromUser}>{settlement.from.name}</Text>
+                          <Text style={styles.arrow}>→</Text>
+                          <Text style={styles.toUser}>{settlement.to.name}</Text>
+                        </View>
+                        <Text style={styles.amount}>
+                          {currencySymbol}
+                          {formatNumber(settlement.amountScaled)}
+                        </Text>
                       </View>
-                      <Text style={styles.amount}>
-                        {currencySymbol}
-                        {formatNumber(settlement.amountScaled)}
-                      </Text>
                     </View>
                   </View>
-                </View>
-              );
-            })}
-          </>
-        )}
+                );
+              })}
+            </>
+          );
+        })()}
 
         {!isAnimating && settlements.length > 0 && (
           <>

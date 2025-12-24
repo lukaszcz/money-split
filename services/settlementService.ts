@@ -177,8 +177,153 @@ export interface SimplificationStep {
   highlightedIndices: number[];
 }
 
-function settlementsEqual(s1: Settlement, s2: Settlement): boolean {
-  return s1.from.id === s2.from.id && s1.to.id === s2.to.id && s1.amountScaled === s2.amountScaled;
+function computeRawDebts(
+  expenses: Expense[],
+  allMembers: GroupMember[]
+): Settlement[] {
+  const debtMap = new Map<string, Map<string, bigint>>();
+  const memberMap = new Map(allMembers.map((m) => [m.id, m]));
+
+  for (const member of allMembers) {
+    debtMap.set(member.id, new Map<string, bigint>());
+  }
+
+  for (const expense of expenses) {
+    const payerId = expense.payerMemberId;
+
+    for (const share of expense.shares) {
+      const memberId = share.memberId;
+      if (memberId === payerId) continue;
+
+      const debtKey = debtMap.get(memberId);
+      if (debtKey) {
+        debtKey.set(payerId, (debtKey.get(payerId) || BigInt(0)) + share.shareInMainScaled);
+      }
+    }
+  }
+
+  const settlements: Settlement[] = [];
+
+  for (const debtorId of debtMap.keys()) {
+    const debtorDebts = debtMap.get(debtorId)!;
+
+    for (const creditorId of debtorDebts.keys()) {
+      const amount = debtorDebts.get(creditorId);
+      if (!amount || amount <= BigInt(0)) continue;
+
+      const debtor = memberMap.get(debtorId);
+      const creditor = memberMap.get(creditorId);
+
+      if (debtor && creditor) {
+        settlements.push({
+          from: debtor,
+          to: creditor,
+          amountScaled: amount,
+        });
+      }
+    }
+  }
+
+  return settlements;
+}
+
+function cloneSettlements(settlements: Settlement[]): Settlement[] {
+  return settlements.map(s => ({
+    from: s.from,
+    to: s.to,
+    amountScaled: s.amountScaled,
+  }));
+}
+
+interface SimplificationPair {
+  firstIdx: number;
+  secondIdx: number;
+  type: 'opposite' | 'chain';
+}
+
+function findSimplificationPair(settlements: Settlement[]): SimplificationPair | null {
+  for (let i = 0; i < settlements.length; i++) {
+    for (let j = i + 1; j < settlements.length; j++) {
+      const s1 = settlements[i];
+      const s2 = settlements[j];
+
+      if (s1.from.id === s2.to.id && s1.to.id === s2.from.id) {
+        return { firstIdx: i, secondIdx: j, type: 'opposite' };
+      }
+    }
+  }
+
+  for (let i = 0; i < settlements.length; i++) {
+    for (let j = 0; j < settlements.length; j++) {
+      if (i === j) continue;
+      const s1 = settlements[i];
+      const s2 = settlements[j];
+
+      if (s1.to.id === s2.from.id && s1.from.id !== s2.to.id) {
+        return { firstIdx: i, secondIdx: j, type: 'chain' };
+      }
+    }
+  }
+
+  return null;
+}
+
+function applySimplification(
+  settlements: Settlement[],
+  pair: SimplificationPair
+): Settlement[] {
+  const { firstIdx, secondIdx, type } = pair;
+  const first = settlements[firstIdx];
+  const second = settlements[secondIdx];
+  const newSettlements = settlements.filter((_, idx) => idx !== firstIdx && idx !== secondIdx);
+
+  if (type === 'opposite') {
+    const net = first.amountScaled - second.amountScaled;
+    if (net > BigInt(0)) {
+      newSettlements.push({
+        from: first.from,
+        to: first.to,
+        amountScaled: net,
+      });
+    } else if (net < BigInt(0)) {
+      newSettlements.push({
+        from: second.from,
+        to: second.to,
+        amountScaled: -net,
+      });
+    }
+  } else {
+    const transferAmount = first.amountScaled < second.amountScaled
+      ? first.amountScaled
+      : second.amountScaled;
+
+    const remainingFirst = first.amountScaled - transferAmount;
+    const remainingSecond = second.amountScaled - transferAmount;
+
+    if (remainingFirst > BigInt(0)) {
+      newSettlements.push({
+        from: first.from,
+        to: first.to,
+        amountScaled: remainingFirst,
+      });
+    }
+
+    if (remainingSecond > BigInt(0)) {
+      newSettlements.push({
+        from: second.from,
+        to: second.to,
+        amountScaled: remainingSecond,
+      });
+    }
+
+    newSettlements.push({
+      from: first.from,
+      to: second.to,
+      amountScaled: transferAmount,
+    });
+  }
+
+  return newSettlements;
 }
 
 export function computeSimplificationSteps(
@@ -186,96 +331,25 @@ export function computeSimplificationSteps(
   allMembers: GroupMember[]
 ): SimplificationStep[] {
   const steps: SimplificationStep[] = [];
+  let currentSettlements = computeRawDebts(expenses, allMembers);
 
-  let currentSettlements = computeSettlementsNoSimplify(expenses, allMembers);
+  let pair = findSimplificationPair(currentSettlements);
+
+  while (pair !== null) {
+    steps.push({
+      settlements: cloneSettlements(currentSettlements),
+      highlightedIndices: [pair.firstIdx, pair.secondIdx],
+    });
+
+    currentSettlements = applySimplification(currentSettlements, pair);
+
+    pair = findSimplificationPair(currentSettlements);
+  }
 
   steps.push({
-    settlements: [...currentSettlements],
+    settlements: cloneSettlements(currentSettlements),
     highlightedIndices: [],
   });
-
-  let changed = true;
-  while (changed) {
-    changed = false;
-
-    for (let i = 0; i < currentSettlements.length && !changed; i++) {
-      for (let j = i + 1; j < currentSettlements.length && !changed; j++) {
-        const s1 = currentSettlements[i];
-        const s2 = currentSettlements[j];
-
-        if (s1.from.id === s2.to.id && s2.from.id === s1.to.id) {
-          steps.push({
-            settlements: [...currentSettlements],
-            highlightedIndices: [i, j],
-          });
-
-          const net = s1.amountScaled - s2.amountScaled;
-          const newSettlements = currentSettlements.filter((_, idx) => idx !== i && idx !== j);
-
-          if (net > BigInt(0)) {
-            newSettlements.push({
-              from: s1.from,
-              to: s1.to,
-              amountScaled: net,
-            });
-          } else if (net < BigInt(0)) {
-            newSettlements.push({
-              from: s2.from,
-              to: s2.to,
-              amountScaled: -net,
-            });
-          }
-
-          currentSettlements = newSettlements;
-          changed = true;
-        }
-        else if (s1.to.id === s2.from.id && s1.from.id !== s2.to.id) {
-          steps.push({
-            settlements: [...currentSettlements],
-            highlightedIndices: [i, j],
-          });
-
-          const newS1Amount = s1.amountScaled <= s2.amountScaled ? BigInt(0) : s1.amountScaled - s2.amountScaled;
-          const newS2Amount = s2.amountScaled <= s1.amountScaled ? BigInt(0) : s2.amountScaled - s1.amountScaled;
-          const newTransferAmount = s1.amountScaled <= s2.amountScaled ? s1.amountScaled : s2.amountScaled;
-
-          const newSettlements = currentSettlements.filter((_, idx) => idx !== i && idx !== j);
-
-          if (newS1Amount > BigInt(0)) {
-            newSettlements.push({
-              from: s1.from,
-              to: s1.to,
-              amountScaled: newS1Amount,
-            });
-          }
-
-          if (newS2Amount > BigInt(0)) {
-            newSettlements.push({
-              from: s2.from,
-              to: s2.to,
-              amountScaled: newS2Amount,
-            });
-          }
-
-          newSettlements.push({
-            from: s1.from,
-            to: s2.to,
-            amountScaled: newTransferAmount,
-          });
-
-          currentSettlements = newSettlements;
-          changed = true;
-        }
-      }
-    }
-
-    if (changed) {
-      steps.push({
-        settlements: [...currentSettlements],
-        highlightedIndices: [],
-      });
-    }
-  }
 
   return steps;
 }
