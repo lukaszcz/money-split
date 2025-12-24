@@ -107,7 +107,10 @@ export async function getOrderedGroups(groups: Group[]): Promise<Group[]> {
   const orderedGroups: Group[] = [];
   const groupsInOrder = new Set<string>();
 
-  const newGroups = groups.filter((g) => !groupOrder.includes(g.id));
+  const newGroups = groups
+    .filter((g) => !groupOrder.includes(g.id))
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
   newGroups.forEach((g) => {
     orderedGroups.push(g);
     groupsInOrder.add(g.id);
