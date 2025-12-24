@@ -23,16 +23,19 @@ import { getExchangeRate } from '../../../services/exchangeRateService';
 import { useCurrencyOrder } from '../../../hooks/useCurrencyOrder';
 
 type SplitMethod = 'equal' | 'percentage' | 'exact';
+type PaymentType = 'expense' | 'transfer';
 
 export default function AddExpenseScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const [group, setGroup] = useState<GroupWithMembers | null>(null);
+  const [paymentType, setPaymentType] = useState<PaymentType>('expense');
 
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
   const [currency, setCurrency] = useState('USD');
   const [payerId, setPayerId] = useState('');
+  const [recipientId, setRecipientId] = useState('');
   const [selectedParticipants, setSelectedParticipants] = useState<string[]>([]);
   const [splitMethod, setSplitMethod] = useState<SplitMethod>('equal');
 
@@ -76,6 +79,11 @@ export default function AddExpenseScreen() {
 
   const handleSave = async () => {
     if (!group) return;
+
+    if (paymentType === 'transfer') {
+      await handleSaveTransfer();
+      return;
+    }
 
     if (!amount || parseFloat(amount) <= 0) {
       Alert.alert('Error', 'Please enter a valid amount');
@@ -140,6 +148,80 @@ export default function AddExpenseScreen() {
     await saveExpense(shares);
   };
 
+  const handleSaveTransfer = async () => {
+    if (!group) return;
+
+    if (!amount || parseFloat(amount) <= 0) {
+      Alert.alert('Error', 'Please enter a valid amount');
+      return;
+    }
+
+    if (!payerId) {
+      Alert.alert('Error', 'Please select who is sending');
+      return;
+    }
+
+    if (!recipientId) {
+      Alert.alert('Error', 'Please select who is receiving');
+      return;
+    }
+
+    if (payerId === recipientId) {
+      Alert.alert('Error', 'Sender and recipient must be different');
+      return;
+    }
+
+    setSaving(true);
+
+    try {
+      const rate = await getExchangeRate(currency, group.mainCurrencyCode);
+
+      if (!rate) {
+        Alert.alert('Error', 'Could not fetch exchange rate. Please try again.');
+        setSaving(false);
+        return;
+      }
+
+      const totalScaled = toScaled(parseFloat(amount));
+      const totalInMainScaled = applyExchangeRate(totalScaled, rate.rateScaled);
+
+      const payer = group.members.find(m => m.id === payerId);
+      const recipient = group.members.find(m => m.id === recipientId);
+
+      const transferDescription = description.trim() ||
+        `Transfer from ${payer?.name} to ${recipient?.name}`;
+
+      const shareData = [{
+        memberId: recipientId,
+        shareAmountScaled: totalScaled,
+        shareInMainScaled: totalInMainScaled,
+      }];
+
+      const expense = await createExpense(
+        group.id,
+        transferDescription,
+        new Date().toISOString(),
+        currency,
+        totalScaled,
+        payerId,
+        rate.rateScaled,
+        totalInMainScaled,
+        shareData,
+        'transfer'
+      );
+
+      if (expense) {
+        router.back();
+      } else {
+        Alert.alert('Error', 'Failed to create transfer');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'An error occurred while saving');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const saveExpense = async (shares: bigint[]) => {
     if (!group) return;
 
@@ -172,7 +254,8 @@ export default function AddExpenseScreen() {
         payerId,
         rate.rateScaled,
         totalInMainScaled,
-        shareData
+        shareData,
+        'expense'
       );
 
       if (expense) {
@@ -197,189 +280,306 @@ export default function AddExpenseScreen() {
 
   const participants = group.members.filter(m => selectedParticipants.includes(m.id));
 
+  const renderExpenseForm = () => (
+    <>
+      <View style={styles.section}>
+        <Text style={styles.label}>Description</Text>
+        <TextInput
+          style={styles.input}
+          value={description}
+          onChangeText={setDescription}
+          placeholder="What was this for?"
+          placeholderTextColor="#9ca3af"
+        />
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.label}>Amount *</Text>
+        <TextInput
+          style={styles.input}
+          value={amount}
+          onChangeText={setAmount}
+          placeholder="0.00"
+          placeholderTextColor="#9ca3af"
+          keyboardType="decimal-pad"
+        />
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.label}>Currency *</Text>
+        <TouchableOpacity
+          style={styles.currencyButton}
+          onPress={() => setShowCurrencyPicker(!showCurrencyPicker)}>
+          <Text style={styles.currencyButtonText}>{currency}</Text>
+        </TouchableOpacity>
+
+        {showCurrencyPicker && (
+          <ScrollView style={styles.currencyList} nestedScrollEnabled>
+            {orderedCurrencies.map(curr => (
+              <TouchableOpacity
+                key={curr.code}
+                style={styles.currencyItem}
+                onPress={() => {
+                  setCurrency(curr.code);
+                  selectCurrency(curr.code);
+                  setShowCurrencyPicker(false);
+                }}>
+                <Text style={styles.currencyCode}>{curr.code}</Text>
+                <Text style={styles.currencyName}>{curr.name}</Text>
+                {currency === curr.code && <Check color="#2563eb" size={20} />}
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        )}
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.label}>Paid by *</Text>
+        {group.members.map(member => (
+          <TouchableOpacity
+            key={member.id}
+            style={[styles.optionItem, payerId === member.id && styles.optionItemSelected]}
+            onPress={() => setPayerId(member.id)}>
+            <Text
+              style={[
+                styles.optionText,
+                payerId === member.id && styles.optionTextSelected,
+              ]}>
+              {member.name}
+            </Text>
+            {payerId === member.id && <Check color="#2563eb" size={20} />}
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.label}>For whom *</Text>
+        {group.members.map(member => (
+          <TouchableOpacity
+            key={member.id}
+            style={[
+              styles.optionItem,
+              selectedParticipants.includes(member.id) && styles.optionItemSelected,
+            ]}
+            onPress={() => toggleParticipant(member.id)}>
+            <Text
+              style={[
+                styles.optionText,
+                selectedParticipants.includes(member.id) && styles.optionTextSelected,
+              ]}>
+              {member.name}
+            </Text>
+            {selectedParticipants.includes(member.id) && <Check color="#2563eb" size={20} />}
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.label}>Split Method *</Text>
+        <View style={styles.splitMethodRow}>
+          <TouchableOpacity
+            style={[styles.methodButton, splitMethod === 'equal' && styles.methodButtonActive]}
+            onPress={() => setSplitMethod('equal')}>
+            <Text
+              style={[
+                styles.methodButtonText,
+                splitMethod === 'equal' && styles.methodButtonTextActive,
+              ]}>
+              Equal
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.methodButton,
+              splitMethod === 'percentage' && styles.methodButtonActive,
+            ]}
+            onPress={() => setSplitMethod('percentage')}>
+            <Text
+              style={[
+                styles.methodButtonText,
+                splitMethod === 'percentage' && styles.methodButtonTextActive,
+              ]}>
+              Percentage
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.methodButton, splitMethod === 'exact' && styles.methodButtonActive]}
+            onPress={() => setSplitMethod('exact')}>
+            <Text
+              style={[
+                styles.methodButtonText,
+                splitMethod === 'exact' && styles.methodButtonTextActive,
+              ]}>
+              Exact
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {splitMethod === 'percentage' && (
+        <View style={styles.section}>
+          <Text style={styles.label}>Percentages (must sum to 100%)</Text>
+          {participants.map(member => (
+            <View key={member.id} style={styles.inputRow}>
+              <Text style={styles.inputRowLabel}>{member.name}</Text>
+              <TextInput
+                style={styles.inputRowField}
+                value={percentages[member.id] || ''}
+                onChangeText={text => setPercentages({ ...percentages, [member.id]: text })}
+                placeholder="0.00"
+                placeholderTextColor="#9ca3af"
+                keyboardType="decimal-pad"
+              />
+              <Text style={styles.inputRowUnit}>%</Text>
+            </View>
+          ))}
+        </View>
+      )}
+
+      {splitMethod === 'exact' && (
+        <View style={styles.section}>
+          <Text style={styles.label}>Exact Amounts (must sum to total)</Text>
+          {participants.map(member => (
+            <View key={member.id} style={styles.inputRow}>
+              <Text style={styles.inputRowLabel}>{member.name}</Text>
+              <TextInput
+                style={styles.inputRowField}
+                value={exactAmounts[member.id] || ''}
+                onChangeText={text => setExactAmounts({ ...exactAmounts, [member.id]: text })}
+                placeholder="0.00"
+                placeholderTextColor="#9ca3af"
+                keyboardType="decimal-pad"
+              />
+            </View>
+          ))}
+        </View>
+      )}
+    </>
+  );
+
+  const renderTransferForm = () => (
+    <>
+      <View style={styles.section}>
+        <Text style={styles.label}>Amount *</Text>
+        <TextInput
+          style={styles.input}
+          value={amount}
+          onChangeText={setAmount}
+          placeholder="0.00"
+          placeholderTextColor="#9ca3af"
+          keyboardType="decimal-pad"
+        />
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.label}>Currency *</Text>
+        <TouchableOpacity
+          style={styles.currencyButton}
+          onPress={() => setShowCurrencyPicker(!showCurrencyPicker)}>
+          <Text style={styles.currencyButtonText}>{currency}</Text>
+        </TouchableOpacity>
+
+        {showCurrencyPicker && (
+          <ScrollView style={styles.currencyList} nestedScrollEnabled>
+            {orderedCurrencies.map(curr => (
+              <TouchableOpacity
+                key={curr.code}
+                style={styles.currencyItem}
+                onPress={() => {
+                  setCurrency(curr.code);
+                  selectCurrency(curr.code);
+                  setShowCurrencyPicker(false);
+                }}>
+                <Text style={styles.currencyCode}>{curr.code}</Text>
+                <Text style={styles.currencyName}>{curr.name}</Text>
+                {currency === curr.code && <Check color="#2563eb" size={20} />}
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        )}
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.label}>From *</Text>
+        {group.members.map(member => (
+          <TouchableOpacity
+            key={member.id}
+            style={[styles.optionItem, payerId === member.id && styles.optionItemSelected]}
+            onPress={() => setPayerId(member.id)}>
+            <Text
+              style={[
+                styles.optionText,
+                payerId === member.id && styles.optionTextSelected,
+              ]}>
+              {member.name}
+            </Text>
+            {payerId === member.id && <Check color="#2563eb" size={20} />}
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.label}>To *</Text>
+        {group.members.map(member => (
+          <TouchableOpacity
+            key={member.id}
+            style={[styles.optionItem, recipientId === member.id && styles.optionItemSelected]}
+            onPress={() => setRecipientId(member.id)}>
+            <Text
+              style={[
+                styles.optionText,
+                recipientId === member.id && styles.optionTextSelected,
+              ]}>
+              {member.name}
+            </Text>
+            {recipientId === member.id && <Check color="#2563eb" size={20} />}
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.label}>Description</Text>
+        <TextInput
+          style={styles.input}
+          value={description}
+          onChangeText={setDescription}
+          placeholder="Optional note"
+          placeholderTextColor="#9ca3af"
+        />
+      </View>
+    </>
+  );
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.closeButton}>
           <X color="#111827" size={24} />
         </TouchableOpacity>
-        <Text style={styles.title}>Add Expense</Text>
+        <Text style={styles.title}>Add Payment</Text>
         <View style={styles.placeholder} />
       </View>
 
+      <View style={styles.typeTabsContainer}>
+        <TouchableOpacity
+          style={[styles.typeTab, paymentType === 'expense' && styles.typeTabActive]}
+          onPress={() => setPaymentType('expense')}>
+          <Text style={[styles.typeTabText, paymentType === 'expense' && styles.typeTabTextActive]}>
+            Expense
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.typeTab, paymentType === 'transfer' && styles.typeTabActive]}
+          onPress={() => setPaymentType('transfer')}>
+          <Text style={[styles.typeTabText, paymentType === 'transfer' && styles.typeTabTextActive]}>
+            Transfer
+          </Text>
+        </TouchableOpacity>
+      </View>
+
       <ScrollView style={styles.content}>
-        <View style={styles.section}>
-          <Text style={styles.label}>Description</Text>
-          <TextInput
-            style={styles.input}
-            value={description}
-            onChangeText={setDescription}
-            placeholder="What was this for?"
-            placeholderTextColor="#9ca3af"
-          />
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.label}>Amount *</Text>
-          <TextInput
-            style={styles.input}
-            value={amount}
-            onChangeText={setAmount}
-            placeholder="0.00"
-            placeholderTextColor="#9ca3af"
-            keyboardType="decimal-pad"
-          />
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.label}>Currency *</Text>
-          <TouchableOpacity
-            style={styles.currencyButton}
-            onPress={() => setShowCurrencyPicker(!showCurrencyPicker)}>
-            <Text style={styles.currencyButtonText}>{currency}</Text>
-          </TouchableOpacity>
-
-          {showCurrencyPicker && (
-            <ScrollView style={styles.currencyList} nestedScrollEnabled>
-              {orderedCurrencies.map(curr => (
-                <TouchableOpacity
-                  key={curr.code}
-                  style={styles.currencyItem}
-                  onPress={() => {
-                    setCurrency(curr.code);
-                    selectCurrency(curr.code);
-                    setShowCurrencyPicker(false);
-                  }}>
-                  <Text style={styles.currencyCode}>{curr.code}</Text>
-                  <Text style={styles.currencyName}>{curr.name}</Text>
-                  {currency === curr.code && <Check color="#2563eb" size={20} />}
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          )}
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.label}>Paid by *</Text>
-          {group.members.map(member => (
-            <TouchableOpacity
-              key={member.id}
-              style={[styles.optionItem, payerId === member.id && styles.optionItemSelected]}
-              onPress={() => setPayerId(member.id)}>
-              <Text
-                style={[
-                  styles.optionText,
-                  payerId === member.id && styles.optionTextSelected,
-                ]}>
-                {member.name}
-              </Text>
-              {payerId === member.id && <Check color="#2563eb" size={20} />}
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.label}>For whom *</Text>
-          {group.members.map(member => (
-            <TouchableOpacity
-              key={member.id}
-              style={[
-                styles.optionItem,
-                selectedParticipants.includes(member.id) && styles.optionItemSelected,
-              ]}
-              onPress={() => toggleParticipant(member.id)}>
-              <Text
-                style={[
-                  styles.optionText,
-                  selectedParticipants.includes(member.id) && styles.optionTextSelected,
-                ]}>
-                {member.name}
-              </Text>
-              {selectedParticipants.includes(member.id) && <Check color="#2563eb" size={20} />}
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.label}>Split Method *</Text>
-          <View style={styles.splitMethodRow}>
-            <TouchableOpacity
-              style={[styles.methodButton, splitMethod === 'equal' && styles.methodButtonActive]}
-              onPress={() => setSplitMethod('equal')}>
-              <Text
-                style={[
-                  styles.methodButtonText,
-                  splitMethod === 'equal' && styles.methodButtonTextActive,
-                ]}>
-                Equal
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.methodButton,
-                splitMethod === 'percentage' && styles.methodButtonActive,
-              ]}
-              onPress={() => setSplitMethod('percentage')}>
-              <Text
-                style={[
-                  styles.methodButtonText,
-                  splitMethod === 'percentage' && styles.methodButtonTextActive,
-                ]}>
-                Percentage
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.methodButton, splitMethod === 'exact' && styles.methodButtonActive]}
-              onPress={() => setSplitMethod('exact')}>
-              <Text
-                style={[
-                  styles.methodButtonText,
-                  splitMethod === 'exact' && styles.methodButtonTextActive,
-                ]}>
-                Exact
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {splitMethod === 'percentage' && (
-          <View style={styles.section}>
-            <Text style={styles.label}>Percentages (must sum to 100%)</Text>
-            {participants.map(member => (
-              <View key={member.id} style={styles.inputRow}>
-                <Text style={styles.inputRowLabel}>{member.name}</Text>
-                <TextInput
-                  style={styles.inputRowField}
-                  value={percentages[member.id] || ''}
-                  onChangeText={text => setPercentages({ ...percentages, [member.id]: text })}
-                  placeholder="0.00"
-                  placeholderTextColor="#9ca3af"
-                  keyboardType="decimal-pad"
-                />
-                <Text style={styles.inputRowUnit}>%</Text>
-              </View>
-            ))}
-          </View>
-        )}
-
-        {splitMethod === 'exact' && (
-          <View style={styles.section}>
-            <Text style={styles.label}>Exact Amounts (must sum to total)</Text>
-            {participants.map(member => (
-              <View key={member.id} style={styles.inputRow}>
-                <Text style={styles.inputRowLabel}>{member.name}</Text>
-                <TextInput
-                  style={styles.inputRowField}
-                  value={exactAmounts[member.id] || ''}
-                  onChangeText={text => setExactAmounts({ ...exactAmounts, [member.id]: text })}
-                  placeholder="0.00"
-                  placeholderTextColor="#9ca3af"
-                  keyboardType="decimal-pad"
-                />
-              </View>
-            ))}
-          </View>
-        )}
+        {paymentType === 'expense' && renderExpenseForm()}
+        {paymentType === 'transfer' && renderTransferForm()}
       </ScrollView>
 
       <View style={styles.footer}>
@@ -387,7 +587,9 @@ export default function AddExpenseScreen() {
           style={[styles.saveButton, saving && styles.saveButtonDisabled]}
           onPress={handleSave}
           disabled={saving}>
-          <Text style={styles.saveButtonText}>{saving ? 'Saving...' : 'Save Expense'}</Text>
+          <Text style={styles.saveButtonText}>
+            {saving ? 'Saving...' : paymentType === 'expense' ? 'Save Expense' : 'Save Transfer'}
+          </Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -419,6 +621,32 @@ const styles = StyleSheet.create({
   },
   placeholder: {
     width: 32,
+  },
+  typeTabsContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#f3f4f6',
+    padding: 4,
+    borderRadius: 8,
+    marginHorizontal: 16,
+    marginTop: 16,
+  },
+  typeTab: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderRadius: 6,
+  },
+  typeTabActive: {
+    backgroundColor: '#ffffff',
+  },
+  typeTabText: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#6b7280',
+  },
+  typeTabTextActive: {
+    color: '#2563eb',
+    fontWeight: '600',
   },
   content: {
     flex: 1,
