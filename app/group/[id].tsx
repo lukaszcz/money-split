@@ -16,14 +16,14 @@ import { formatNumber } from '../../utils/money';
 import { getCurrencySymbol } from '../../utils/currencies';
 import { getExchangeRate } from '../../services/exchangeRateService';
 
-type Tab = 'expenses' | 'balances' | 'members' | 'settle';
+type Tab = 'payments' | 'balances' | 'members' | 'settle';
 
 export default function GroupDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const [group, setGroup] = useState<GroupWithMembers | null>(null);
   const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [activeTab, setActiveTab] = useState<Tab>('expenses');
+  const [activeTab, setActiveTab] = useState<Tab>('payments');
   const [loading, setLoading] = useState(true);
   const [isOwner, setIsOwner] = useState(false);
 
@@ -63,7 +63,7 @@ export default function GroupDetailScreen() {
   const balances = computeBalances(expenses, group.members);
 
   const handleAddPress = () => {
-    if (activeTab === 'expenses') {
+    if (activeTab === 'payments') {
       router.push(`/group/${id}/add-expense` as any);
     } else if (activeTab === 'members') {
       router.push(`/group/${id}/add-member` as any);
@@ -113,7 +113,7 @@ export default function GroupDetailScreen() {
               <Trash2 color="#dc2626" size={20} />
             </TouchableOpacity>
           )}
-          {(activeTab === 'expenses' || activeTab === 'members') && (
+          {(activeTab === 'payments' || activeTab === 'members') && (
             <TouchableOpacity style={styles.addButton} onPress={handleAddPress}>
               <Plus color="#ffffff" size={20} />
             </TouchableOpacity>
@@ -123,10 +123,10 @@ export default function GroupDetailScreen() {
 
       <View style={styles.tabs}>
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'expenses' && styles.tabActive]}
-          onPress={() => setActiveTab('expenses')}>
-          <Text style={[styles.tabText, activeTab === 'expenses' && styles.tabTextActive]}>
-            Expenses
+          style={[styles.tab, activeTab === 'payments' && styles.tabActive]}
+          onPress={() => setActiveTab('payments')}>
+          <Text style={[styles.tabText, activeTab === 'payments' && styles.tabTextActive]}>
+            Payments
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -153,7 +153,7 @@ export default function GroupDetailScreen() {
       </View>
 
       <ScrollView style={styles.content}>
-        {activeTab === 'expenses' && (
+        {activeTab === 'payments' && (
           <ExpensesTab expenses={expenses} group={group} reload={loadData} />
         )}
         {activeTab === 'balances' && (

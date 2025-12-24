@@ -1,15 +1,16 @@
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Modal } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Modal, Alert } from 'react-native';
 import { useState, useEffect } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft } from 'lucide-react-native';
-import { getGroup, getGroupExpenses, GroupWithMembers } from '../../../services/groupRepository';
+import { ArrowLeft, ArrowRight } from 'lucide-react-native';
+import { getGroup, getGroupExpenses, GroupWithMembers, createExpense } from '../../../services/groupRepository';
 import {
   computeSettlementsNoSimplify,
   computeSettlementsSimplified,
   Settlement,
 } from '../../../services/settlementService';
-import { formatNumber } from '../../../utils/money';
+import { formatNumber, toScaled, applyExchangeRate } from '../../../utils/money';
 import { getCurrencySymbol } from '../../../utils/currencies';
+import { getExchangeRate } from '../../../services/exchangeRateService';
 
 export default function SettleScreen() {
   const { id } = useLocalSearchParams();
@@ -52,6 +53,52 @@ export default function SettleScreen() {
     }
 
     setShowDialog(false);
+  };
+
+  const handleAddTransfer = async (settlement: Settlement) => {
+    if (!group || !id || typeof id !== 'string') return;
+
+    try {
+      const rate = await getExchangeRate(group.mainCurrencyCode, group.mainCurrencyCode);
+
+      if (!rate) {
+        Alert.alert('Error', 'Could not process transfer. Please try again.');
+        return;
+      }
+
+      const totalScaled = settlement.amountScaled;
+      const transferDescription = `Settlement: ${settlement.from.name} → ${settlement.to.name}`;
+
+      const shareData = [{
+        memberId: settlement.to.id,
+        shareAmountScaled: totalScaled,
+        shareInMainScaled: totalScaled,
+      }];
+
+      const expense = await createExpense(
+        group.id,
+        transferDescription,
+        new Date().toISOString(),
+        group.mainCurrencyCode,
+        totalScaled,
+        settlement.from.id,
+        rate.rateScaled,
+        totalScaled,
+        shareData,
+        'transfer'
+      );
+
+      if (expense) {
+        setSettlements(prev => prev.filter(s =>
+          !(s.from.id === settlement.from.id && s.to.id === settlement.to.id)
+        ));
+        Alert.alert('Success', 'Transfer recorded successfully');
+      } else {
+        Alert.alert('Error', 'Failed to record transfer');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'An error occurred while recording transfer');
+    }
   };
 
   if (loading || !group) {
@@ -102,15 +149,25 @@ export default function SettleScreen() {
 
             {settlements.map((settlement, idx) => (
               <View key={idx} style={styles.settlementCard}>
-                <View style={styles.settlementRow}>
-                  <Text style={styles.fromUser}>{settlement.from.name}</Text>
-                  <Text style={styles.arrow}>→</Text>
-                  <Text style={styles.toUser}>{settlement.to.name}</Text>
+                <View style={styles.settlementContent}>
+                  <View style={styles.settlementInfo}>
+                    <View style={styles.settlementRow}>
+                      <Text style={styles.fromUser}>{settlement.from.name}</Text>
+                      <Text style={styles.arrow}>→</Text>
+                      <Text style={styles.toUser}>{settlement.to.name}</Text>
+                    </View>
+                    <Text style={styles.amount}>
+                      {currencySymbol}
+                      {formatNumber(settlement.amountScaled)}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.transferButton}
+                    onPress={() => handleAddTransfer(settlement)}>
+                    <Text style={styles.transferButtonText}>Transfer</Text>
+                    <ArrowRight color="#2563eb" size={16} />
+                  </TouchableOpacity>
                 </View>
-                <Text style={styles.amount}>
-                  {currencySymbol}
-                  {formatNumber(settlement.amountScaled)}
-                </Text>
               </View>
             ))}
 
@@ -224,6 +281,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e5e7eb',
   },
+  settlementContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  settlementInfo: {
+    flex: 1,
+  },
   settlementRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -251,7 +316,22 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     color: '#2563eb',
-    textAlign: 'center',
+  },
+  transferButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#eff6ff',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+    gap: 4,
+  },
+  transferButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#2563eb',
   },
   recalculateButton: {
     backgroundColor: '#ffffff',

@@ -407,6 +407,7 @@ export interface Expense {
   totalInMainScaled: bigint;
   createdAt: string;
   shares: ExpenseShare[];
+  paymentType?: 'expense' | 'transfer';
 }
 
 export interface ExpenseShare {
@@ -425,7 +426,8 @@ export async function createExpense(
   payerMemberId: string,
   exchangeRateToMainScaled: bigint,
   totalInMainScaled: bigint,
-  shares: Array<{ memberId: string; shareAmountScaled: bigint; shareInMainScaled: bigint }>
+  shares: Array<{ memberId: string; shareAmountScaled: bigint; shareInMainScaled: bigint }>,
+  paymentType: 'expense' | 'transfer' = 'expense'
 ): Promise<Expense | null> {
   try {
     const { data: expenseData, error: expenseError } = await supabase
@@ -439,6 +441,7 @@ export async function createExpense(
         payer_member_id: payerMemberId,
         exchange_rate_to_main_scaled: Number(exchangeRateToMainScaled),
         total_in_main_scaled: Number(totalInMainScaled),
+        payment_type: paymentType,
       })
       .select()
       .single();
@@ -511,6 +514,7 @@ export async function getGroupExpenses(groupId: string): Promise<Expense[]> {
         exchangeRateToMainScaled: BigInt(e.exchange_rate_to_main_scaled),
         totalInMainScaled: BigInt(e.total_in_main_scaled),
         createdAt: e.created_at,
+        paymentType: e.payment_type || 'expense',
         shares: (shareData || []).map((s) => ({
           id: s.id,
           memberId: s.member_id,

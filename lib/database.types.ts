@@ -85,6 +85,7 @@ export type Database = {
           exchange_rate_to_main_scaled: number;
           total_in_main_scaled: number;
           created_at: string;
+          payment_type: string;
         };
         Insert: {
           id?: string;
@@ -97,6 +98,7 @@ export type Database = {
           exchange_rate_to_main_scaled: number;
           total_in_main_scaled: number;
           created_at?: string;
+          payment_type?: string;
         };
         Update: {
           id?: string;
@@ -109,6 +111,7 @@ export type Database = {
           exchange_rate_to_main_scaled?: number;
           total_in_main_scaled?: number;
           created_at?: string;
+          payment_type?: string;
         };
       };
       expense_shares: {
