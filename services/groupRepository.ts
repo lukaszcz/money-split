@@ -740,15 +740,23 @@ export async function leaveGroup(groupId: string): Promise<boolean> {
 
     if (supabaseUrl && token) {
       try {
-        await fetch(`${supabaseUrl}/functions/v1/cleanup-orphaned-groups`, {
+        console.log('Triggering cleanup-orphaned-groups function...');
+        const cleanupResponse = await fetch(`${supabaseUrl}/functions/v1/cleanup-orphaned-groups`, {
           method: 'POST',
           headers: {
             Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
         });
+        console.log('Cleanup response status:', cleanupResponse.status);
+        if (!cleanupResponse.ok) {
+          const cleanupError = await cleanupResponse.text().catch(() => 'Unknown error');
+          console.error('Cleanup function failed:', cleanupError);
+        } else {
+          console.log('Cleanup function succeeded');
+        }
       } catch (cleanupError) {
-        console.warn('Failed to trigger cleanup:', cleanupError);
+        console.error('Failed to trigger cleanup:', cleanupError);
       }
     }
 
