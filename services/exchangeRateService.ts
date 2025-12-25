@@ -2,7 +2,7 @@ import { supabase } from '../lib/supabase';
 import { toScaled } from '../utils/money';
 
 const API_BASE = 'https://api.exchangerate-api.com/v4/latest';
-const CACHE_DURATION_MS = 24 * 60 * 60 * 1000;
+const CACHE_DURATION_MS = 12 * 60 * 60 * 1000;
 
 export interface ExchangeRate {
   baseCurrencyCode: string;
