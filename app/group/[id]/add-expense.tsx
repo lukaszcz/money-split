@@ -421,17 +421,46 @@ export default function AddExpenseScreen() {
 
       {splitMethod === 'percentage' && (
         <View style={styles.section}>
-          <Text style={styles.label}>Percentages (must sum to 100%)</Text>
+          <View style={styles.labelWithRemaining}>
+            <Text style={styles.label}>Percentages</Text>
+            <Text style={styles.remainingText}>
+              Remaining: {(() => {
+                const total = participants.reduce((sum, m) => {
+                  const value = parseFloat(percentages[m.id] || '0');
+                  return sum + (isNaN(value) ? 0 : value);
+                }, 0);
+                return Math.max(0, 100 - total);
+              })()}%
+            </Text>
+          </View>
           {participants.map(member => (
             <View key={member.id} style={styles.inputRow}>
               <Text style={styles.inputRowLabel}>{member.name}</Text>
               <TextInput
                 style={styles.inputRowField}
                 value={percentages[member.id] || ''}
-                onChangeText={text => setPercentages({ ...percentages, [member.id]: text })}
-                placeholder="0.00"
+                onChangeText={text => {
+                  const sanitized = text.replace(/[^0-9]/g, '');
+                  if (sanitized === '') {
+                    setPercentages({ ...percentages, [member.id]: '' });
+                    return;
+                  }
+                  const value = parseInt(sanitized, 10);
+                  if (isNaN(value)) return;
+
+                  const currentTotal = participants.reduce((sum, m) => {
+                    if (m.id === member.id) return sum;
+                    const val = parseFloat(percentages[m.id] || '0');
+                    return sum + (isNaN(val) ? 0 : val);
+                  }, 0);
+
+                  const remaining = 100 - currentTotal;
+                  const finalValue = Math.min(value, remaining);
+                  setPercentages({ ...percentages, [member.id]: finalValue.toString() });
+                }}
+                placeholder="0"
                 placeholderTextColor="#9ca3af"
-                keyboardType="decimal-pad"
+                keyboardType="number-pad"
               />
               <Text style={styles.inputRowUnit}>%</Text>
             </View>
@@ -441,14 +470,50 @@ export default function AddExpenseScreen() {
 
       {splitMethod === 'exact' && (
         <View style={styles.section}>
-          <Text style={styles.label}>Exact Amounts (must sum to total)</Text>
+          <View style={styles.labelWithRemaining}>
+            <Text style={styles.label}>Exact Amounts</Text>
+            <Text style={styles.remainingText}>
+              Remaining: {(() => {
+                const totalAmount = parseFloat(amount) || 0;
+                const allocated = participants.reduce((sum, m) => {
+                  const value = parseFloat(exactAmounts[m.id] || '0');
+                  return sum + (isNaN(value) ? 0 : value);
+                }, 0);
+                return Math.max(0, totalAmount - allocated).toFixed(2);
+              })()}
+            </Text>
+          </View>
           {participants.map(member => (
             <View key={member.id} style={styles.inputRow}>
               <Text style={styles.inputRowLabel}>{member.name}</Text>
               <TextInput
                 style={styles.inputRowField}
                 value={exactAmounts[member.id] || ''}
-                onChangeText={text => setExactAmounts({ ...exactAmounts, [member.id]: text })}
+                onChangeText={text => {
+                  const sanitized = text.replace(/[^0-9.]/g, '');
+                  if (sanitized === '' || sanitized === '.') {
+                    setExactAmounts({ ...exactAmounts, [member.id]: sanitized });
+                    return;
+                  }
+
+                  const value = parseFloat(sanitized);
+                  if (isNaN(value)) return;
+
+                  const totalAmount = parseFloat(amount) || 0;
+                  const currentTotal = participants.reduce((sum, m) => {
+                    if (m.id === member.id) return sum;
+                    const val = parseFloat(exactAmounts[m.id] || '0');
+                    return sum + (isNaN(val) ? 0 : val);
+                  }, 0);
+
+                  const remaining = totalAmount - currentTotal;
+                  const finalValue = Math.min(value, Math.max(0, remaining));
+                  setExactAmounts({ ...exactAmounts, [member.id]: sanitized });
+
+                  if (value > remaining) {
+                    setExactAmounts({ ...exactAmounts, [member.id]: finalValue.toFixed(2) });
+                  }
+                }}
                 placeholder="0.00"
                 placeholderTextColor="#9ca3af"
                 keyboardType="decimal-pad"
@@ -799,6 +864,17 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     marginLeft: 8,
     width: 24,
+  },
+  labelWithRemaining: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  remainingText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#2563eb',
   },
   footer: {
     padding: 16,

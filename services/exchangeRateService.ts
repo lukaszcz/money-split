@@ -2,7 +2,7 @@ import { supabase } from '../lib/supabase';
 import { toScaled } from '../utils/money';
 
 const API_BASE = 'https://api.exchangerate-api.com/v4/latest';
-const CACHE_DURATION_MS = 12 * 60 * 60 * 1000;
+const CACHE_DURATION_MS = 24 * 60 * 60 * 1000;
 
 export interface ExchangeRate {
   baseCurrencyCode: string;
@@ -65,16 +65,25 @@ export async function getExchangeRate(
     const fetchedAt = new Date().toISOString();
 
     try {
-      await supabase
+      const { error } = await supabase
         .from('exchange_rates')
-        .upsert({
-          base_currency_code: baseCurrency,
-          quote_currency_code: quoteCurrency,
-          rate_scaled: Number(rateScaled),
-          fetched_at: fetchedAt,
-        });
+        .upsert(
+          {
+            base_currency_code: baseCurrency,
+            quote_currency_code: quoteCurrency,
+            rate_scaled: Number(rateScaled),
+            fetched_at: fetchedAt,
+          },
+          {
+            onConflict: 'base_currency_code,quote_currency_code',
+          }
+        );
+
+      if (error) {
+        console.error('Failed to cache exchange rate:', error);
+      }
     } catch (error) {
-      console.warn('Failed to cache exchange rate:', error);
+      console.error('Failed to cache exchange rate:', error);
     }
 
     return {
