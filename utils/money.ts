@@ -39,8 +39,12 @@ export function calculateEqualSplit(totalScaled: bigint, participantCount: numbe
     shares.push(baseShare);
   }
 
-  for (let i = 0; i < Number(remainder); i++) {
+  let remainingUnits = remainder;
+  let i = 0;
+  while (remainingUnits > BigInt(0) && i < shares.length) {
     shares[i] += BigInt(1);
+    remainingUnits -= BigInt(1);
+    i++;
   }
 
   return shares;
@@ -71,8 +75,12 @@ export function calculatePercentageSplit(totalScaled: bigint, percentages: numbe
 
   const remainder = totalScaled - shares.reduce((a, b) => a + b, BigInt(0));
 
-  for (let i = 0; i < Number(remainder); i++) {
+  let remainingUnits = remainder;
+  let i = 0;
+  while (remainingUnits > BigInt(0) && i < shares.length) {
     shares[i] += BigInt(1);
+    remainingUnits -= BigInt(1);
+    i++;
   }
 
   return shares;
@@ -91,13 +99,22 @@ export function normalizeExactSplit(sharesScaled: bigint[], totalScaled: bigint)
   const adjusted = [...sharesScaled];
 
   if (diff > BigInt(0)) {
-    for (let i = 0; i < Number(diff); i++) {
+    let remaining = diff;
+    let i = 0;
+    while (remaining > BigInt(0) && i < adjusted.length) {
       adjusted[i] += BigInt(1);
+      remaining -= BigInt(1);
+      i++;
     }
   } else {
-    const toSubtract = -Number(diff);
-    for (let i = adjusted.length - 1; i >= 0 && adjusted.length - i <= toSubtract; i--) {
-      adjusted[i] -= BigInt(1);
+    let remaining = -diff;
+    let i = adjusted.length - 1;
+    while (remaining > BigInt(0) && i >= 0) {
+      if (adjusted[i] > BigInt(0)) {
+        adjusted[i] -= BigInt(1);
+        remaining -= BigInt(1);
+      }
+      i--;
     }
   }
 
