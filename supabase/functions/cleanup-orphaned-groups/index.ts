@@ -45,7 +45,6 @@ function deleteGroup(supabase, groupId: string): void {
   if (groupError) throw groupError;
 }
 
-
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, {
