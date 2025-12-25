@@ -51,6 +51,9 @@ export default function AuthScreen() {
         style={{ flex: 1 }}
       >
         <View style={styles.content}>
+        <View style={styles.logoContainer}>
+          <Text style={styles.logoText}>MoneySplit</Text>
+        </View>
         <Text style={styles.title}>{isLogin ? 'Welcome back' : 'Create account'}</Text>
         <Text style={styles.subtitle}>
           {isLogin ? 'Sign in to continue' : 'Sign up to get started'}
@@ -124,6 +127,16 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     paddingHorizontal: 24,
+  },
+  logoContainer: {
+    marginBottom: 40,
+    alignItems: 'center',
+  },
+  logoText: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#007AFF',
+    letterSpacing: -0.5,
   },
   title: {
     fontSize: 32,
