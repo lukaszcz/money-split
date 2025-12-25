@@ -289,7 +289,7 @@ export async function createGroup(
 
     const { data: groupData, error: groupError } = await supabase
       .from('groups')
-      .insert({ name, main_currency_code: mainCurrencyCode, created_by: user.id })
+      .insert({ name, main_currency_code: mainCurrencyCode })
       .select()
       .single();
 
@@ -724,7 +724,7 @@ export async function updateGroupMember(
   }
 }
 
-export async function deleteGroup(groupId: string): Promise<boolean> {
+export async function leaveGroup(groupId: string): Promise<boolean> {
   try {
     const {
       data: { user },
@@ -733,77 +733,45 @@ export async function deleteGroup(groupId: string): Promise<boolean> {
       throw new Error('No authenticated user');
     }
 
-    const group = await getGroup(groupId);
-    if (!group) {
-      throw new Error('Group not found');
+    const currentMember = await getCurrentUserMemberInGroup(groupId);
+    if (!currentMember) {
+      throw new Error('You are not a member of this group');
     }
 
-    const { data: groupData } = await supabase
-      .from('groups')
-      .select('created_by')
-      .eq('id', groupId)
-      .maybeSingle();
-
-    if (!groupData || groupData.created_by !== user.id) {
-      throw new Error('Only the group owner can delete the group');
-    }
-
-    const expenses = await getGroupExpenses(groupId);
-    const expenseIds = expenses.map((e) => e.id);
-
-    if (expenseIds.length > 0) {
-      const { error: sharesError } = await supabase
-        .from('expense_shares')
-        .delete()
-        .in('expense_id', expenseIds);
-
-      if (sharesError) throw sharesError;
-    }
-
-    const { error: expensesError } = await supabase
-      .from('expenses')
-      .delete()
-      .eq('group_id', groupId);
-
-    if (expensesError) throw expensesError;
-
-    const { error: membersError } = await supabase
+    const { error } = await supabase
       .from('group_members')
-      .delete()
-      .eq('group_id', groupId);
+      .update({ connected_user_id: null })
+      .eq('id', currentMember.id);
 
-    if (membersError) throw membersError;
+    if (error) throw error;
 
-    const { error: groupError } = await supabase.from('groups').delete().eq('id', groupId);
+    const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    const token = session?.access_token;
 
-    if (groupError) throw groupError;
+    if (supabaseUrl && token) {
+      try {
+        await fetch(`${supabaseUrl}/functions/v1/cleanup-orphaned-groups`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+      } catch (cleanupError) {
+        console.warn('Failed to trigger cleanup:', cleanupError);
+      }
+    }
 
     return true;
   } catch (error) {
-    console.error('Failed to delete group:', error);
+    console.error('Failed to leave group:', error);
     return false;
   }
 }
 
-export async function isGroupOwner(groupId: string): Promise<boolean> {
-  try {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return false;
-
-    const { data } = await supabase
-      .from('groups')
-      .select('created_by')
-      .eq('id', groupId)
-      .maybeSingle();
-
-    return data?.created_by === user.id;
-  } catch (error) {
-    console.error('Failed to check group ownership:', error);
-    return false;
-  }
-}
 
 export async function deleteUserAccount(): Promise<boolean> {
   try {
@@ -813,11 +781,6 @@ export async function deleteUserAccount(): Promise<boolean> {
     if (!user) {
       throw new Error('No authenticated user');
     }
-
-    const { data: ownedGroups } = await supabase
-      .from('groups')
-      .select('id')
-      .eq('created_by', user.id);
 
     const {
       data: { session },
