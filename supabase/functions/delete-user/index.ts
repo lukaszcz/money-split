@@ -50,49 +50,26 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const { data: ownedGroups } = await supabaseClient
-      .from("groups")
-      .select("id")
-      .eq("created_by", user.id);
-
-    if (ownedGroups && ownedGroups.length > 0) {
-      for (const group of ownedGroups) {
-        const { data: expenses } = await supabaseClient
-          .from("expenses")
-          .select("id")
-          .eq("group_id", group.id);
-
-        const expenseIds = (expenses || []).map(e => e.id);
-
-        if (expenseIds.length > 0) {
-          await supabaseClient
-            .from("expense_shares")
-            .delete()
-            .in("expense_id", expenseIds);
-        }
-
-        await supabaseClient
-          .from("expenses")
-          .delete()
-          .eq("group_id", group.id);
-
-        await supabaseClient
-          .from("group_members")
-          .delete()
-          .eq("group_id", group.id);
-
-        await supabaseClient
-          .from("groups")
-          .delete()
-          .eq("id", group.id);
-      }
-    }
-
-    await supabaseClient
+    // Step 1: Disconnect user from all their groups
+    // This sets connected_user_id to null for all group_members where the user is connected
+    const { error: disconnectError } = await supabaseClient
       .from("group_members")
       .update({ connected_user_id: null })
       .eq("connected_user_id", user.id);
 
+    if (disconnectError) {
+      console.error("Failed to disconnect user from groups:", disconnectError);
+      return new Response(
+        JSON.stringify({ error: "Failed to disconnect from groups", details: disconnectError.message }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // Step 2: Delete user from public.users table
+    // This will cascade delete user_currency_preferences and user_group_preferences
     const { error: publicUserError } = await supabaseClient
       .from("users")
       .delete()
@@ -109,6 +86,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // Step 3: Delete user from auth.users
     const { error: deleteError } = await supabaseClient.auth.admin.deleteUser(
       user.id
     );
@@ -122,6 +100,31 @@ Deno.serve(async (req: Request) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
+    }
+
+    // Step 4: Cleanup orphaned groups
+    // Call the cleanup function to remove groups with no connected members
+    try {
+      const cleanupResponse = await fetch(
+        `${supabaseUrl}/functions/v1/cleanup-orphaned-groups`,
+        {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${supabaseServiceKey}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!cleanupResponse.ok) {
+        console.error("Cleanup function failed, but user was deleted");
+      } else {
+        const cleanupResult = await cleanupResponse.json();
+        console.log("Cleanup result:", cleanupResult);
+      }
+    } catch (cleanupError) {
+      // Don't fail the entire request if cleanup fails
+      console.error("Failed to call cleanup function:", cleanupError);
     }
 
     return new Response(

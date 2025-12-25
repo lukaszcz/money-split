@@ -6,8 +6,7 @@ import { ArrowLeft, Plus, User, Mail, Link, Trash2 } from 'lucide-react-native';
 import {
   getGroup,
   getGroupExpenses,
-  deleteGroup,
-  isGroupOwner,
+  leaveGroup,
   Expense,
   GroupWithMembers,
   GroupMember,
@@ -27,18 +26,15 @@ export default function GroupDetailScreen() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [activeTab, setActiveTab] = useState<Tab>('payments');
   const [loading, setLoading] = useState(true);
-  const [isOwner, setIsOwner] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!id || typeof id !== 'string') return;
 
     const fetchedGroup = await getGroup(id);
     const fetchedExpenses = await getGroupExpenses(id);
-    const ownerStatus = await isGroupOwner(id);
 
     setGroup(fetchedGroup);
     setExpenses(fetchedExpenses);
-    setIsOwner(ownerStatus);
     setLoading(false);
 
     await recordGroupVisit(id);
@@ -74,26 +70,26 @@ export default function GroupDetailScreen() {
     }
   };
 
-  const handleDeleteGroup = () => {
+  const handleLeaveGroup = () => {
     Alert.alert(
-      'Delete Group',
-      'Are you sure you want to delete this group? This will permanently remove all expenses, members, and data associated with this group. This action cannot be undone.',
+      'Leave Group',
+      'Are you sure you want to leave this group? You will be disconnected from it. If you are the last member, the group will be deleted.',
       [
         {
           text: 'Cancel',
           style: 'cancel',
         },
         {
-          text: 'Delete',
+          text: 'Leave',
           style: 'destructive',
           onPress: async () => {
             if (!id || typeof id !== 'string') return;
 
-            const success = await deleteGroup(id);
+            const success = await leaveGroup(id);
             if (success) {
               router.back();
             } else {
-              Alert.alert('Error', 'Failed to delete group. You must be the group owner to delete it.');
+              Alert.alert('Error', 'Failed to leave group. Please try again.');
             }
           },
         },
@@ -112,11 +108,9 @@ export default function GroupDetailScreen() {
           <Text style={styles.headerSubtitle}>{group.mainCurrencyCode}</Text>
         </View>
         <View style={styles.headerActions}>
-          {isOwner && (
-            <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteGroup}>
-              <Trash2 color="#dc2626" size={20} />
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity style={styles.deleteButton} onPress={handleLeaveGroup}>
+            <Trash2 color="#dc2626" size={20} />
+          </TouchableOpacity>
           {(activeTab === 'payments' || activeTab === 'members') && (
             <TouchableOpacity style={styles.addButton} onPress={handleAddPress}>
               <Plus color="#ffffff" size={20} />
