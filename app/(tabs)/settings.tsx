@@ -178,8 +178,7 @@ export default function SettingsScreen() {
 
         <View style={styles.card}>
           <Text style={styles.dangerWarning}>
-            Deleting your account is permanent and cannot be undone. All groups you own and their
-            data will be permanently deleted.
+            Deleting your account is permanent and cannot be undone.
           </Text>
 
           <TouchableOpacity style={styles.deleteAccountButton} onPress={handleDeleteAccount}>
