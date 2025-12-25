@@ -17,7 +17,6 @@ export default function SettingsScreen() {
   const [deletingAccount, setDeletingAccount] = useState(false);
 
   useEffect(() => {
-    loadRefreshInfo();
     loadUserProfile();
   }, [user]);
 
