@@ -210,7 +210,8 @@ export default function AddExpenseScreen() {
         rate.rateScaled,
         totalInMainScaled,
         shareData,
-        'transfer'
+        'transfer',
+        'equal'
       );
 
       if (expense) {
@@ -258,7 +259,8 @@ export default function AddExpenseScreen() {
         rate.rateScaled,
         totalInMainScaled,
         shareData,
-        'expense'
+        'expense',
+        splitMethod
       );
 
       if (expense) {

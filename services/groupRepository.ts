@@ -421,6 +421,7 @@ export interface Expense {
   createdAt: string;
   shares: ExpenseShare[];
   paymentType?: 'expense' | 'transfer';
+  splitType?: 'equal' | 'percentage' | 'exact';
 }
 
 export interface ExpenseShare {
@@ -440,7 +441,8 @@ export async function createExpense(
   exchangeRateToMainScaled: bigint,
   totalInMainScaled: bigint,
   shares: Array<{ memberId: string; shareAmountScaled: bigint; shareInMainScaled: bigint }>,
-  paymentType: 'expense' | 'transfer' = 'expense'
+  paymentType: 'expense' | 'transfer' = 'expense',
+  splitType: 'equal' | 'percentage' | 'exact' = 'equal'
 ): Promise<Expense | null> {
   try {
     const { data: expenseData, error: expenseError } = await supabase
@@ -455,6 +457,7 @@ export async function createExpense(
         exchange_rate_to_main_scaled: Number(exchangeRateToMainScaled),
         total_in_main_scaled: Number(totalInMainScaled),
         payment_type: paymentType,
+        split_type: splitType,
       })
       .select()
       .single();
@@ -485,6 +488,8 @@ export async function createExpense(
       exchangeRateToMainScaled: BigInt(expenseData.exchange_rate_to_main_scaled),
       totalInMainScaled: BigInt(expenseData.total_in_main_scaled),
       createdAt: expenseData.created_at,
+      paymentType: expenseData.payment_type || 'expense',
+      splitType: expenseData.split_type || 'equal',
       shares: shares.map((s) => ({
         id: '',
         memberId: s.memberId,
@@ -528,6 +533,7 @@ export async function getGroupExpenses(groupId: string): Promise<Expense[]> {
       totalInMainScaled: BigInt(e.total_in_main_scaled),
       createdAt: e.created_at,
       paymentType: e.payment_type || 'expense',
+      splitType: e.split_type || 'equal',
       shares: (e.expense_shares || []).map((s: any) => ({
         id: s.id,
         memberId: s.member_id,
@@ -570,6 +576,8 @@ export async function getExpense(expenseId: string): Promise<Expense | null> {
       exchangeRateToMainScaled: BigInt(expenseData.exchange_rate_to_main_scaled),
       totalInMainScaled: BigInt(expenseData.total_in_main_scaled),
       createdAt: expenseData.created_at,
+      paymentType: expenseData.payment_type || 'expense',
+      splitType: expenseData.split_type || 'equal',
       shares: (shareData || []).map((s) => ({
         id: s.id,
         memberId: s.member_id,
@@ -592,7 +600,8 @@ export async function updateExpense(
   payerMemberId: string,
   exchangeRateToMainScaled: bigint,
   totalInMainScaled: bigint,
-  shares: Array<{ memberId: string; shareAmountScaled: bigint; shareInMainScaled: bigint }>
+  shares: Array<{ memberId: string; shareAmountScaled: bigint; shareInMainScaled: bigint }>,
+  splitType: 'equal' | 'percentage' | 'exact' = 'equal'
 ): Promise<Expense | null> {
   try {
     const { data: expenseData, error: expenseError } = await supabase
@@ -605,6 +614,7 @@ export async function updateExpense(
         payer_member_id: payerMemberId,
         exchange_rate_to_main_scaled: Number(exchangeRateToMainScaled),
         total_in_main_scaled: Number(totalInMainScaled),
+        split_type: splitType,
       })
       .eq('id', expenseId)
       .select()
@@ -641,6 +651,8 @@ export async function updateExpense(
       exchangeRateToMainScaled: BigInt(expenseData.exchange_rate_to_main_scaled),
       totalInMainScaled: BigInt(expenseData.total_in_main_scaled),
       createdAt: expenseData.created_at,
+      paymentType: expenseData.payment_type || 'expense',
+      splitType: expenseData.split_type || 'equal',
       shares: shares.map((s) => ({
         id: '',
         memberId: s.memberId,

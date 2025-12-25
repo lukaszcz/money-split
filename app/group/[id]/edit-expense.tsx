@@ -81,23 +81,21 @@ export default function EditExpenseScreen() {
       const participants = fetchedExpense.shares.map((s) => s.memberId);
       setSelectedParticipants(participants);
 
-      const shareAmounts = fetchedExpense.shares.map((s) => s.shareAmountScaled);
-      const totalAmount = fetchedExpense.totalAmountScaled;
-      const numParticipants = shareAmounts.length;
+      const splitType = fetchedExpense.splitType || 'equal';
+      setSplitMethod(splitType);
 
-      const isEqualSplit = shareAmounts.every((share) => {
-        const expectedShare =
-          totalAmount / BigInt(numParticipants) +
-          (BigInt(shareAmounts.indexOf(share)) < totalAmount % BigInt(numParticipants)
-            ? BigInt(1)
-            : BigInt(0));
-        return share === expectedShare;
-      });
+      if (splitType === 'percentage') {
+        const percentageData: Record<string, string> = {};
+        const totalAmount = Number(fetchedExpense.totalAmountScaled);
 
-      if (isEqualSplit) {
-        setSplitMethod('equal');
-      } else {
-        setSplitMethod('exact');
+        fetchedExpense.shares.forEach((share) => {
+          const shareAmount = Number(share.shareAmountScaled);
+          const percentage = (shareAmount / totalAmount) * 100;
+          percentageData[share.memberId] = percentage.toFixed(0);
+        });
+
+        setPercentages(percentageData);
+      } else if (splitType === 'exact') {
         const exactAmts: Record<string, string> = {};
         fetchedExpense.shares.forEach((share) => {
           exactAmts[share.memberId] = (Number(share.shareAmountScaled) / 10000).toFixed(2);
@@ -235,7 +233,8 @@ export default function EditExpenseScreen() {
         payerId,
         rate.rateScaled,
         totalInMainScaled,
-        shareData
+        shareData,
+        splitMethod
       );
 
       if (updatedExpense) {
