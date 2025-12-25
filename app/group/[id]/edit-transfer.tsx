@@ -130,7 +130,8 @@ export default function EditTransferScreen() {
         payerId,
         rate.rateScaled,
         totalInMainScaled,
-        shareData
+        shareData,
+        'equal'
       );
 
       if (updated) {
