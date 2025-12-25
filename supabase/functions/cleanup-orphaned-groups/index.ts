@@ -7,42 +7,16 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
-function deleteGroup(supabase, groupId: string): void {
-  const { data: expenses, error: expenseError } = await supabase
-    .from('expenses')
-    .select('id')
-    .eq('group_id', groupId);
+async function deleteGroup(supabase: any, groupId: string): Promise<void> {
+  const { error } = await supabase
+    .from('groups')
+    .delete()
+    .eq('id', groupId);
 
-  if (expenseError) throw expenseError;
-
-  const expenseIds = expenses.map((e) => e.id);
-
-  if (expenseIds.length > 0) {
-    const { error: sharesError } = await supabase
-      .from('expense_shares')
-      .delete()
-      .in('expense_id', expenseIds);
-
-    if (sharesError) throw sharesError;
+  if (error) {
+    console.error(`Failed to delete group ${groupId}:`, error);
+    throw error;
   }
-
-  const { error: expensesError } = await supabase
-    .from('expenses')
-    .delete()
-    .eq('group_id', groupId);
-
-  if (expensesError) throw expensesError;
-
-  const { error: membersError } = await supabase
-    .from('group_members')
-    .delete()
-    .eq('group_id', groupId);
-
-  if (membersError) throw membersError;
-
-  const { error: groupError } = await supabase.from('groups').delete().eq('id', groupId);
-
-  if (groupError) throw groupError;
 }
 
 Deno.serve(async (req: Request) => {
@@ -57,7 +31,6 @@ Deno.serve(async (req: Request) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    // Verify user is authenticated
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(
@@ -89,7 +62,6 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Find all groups that have no connected members
     const { data: orphanedGroups, error: fetchError } = await supabaseClient
       .from("groups")
       .select("id");
@@ -105,7 +77,6 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Filter groups where ALL members have null connected_user_id
     const groupsToDelete: string[] = [];
     const groupsChecked = new Set<string>();
 
@@ -114,29 +85,25 @@ Deno.serve(async (req: Request) => {
         if (groupsChecked.has(group.id)) continue;
         groupsChecked.add(group.id);
 
-        // Get all members for this group
         const { data: members } = await supabaseClient
           .from("group_members")
           .select("connected_user_id")
           .eq("group_id", group.id);
 
-        // If all members have null connected_user_id, mark for deletion
         if (members && members.length > 0) {
           const hasConnectedMember = members.some(m => m.connected_user_id !== null);
           if (!hasConnectedMember) {
             groupsToDelete.push(group.id);
           }
         } else {
-          // No members at all, delete the group
           groupsToDelete.push(group.id);
         }
       }
     }
 
-    // Delete the orphaned groups
     let deletedCount = 0;
     for (const groupId of groupsToDelete) {
-      deleteGroup(supabaseClient, groupId);
+      await deleteGroup(supabaseClient, groupId);
       ++deletedCount;
     }
 
