@@ -65,16 +65,25 @@ export async function getExchangeRate(
     const fetchedAt = new Date().toISOString();
 
     try {
-      await supabase
+      const { error } = await supabase
         .from('exchange_rates')
-        .upsert({
-          base_currency_code: baseCurrency,
-          quote_currency_code: quoteCurrency,
-          rate_scaled: Number(rateScaled),
-          fetched_at: fetchedAt,
-        });
+        .upsert(
+          {
+            base_currency_code: baseCurrency,
+            quote_currency_code: quoteCurrency,
+            rate_scaled: Number(rateScaled),
+            fetched_at: fetchedAt,
+          },
+          {
+            onConflict: 'base_currency_code,quote_currency_code',
+          }
+        );
+
+      if (error) {
+        console.error('Failed to cache exchange rate:', error);
+      }
     } catch (error) {
-      console.warn('Failed to cache exchange rate:', error);
+      console.error('Failed to cache exchange rate:', error);
     }
 
     return {
