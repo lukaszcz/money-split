@@ -8,6 +8,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/AuthContext';
@@ -52,7 +53,11 @@ export default function AuthScreen() {
       >
         <View style={styles.content}>
         <View style={styles.logoContainer}>
-          <Text style={styles.logoText}>MoneySplit</Text>
+          <Image
+            source={require('../assets/images/moneysplit.jpg')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
         </View>
         <Text style={styles.title}>{isLogin ? 'Welcome back' : 'Create account'}</Text>
         <Text style={styles.subtitle}>
@@ -132,11 +137,9 @@ const styles = StyleSheet.create({
     marginBottom: 40,
     alignItems: 'center',
   },
-  logoText: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#007AFF',
-    letterSpacing: -0.5,
+  logo: {
+    width: 280,
+    height: 80,
   },
   title: {
     fontSize: 32,
