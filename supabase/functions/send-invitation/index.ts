@@ -120,7 +120,7 @@ Deno.serve(async (req: Request) => {
             </div>
             <div class="content">
               <p>Hi there!</p>
-              <p>You've been invited to join the group <span class="group-name">"${groupName}"</span> on our expense sharing app.</p>
+              <p>You've been invited to join the group <span class="group-name">"${groupName}"</span> on the MoneySplit expense sharing app.</p>
               <p>Join now to:</p>
               <ul>
                 <li>Track shared expenses with your group</li>
@@ -133,7 +133,7 @@ Deno.serve(async (req: Request) => {
               <p style="font-size: 14px; color: #6b7280;">If you didn't expect this invitation, you can safely ignore this email.</p>
             </div>
             <div class="footer">
-              <p>© 2024 Expense Sharing App. All rights reserved.</p>
+              <p>© 2025 Lukasz Czajka. All rights reserved.</p>
             </div>
           </div>
         </body>
