@@ -15,5 +15,5 @@
 */
 
 -- Fix the search_path for is_group_member function
-ALTER FUNCTION public.is_group_member(uuid)
-SET search_path = pg_catalog, public;
+ALTER FUNCTION public.is_group_member(...)
+SET search_path = '';
