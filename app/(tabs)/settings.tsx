@@ -2,7 +2,6 @@ import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, TextInput,
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useEffect } from 'react';
 import { RefreshCw, LogOut, User, Edit2, Check, X, Trash2 } from 'lucide-react-native';
-import { getLastRefreshTime, refreshAllRates, getCachedRates } from '../../services/exchangeRateService';
 import { useAuth } from '@/contexts/AuthContext';
 import { router } from 'expo-router';
 import { getUser, updateUserName, deleteUserAccount } from '../../services/groupRepository';
@@ -18,7 +17,6 @@ export default function SettingsScreen() {
   const [deletingAccount, setDeletingAccount] = useState(false);
 
   useEffect(() => {
-    loadRefreshInfo();
     loadUserProfile();
   }, [user]);
 
@@ -29,58 +27,6 @@ export default function SettingsScreen() {
       setUserName(userData.name);
       setTempName(userData.name);
     }
-  };
-
-  const loadRefreshInfo = async () => {
-    const lastTime = await getLastRefreshTime();
-    setLastRefresh(lastTime);
-
-    const rates = await getCachedRates();
-    setRateCount(rates.length);
-  };
-
-  const handleManualRefresh = async () => {
-    setRefreshing(true);
-
-    try {
-      const rates = await getCachedRates();
-      const currencies = new Set<string>();
-
-      rates.forEach(rate => {
-        currencies.add(rate.baseCurrencyCode);
-        currencies.add(rate.quoteCurrencyCode);
-      });
-
-      if (currencies.size === 0) {
-        currencies.add('USD');
-        currencies.add('EUR');
-        currencies.add('GBP');
-      }
-
-      await refreshAllRates(Array.from(currencies));
-
-      await loadRefreshInfo();
-
-      Alert.alert('Success', 'Exchange rates refreshed successfully');
-    } catch (error) {
-      Alert.alert('Error', 'Failed to refresh exchange rates');
-    } finally {
-      setRefreshing(false);
-    }
-  };
-
-  const formatLastRefresh = () => {
-    if (!lastRefresh) return 'Never';
-
-    const now = Date.now();
-    const diff = now - lastRefresh.getTime();
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-
-    if (hours === 0) {
-      return `${minutes} minute${minutes !== 1 ? 's' : ''} ago`;
-    }
-    return `${hours} hour${hours !== 1 ? 's' : ''} ago`;
   };
 
   const handleSaveName = async () => {
@@ -129,7 +75,7 @@ export default function SettingsScreen() {
   const handleDeleteAccount = () => {
     Alert.alert(
       'Delete Account',
-      'Are you absolutely sure you want to delete your account? This will:\n\n• Delete all groups you own\n• Remove all expenses in your groups\n• Disconnect you from groups you are a member of\n• Permanently erase all your data\n\nThis action cannot be undone.',
+      'Are you absolutely sure you want to delete your account? This will:\n\n• Disconnect you from groups you are a member of\n• Permanently erase all your data\n\nThis action cannot be undone.',
       [
         {
           text: 'Cancel',
@@ -232,8 +178,7 @@ export default function SettingsScreen() {
 
         <View style={styles.card}>
           <Text style={styles.dangerWarning}>
-            Deleting your account is permanent and cannot be undone. All groups you own and their
-            data will be permanently deleted.
+            Deleting your account is permanent and cannot be undone.
           </Text>
 
           <TouchableOpacity style={styles.deleteAccountButton} onPress={handleDeleteAccount}>
@@ -241,37 +186,6 @@ export default function SettingsScreen() {
             <Text style={styles.deleteAccountButtonText}>Delete My Account</Text>
           </TouchableOpacity>
         </View>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Exchange Rates</Text>
-
-        <View style={styles.card}>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Last updated:</Text>
-            <Text style={styles.infoValue}>{formatLastRefresh()}</Text>
-          </View>
-
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Cached rates:</Text>
-            <Text style={styles.infoValue}>{rateCount}</Text>
-          </View>
-
-          <TouchableOpacity
-            style={[styles.refreshButton, refreshing && styles.refreshButtonDisabled]}
-            onPress={handleManualRefresh}
-            disabled={refreshing}>
-            <RefreshCw color="#ffffff" size={20} />
-            <Text style={styles.refreshButtonText}>
-              {refreshing ? 'Refreshing...' : 'Refresh Now'}
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        <Text style={styles.helpText}>
-          Exchange rates are automatically fetched from the internet and cached for 12 hours. When
-          offline, the app will use the last cached rates.
-        </Text>
       </View>
 
       <View style={styles.section}>
@@ -284,18 +198,6 @@ export default function SettingsScreen() {
             Track shared expenses and debts with friends. All calculations use fixed-point
             arithmetic with 4 decimal places precision for accuracy.
           </Text>
-        </View>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Technical Details</Text>
-
-        <View style={styles.card}>
-          <Text style={styles.techDetail}>• Money stored as integers scaled by 10,000</Text>
-          <Text style={styles.techDetail}>• 4 decimal places internal precision</Text>
-          <Text style={styles.techDetail}>• 2 decimal places display precision</Text>
-          <Text style={styles.techDetail}>• No floating point drift</Text>
-          <Text style={styles.techDetail}>• Deterministic rounding with remainder distribution</Text>
         </View>
       </View>
       </ScrollView>

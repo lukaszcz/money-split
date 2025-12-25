@@ -7,6 +7,44 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
+function deleteGroup(supabase, groupId: string): void {
+  const { data: expenses, error: expenseError } = await supabase
+    .from('expenses')
+    .select('id')
+    .eq('group_id', groupId);
+
+  if (expenseError) throw expenseError;
+
+  const expenseIds = expenses.map((e) => e.id);
+
+  if (expenseIds.length > 0) {
+    const { error: sharesError } = await supabase
+      .from('expense_shares')
+      .delete()
+      .in('expense_id', expenseIds);
+
+    if (sharesError) throw sharesError;
+  }
+
+  const { error: expensesError } = await supabase
+    .from('expenses')
+    .delete()
+    .eq('group_id', groupId);
+
+  if (expensesError) throw expensesError;
+
+  const { error: membersError } = await supabase
+    .from('group_members')
+    .delete()
+    .eq('group_id', groupId);
+
+  if (membersError) throw membersError;
+
+  const { error: groupError } = await supabase.from('groups').delete().eq('id', groupId);
+
+  if (groupError) throw groupError;
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, {
@@ -54,13 +92,7 @@ Deno.serve(async (req: Request) => {
     // Find all groups that have no connected members
     const { data: orphanedGroups, error: fetchError } = await supabaseClient
       .from("groups")
-      .select(`
-        id,
-        name,
-        group_members!inner(
-          connected_user_id
-        )
-      `);
+      .select("id");
 
     if (fetchError) {
       console.error("Failed to fetch groups:", fetchError);
@@ -103,23 +135,9 @@ Deno.serve(async (req: Request) => {
 
     // Delete the orphaned groups
     let deletedCount = 0;
-    if (groupsToDelete.length > 0) {
-      const { error: deleteError } = await supabaseClient
-        .from("groups")
-        .delete()
-        .in("id", groupsToDelete);
-
-      if (deleteError) {
-        console.error("Failed to delete groups:", deleteError);
-        return new Response(
-          JSON.stringify({ error: "Failed to delete groups", details: deleteError.message }),
-          {
-            status: 500,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          }
-        );
-      }
-      deletedCount = groupsToDelete.length;
+    for (const groupId of groupsToDelete) {
+      deleteGroup(supabaseClient, groupId);
+      ++deletedCount;
     }
 
     return new Response(

@@ -73,7 +73,7 @@ export default function GroupDetailScreen() {
   const handleLeaveGroup = () => {
     Alert.alert(
       'Leave Group',
-      'Are you sure you want to leave this group? You will be disconnected from it. If you are the last member, the group will be deleted.',
+      'Are you sure you want to leave this group? If you are the last member, the group will be deleted.',
       [
         {
           text: 'Cancel',
