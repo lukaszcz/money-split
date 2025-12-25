@@ -677,19 +677,6 @@ export async function deleteExpense(expenseId: string): Promise<boolean> {
   }
 }
 
-export async function deleteGroupMember(memberId: string): Promise<boolean> {
-  try {
-    const { error } = await supabase.from('group_members').delete().eq('id', memberId);
-
-    if (error) throw error;
-
-    return true;
-  } catch (error) {
-    console.error('Failed to delete group member:', error);
-    return false;
-  }
-}
-
 export async function updateGroupMember(
   memberId: string,
   name: string,
