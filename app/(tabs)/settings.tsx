@@ -200,18 +200,6 @@ export default function SettingsScreen() {
           </Text>
         </View>
       </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Technical Details</Text>
-
-        <View style={styles.card}>
-          <Text style={styles.techDetail}>• Money stored as integers scaled by 10,000</Text>
-          <Text style={styles.techDetail}>• 4 decimal places internal precision</Text>
-          <Text style={styles.techDetail}>• 2 decimal places display precision</Text>
-          <Text style={styles.techDetail}>• No floating point drift</Text>
-          <Text style={styles.techDetail}>• Deterministic rounding with remainder distribution</Text>
-        </View>
-      </View>
       </ScrollView>
 
       <Modal visible={deletingAccount} transparent animationType="fade" presentationStyle="overFullScreen">
