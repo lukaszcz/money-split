@@ -54,13 +54,7 @@ Deno.serve(async (req: Request) => {
     // Find all groups that have no connected members
     const { data: orphanedGroups, error: fetchError } = await supabaseClient
       .from("groups")
-      .select(`
-        id,
-        name,
-        group_members!inner(
-          connected_user_id
-        )
-      `);
+      .select("id");
 
     if (fetchError) {
       console.error("Failed to fetch groups:", fetchError);
