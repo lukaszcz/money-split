@@ -51,7 +51,7 @@ export default function AuthScreen() {
         style={{ flex: 1 }}
       >
         <View style={styles.content}>
-        <Text style={styles.title}>{isLogin ? 'Welcome Back' : 'Create Account'}</Text>
+        <Text style={styles.title}>{isLogin ? 'Welcome back to MoneySplit' : 'Create MoneySplit account'}</Text>
         <Text style={styles.subtitle}>
           {isLogin ? 'Sign in to continue' : 'Sign up to get started'}
         </Text>
