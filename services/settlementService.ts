@@ -244,8 +244,7 @@ interface SimplificationPair {
 
 function findSimplificationPair(settlements: Settlement[]): SimplificationPair | null {
   for (let i = 0; i < settlements.length; i++) {
-    for (let j = 0; j < settlements.length; j++) {
-      if (i === j) continue;
+    for (let j = i + 1; j < settlements.length; j++) {
       const s1 = settlements[i];
       const s2 = settlements[j];
 
@@ -279,13 +278,15 @@ function findSimplificationPair(settlements: Settlement[]): SimplificationPair |
   }
 
   for (let k = 0; k < settlements.length; k++) {
+    const s0 = settlements[k];
     for (let i = k; i < settlements.length; i++) {
-      for (let j = i + 1; j < settlements.length; j++) {
+      for (let j = k; j < settlements.length; j++) {
+        if (i === j) continue;
         const s1 = settlements[i];
         const s2 = settlements[j];
-  
-        if (s1.to.id === s2.from.id && s1.from.id !== s2.to.id) {
-          return { firstIdx: i, secondIdx: j, type: 'chain' };
+
+        if (s0.from.id == s1.from.id && s0.to.id === s2.to.id) {
+          return { firstIdx: i, secondIdx: j, type: 'swap' };
         }
       }
     }
@@ -310,11 +311,17 @@ function getResultIndices(
     } else {
       return [idx];
     }
-  } else {
+  } else if (type === 'chain') {
     if (first.amountScaled == second.amountScaled) {
       return [idx];
     } else {
       return [idx, idx + 1];
+    }
+  } else {
+    if (first.amountScaled == second.amountScaled) {
+      return [idx, idx + 1];
+    } else {
+      return [idx, idx + 1, idx + 2];
     }
   }
 }
@@ -351,7 +358,7 @@ function applySimplification(
         amountScaled: -net,
       });
     }
-  } else {
+  } else if (type == 'chain') {
     const transferAmount = first.amountScaled < second.amountScaled
       ? first.amountScaled
       : second.amountScaled;
@@ -380,6 +387,8 @@ function applySimplification(
       to: second.to,
       amountScaled: transferAmount,
     });
+  } else {
+    
   }
 
   return [newSettlements, resultIndices];
