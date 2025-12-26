@@ -279,8 +279,8 @@ function findSimplificationPair(settlements: Settlement[]): SimplificationPair |
 
   for (let k = 0; k < settlements.length; k++) {
     const s0 = settlements[k];
-    for (let i = k; i < settlements.length; i++) {
-      for (let j = k; j < settlements.length; j++) {
+    for (let i = k + 1; i < settlements.length; i++) {
+      for (let j = k + 1; j < settlements.length; j++) {
         if (i === j) continue;
         const s1 = settlements[i];
         const s2 = settlements[j];
