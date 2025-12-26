@@ -517,7 +517,7 @@ export async function getGroupExpenses(groupId: string): Promise<Expense[]> {
         )
       `)
       .eq('group_id', groupId)
-      .order('date_time', { ascending: false });
+      .order('created_at', { ascending: false });
 
     if (expenseError) throw expenseError;
 
