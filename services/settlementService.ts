@@ -388,7 +388,43 @@ function applySimplification(
       amountScaled: transferAmount,
     });
   } else {
-    
+    // type === 'swap'
+    const net = first.amountScaled - second.amountScaled;
+    if (net > BigInt(0)) {
+      newSettlements.splice(resultIndices[0], 0, {
+        from: first.from,
+        to: first.to,
+        amountScaled: net,
+      });
+      newSettlements.splice(resultIndices[1], 0, {
+        from: first.from,
+        to: second.to,
+        amountScaled: second.amountScaled,
+      });
+      newSettlements.splice(resultIndices[2], 0, {
+        from: second.from,
+        to: first.to,
+        amountScaled: first.amountScaled,
+      });
+    } else if (net < BigInt(0)) {
+      newSettlements.splice(resultIndices[0], 0, {
+        from: second.from,
+        to: second.to,
+        amountScaled: -net,
+      });
+      newSettlements.splice(resultIndices[1], 0, {
+        from: second.from,
+        to: first.to,
+        amountScaled: first.amountScaled,
+      });
+      newSettlements.splice(resultIndices[2], 0, {
+        from: second.from,
+        to: first.to,
+        amountScaled: first.amountScaled,
+      });
+    } else {
+      
+    }    
   }
 
   return [newSettlements, resultIndices];
