@@ -72,6 +72,18 @@ export default function EditTransferScreen() {
     setLoading(false);
   };
 
+  const validateDecimalInput = (text: string, maxDecimals: number = 2): string => {
+    const sanitized = text.replace(/[^0-9.]/g, '');
+    const parts = sanitized.split('.');
+    if (parts.length > 2) {
+      return parts[0] + '.' + parts.slice(1).join('');
+    }
+    if (parts.length === 2) {
+      return parts[0] + '.' + parts[1].substring(0, maxDecimals);
+    }
+    return sanitized;
+  };
+
   const handleSave = async () => {
     if (!group || !expense) return;
 
@@ -204,7 +216,7 @@ export default function EditTransferScreen() {
           <TextInput
             style={styles.input}
             value={amount}
-            onChangeText={setAmount}
+            onChangeText={text => setAmount(validateDecimalInput(text))}
             placeholder="0.00"
             placeholderTextColor="#9ca3af"
             keyboardType="decimal-pad"

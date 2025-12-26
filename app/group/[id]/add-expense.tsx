@@ -72,6 +72,18 @@ export default function AddExpenseScreen() {
     }
   };
 
+  const validateDecimalInput = (text: string, maxDecimals: number = 2): string => {
+    const sanitized = text.replace(/[^0-9.]/g, '');
+    const parts = sanitized.split('.');
+    if (parts.length > 2) {
+      return parts[0] + '.' + parts.slice(1).join('');
+    }
+    if (parts.length === 2) {
+      return parts[0] + '.' + parts[1].substring(0, maxDecimals);
+    }
+    return sanitized;
+  };
+
   const toggleParticipant = (userId: string) => {
     if (selectedParticipants.includes(userId)) {
       setSelectedParticipants(selectedParticipants.filter(id => id !== userId));
@@ -303,7 +315,7 @@ export default function AddExpenseScreen() {
         <TextInput
           style={styles.input}
           value={amount}
-          onChangeText={setAmount}
+          onChangeText={text => setAmount(validateDecimalInput(text))}
           placeholder="0.00"
           placeholderTextColor="#9ca3af"
           keyboardType="decimal-pad"
@@ -492,7 +504,7 @@ export default function AddExpenseScreen() {
                 style={styles.inputRowField}
                 value={exactAmounts[member.id] || ''}
                 onChangeText={text => {
-                  const sanitized = text.replace(/[^0-9.]/g, '');
+                  const sanitized = validateDecimalInput(text);
                   if (sanitized === '' || sanitized === '.') {
                     setExactAmounts({ ...exactAmounts, [member.id]: sanitized });
                     return;
@@ -534,7 +546,7 @@ export default function AddExpenseScreen() {
         <TextInput
           style={styles.input}
           value={amount}
-          onChangeText={setAmount}
+          onChangeText={text => setAmount(validateDecimalInput(text))}
           placeholder="0.00"
           placeholderTextColor="#9ca3af"
           keyboardType="decimal-pad"
