@@ -363,8 +363,7 @@ function SettleTab({
       </TouchableOpacity>
 
       <Text style={styles.settleInfo}>
-        Tap above to see who should pay whom and how much. You'll have the option to simplify debts
-        to reduce the number of transfers.
+        Tap above to see who should pay whom and how much. You'll have the option to simplify debts to reduce the number of transfers. Simplifying reduces the number of transfers, but may change who pays whom.
       </Text>
     </View>
   );
