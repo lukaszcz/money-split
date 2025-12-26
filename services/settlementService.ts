@@ -423,7 +423,16 @@ function applySimplification(
         amountScaled: first.amountScaled,
       });
     } else {
-      
+      newSettlements.splice(resultIndices[0], 0, {
+        from: first.from,
+        to: second.to,
+        amountScaled: first.amountScaled,
+      });
+      newSettlements.splice(resultIndices[1], 0, {
+        from: second.from,
+        to: first.to,
+        amountScaled: first.amountScaled,
+      });
     }    
   }
 
