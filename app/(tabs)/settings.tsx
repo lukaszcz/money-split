@@ -193,10 +193,9 @@ export default function SettingsScreen() {
 
         <View style={styles.card}>
           <Text style={styles.appName}>MoneySplit</Text>
-          <Text style={styles.appVersion}>Version 1.0.0</Text>
+          <Text style={styles.appVersion}>Version 1.0.0 beta</Text>
           <Text style={styles.appDescription}>
-            Track shared expenses and debts with friends. All calculations use fixed-point
-            arithmetic with 4 decimal places precision for accuracy.
+            Track shared expenses and debts with friends.
           </Text>
         </View>
       </View>
