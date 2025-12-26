@@ -86,23 +86,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Step 3: Delete user from auth.users
-    const { error: deleteError } = await supabaseClient.auth.admin.deleteUser(
-      user.id
-    );
-
-    if (deleteError) {
-      console.error("Failed to delete auth user:", deleteError);
-      return new Response(
-        JSON.stringify({ error: "Failed to delete user", details: deleteError.message }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
-    }
-
-    // Step 4: Cleanup orphaned groups
+    // Step 3: Cleanup orphaned groups
     // Call the cleanup function to remove groups with no connected members
     try {
       const cleanupResponse = await fetch(
@@ -110,7 +94,7 @@ Deno.serve(async (req: Request) => {
         {
           method: "POST",
           headers: {
-            "Authorization": `Bearer ${supabaseServiceKey}`,
+            "Authorization": `Bearer ${token}`,
             "Content-Type": "application/json",
           },
         }
@@ -125,6 +109,22 @@ Deno.serve(async (req: Request) => {
     } catch (cleanupError) {
       // Don't fail the entire request if cleanup fails
       console.error("Failed to call cleanup function:", cleanupError);
+    }
+
+    // Step 4: Delete user from auth.users
+    const { error: deleteError } = await supabaseClient.auth.admin.deleteUser(
+      user.id
+    );
+
+    if (deleteError) {
+      console.error("Failed to delete auth user:", deleteError);
+      return new Response(
+        JSON.stringify({ error: "Failed to delete user", details: deleteError.message }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
     }
 
     return new Response(
