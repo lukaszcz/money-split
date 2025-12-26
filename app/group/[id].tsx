@@ -363,7 +363,7 @@ function SettleTab({
       </TouchableOpacity>
 
       <Text style={styles.settleInfo}>
-        Tap above to see who should pay whom and how much.
+        Tap above to see who should pay whom.
       </Text>
 
       <Text style={[styles.settleInfo, {marginTop: 12}]}>
