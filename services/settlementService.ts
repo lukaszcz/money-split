@@ -239,7 +239,7 @@ function cloneSettlements(settlements: Settlement[]): Settlement[] {
 interface SimplificationPair {
   firstIdx: number;
   secondIdx: number;
-  type: 'merge' | 'opposite' | 'chain';
+  type: 'merge' | 'opposite' | 'chain' | 'swap';
 }
 
 function findSimplificationPair(settlements: Settlement[]): SimplificationPair | null {
@@ -278,6 +278,19 @@ function findSimplificationPair(settlements: Settlement[]): SimplificationPair |
     }
   }
 
+  for (let k = 0; k < settlements.length; k++) {
+    for (let i = k; i < settlements.length; i++) {
+      for (let j = i + 1; j < settlements.length; j++) {
+        const s1 = settlements[i];
+        const s2 = settlements[j];
+  
+        if (s1.to.id === s2.from.id && s1.from.id !== s2.to.id) {
+          return { firstIdx: i, secondIdx: j, type: 'chain' };
+        }
+      }
+    }
+  }
+  
   return null;
 }
 
