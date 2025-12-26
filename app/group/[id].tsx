@@ -609,6 +609,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6b7280',
     lineHeight: 20,
-    textAlign: 'center',
+    textAlign: 'left',
   },
 });
