@@ -18,7 +18,6 @@ import {
   toScaled,
   calculateEqualSplit,
   calculatePercentageSplit,
-  normalizeExactSplit,
   sumScaled,
   applyExchangeRate,
 } from '../../../utils/money';
@@ -140,20 +139,7 @@ export default function AddExpenseScreen() {
       const totalExact = sumScaled(exactValues);
 
       if (totalExact !== totalScaled) {
-        Alert.alert(
-          'Warning',
-          'Exact amounts do not sum to total. Do you want to normalize?',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            {
-              text: 'Normalize',
-              onPress: () => {
-                const normalized = normalizeExactSplit(exactValues, totalScaled);
-                saveExpense(normalized);
-              },
-            },
-          ]
-        );
+        Alert.alert('Error', 'Exact amounts must sum to the total amount');
         return;
       }
 
