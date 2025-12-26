@@ -366,7 +366,7 @@ function SettleTab({
         Tap above to see who should pay whom and how much.
       </Text>
 
-      <Text style={styles.settleInfo, {marginTop: 12}}>
+      <Text style={[styles.settleInfo, {marginTop: 12}]}>
         You'll have the option to simplify debts. Simplifying reduces the number of transfers, but may change who pays whom.
       </Text>
     </View>
