@@ -404,7 +404,7 @@ function applySimplification(
       newSettlements.splice(resultIndices[2], 0, {
         from: second.from,
         to: first.to,
-        amountScaled: first.amountScaled,
+        amountScaled: second.amountScaled,
       });
     } else if (net < BigInt(0)) {
       newSettlements.splice(resultIndices[0], 0, {
@@ -413,8 +413,8 @@ function applySimplification(
         amountScaled: -net,
       });
       newSettlements.splice(resultIndices[1], 0, {
-        from: second.from,
-        to: first.to,
+        from: first.from,
+        to: second.to,
         amountScaled: first.amountScaled,
       });
       newSettlements.splice(resultIndices[2], 0, {
