@@ -363,7 +363,11 @@ function SettleTab({
       </TouchableOpacity>
 
       <Text style={styles.settleInfo}>
-        Tap above to see who should pay whom and how much. You'll have the option to simplify debts. Simplifying reduces the number of transfers, but may change who pays whom.
+        Tap above to see who should pay whom and how much.
+      </Text>
+
+      <Text style={styles.settleInfo}>
+        You'll have the option to simplify debts. Simplifying reduces the number of transfers, but may change who pays whom.
       </Text>
     </View>
   );
@@ -609,6 +613,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6b7280',
     lineHeight: 20,
-    textAlign: 'left',
+    textAlign: 'center',
   },
 });
