@@ -241,7 +241,7 @@ function ExpensesTab({
             </View>
             <Text style={styles.expenseDetails}>Paid by {payer?.name || 'Unknown'}</Text>
             <Text style={styles.expenseDate}>
-              {new Date(expense.dateTime).toLocaleDateString()}
+              {new Date(expense.createdAt).toLocaleDateString()}
             </Text>
           </TouchableOpacity>
         );
