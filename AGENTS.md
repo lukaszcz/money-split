@@ -35,17 +35,17 @@ MoneySplit is a React Native/Expo mobile app for tracking shared expenses and de
 ## Testing Guidelines
 
 - Framework: Jest (configured in `package.json`).
-- No tests currently exist; new tests should follow `__tests__/name.test.ts` or co-locate with features if you introduce a test folder.
+- Tests should follow `__tests__/name.test.ts` or co-locate with features if you introduce a test folder.
 - Run locally with `npm test`.
 
 ## Commit & Pull Request Guidelines
 
 - Commit format: `type: subject` in imperative lowercase (e.g., `feat: add transfer flow`).
-- PR descriptions should summarize changes and list affected components (screens, database, edge functions).
+- PR descriptions should summarize changes.
 - Keep commits focused; avoid mixing unrelated changes.
 
 ## Security & Configuration
 
 - RLS and schema changes live in `supabase/migrations/`.
-- Edge functions run under `supabase/functions/` and should be referenced in `ARCHITECTURE.md` when changed.
+- Edge functions run under `supabase/functions/` and should be referenced in `docs/ARCHITECTURE.md` when changed.
 - NEVER read or otherwise touch `.env`. NEVER add it to the repository.
