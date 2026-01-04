@@ -12,7 +12,7 @@ A React Native/Expo mobile app for tracking shared expenses and debts among grou
 
 ## Architecture
 
-See `ARCHITECTURE.md` for the full system overview, data model, and screen-level behavior.
+See `docs/ARCHITECTURE.md` for the full system overview, data model, and screen-level behavior.
 
 ## Setup
 

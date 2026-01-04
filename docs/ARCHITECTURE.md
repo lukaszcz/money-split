@@ -51,41 +51,49 @@ The canonical schema is defined by the SQL migrations under `supabase/migrations
 ### users
 - Table: `public.users`
 - Columns: `id`, `name`, `email`, `created_at`, `last_login`.
+- Description: Profile records for authenticated users, mirrored from Supabase Auth.
 - Used by `ensureUserProfile()` and profile updates (`services/groupRepository.ts`).
 
 ### groups
+- Description: Expense-sharing groups with a primary currency for totals.
 - Table: `public.groups`
 - Columns: `id`, `name`, `main_currency_code`, `created_at`.
 - Group creation uses `createGroup()` in `services/groupRepository.ts`.
 
 ### group_members
+- Description: Membership roster for each group, including invited members not yet linked to a user.
 - Table: `public.group_members`
 - Columns: `id`, `group_id`, `name`, `email`, `connected_user_id`, `created_at`.
 - Supports members that are not yet connected to an auth user (email-based invitations).
 - Connection and reconnection logic is handled in `ensureUserProfile()` and `reconnectGroupMembers()` (`services/groupRepository.ts`).
 
 ### expenses
+- Description: Expense or transfer records for a group, stored in original and main currency.
 - Table: `public.expenses`
 - Columns: `id`, `group_id`, `description`, `date_time`, `currency_code`, `total_amount_scaled`, `payer_member_id`, `exchange_rate_to_main_scaled`, `total_in_main_scaled`, `payment_type`, `split_type`, `created_at`.
 - `payment_type` distinguishes `expense` vs `transfer` (`supabase/migrations/20251224125151_add_payment_type_to_expenses.sql`).
 - `split_type` preserves `equal` / `percentage` / `exact` (`supabase/migrations/20251225183146_add_split_type_to_expenses.sql`).
 
 ### expense_shares
+- Description: Per-member allocation of each expense in both original and main currency.
 - Table: `public.expense_shares`
 - Columns: `id`, `expense_id`, `member_id`, `share_amount_scaled`, `share_in_main_scaled`.
 - Shares are created when an expense is created or updated (`createExpense()` / `updateExpense()` in `services/groupRepository.ts`).
 
 ### exchange_rates
+- Description: Cached FX rates used to convert expenses to a group's main currency.
 - Table: `public.exchange_rates`
 - Columns: `id`, `base_currency_code`, `quote_currency_code`, `rate_scaled`, `fetched_at`.
 - Cached rates are read/written in `services/exchangeRateService.ts`.
 
 ### user_currency_preferences
+- Description: Per-user ordering of currencies for display and selection.
 - Table: `public.user_currency_preferences`
 - Columns: `id`, `user_id`, `currency_order`, `created_at`, `updated_at`.
 - Stored as a JSON array and managed in `services/currencyPreferenceService.ts`.
 
 ### user_group_preferences
+- Description: Per-user ordering of groups for the tabs list and recency sorting.
 - Table: `public.user_group_preferences`
 - Columns: `user_id`, `group_order`, `updated_at`.
 - Managed in `services/groupPreferenceService.ts` for recency-ordered group lists.
