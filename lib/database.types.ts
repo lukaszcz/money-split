@@ -30,21 +30,18 @@ export type Database = {
           name: string;
           main_currency_code: string;
           created_at: string;
-          created_by: string | null;
         };
         Insert: {
           id?: string;
           name: string;
           main_currency_code: string;
           created_at?: string;
-          created_by?: string | null;
         };
         Update: {
           id?: string;
           name?: string;
           main_currency_code?: string;
           created_at?: string;
-          created_by?: string | null;
         };
       };
       group_members: {
@@ -86,6 +83,7 @@ export type Database = {
           total_in_main_scaled: number;
           created_at: string;
           payment_type: string;
+          split_type: string;
         };
         Insert: {
           id?: string;
@@ -99,6 +97,7 @@ export type Database = {
           total_in_main_scaled: number;
           created_at?: string;
           payment_type?: string;
+          split_type?: string;
         };
         Update: {
           id?: string;
@@ -112,6 +111,7 @@ export type Database = {
           total_in_main_scaled?: number;
           created_at?: string;
           payment_type?: string;
+          split_type?: string;
         };
       };
       expense_shares: {
@@ -180,6 +180,23 @@ export type Database = {
           user_id?: string;
           currency_order?: string[];
           created_at?: string;
+          updated_at?: string;
+        };
+      };
+      user_group_preferences: {
+        Row: {
+          user_id: string;
+          group_order: string[];
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          group_order?: string[];
+          updated_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          group_order?: string[];
           updated_at?: string;
         };
       };
