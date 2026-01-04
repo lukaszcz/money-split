@@ -15,7 +15,7 @@ MoneySplit is a React Native/Expo mobile app for tracking shared expenses and de
 
 ## Architecture
 
-**IMPORTANT**: Read @ARCHITECTURE.md to understand application architecture. Update ARCHITECTURE.md whenever architecture changes.
+**IMPORTANT**: Read @docs/ARCHITECTURE.md to understand application architecture. Update docs/ARCHITECTURE.md whenever architecture changes – always keep it up-to-date with the codebase.
 
 ## Build, Test, and Development Commands
 
