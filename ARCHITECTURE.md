@@ -1,27 +1,12 @@
 # MoneySplit Architecture
 
-This document describes the architecture of the MoneySplit app (React Native + Expo + Supabase), including client and server responsibilities, data flow, database schema and RLS policies, edge functions, and screen-level behavior.
+This document describes the architecture of the MoneySplit application (React Native + Expo + Supabase), including client and server responsibilities, data flow, database schema and RLS policies, edge functions, and screen-level behavior.
 
 ## High-level structure
 
 - Mobile client: Expo Router app under `app/` with shared domain logic in `services/`, `utils/`, `hooks/`, and `contexts/`.
 - Backend: Supabase Postgres (tables + RLS), Supabase Auth, and Edge Functions in `supabase/functions/`.
 - External services: Exchange rate API (`https://api.exchangerate-api.com`) and Resend email API for invitations.
-
-## Repository layout
-
-```
-app/                 - Expo Router screens and navigation
-assets/              - App icons and images
-contexts/            - Auth state and shared providers
-docs/database/       - Table-level database documentation
-hooks/               - Client hooks (currency ordering, framework ready)
-lib/                 - Supabase client and generated types
-services/            - Data access and business logic
-supabase/functions/  - Edge functions
-supabase/migrations/ - Schema and RLS migrations
-utils/               - Money math and currency definitions
-```
 
 ## Runtime split: device vs server
 
