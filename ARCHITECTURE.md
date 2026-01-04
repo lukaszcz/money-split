@@ -8,6 +8,21 @@ This document describes the architecture of the MoneySplit app (React Native + E
 - Backend: Supabase Postgres (tables + RLS), Supabase Auth, and Edge Functions in `supabase/functions/`.
 - External services: Exchange rate API (`https://api.exchangerate-api.com`) and Resend email API for invitations.
 
+## Repository layout
+
+```
+app/                 - Expo Router screens and navigation
+assets/              - App icons and images
+contexts/            - Auth state and shared providers
+docs/database/       - Table-level database documentation
+hooks/               - Client hooks (currency ordering, framework ready)
+lib/                 - Supabase client and generated types
+services/            - Data access and business logic
+supabase/functions/  - Edge functions
+supabase/migrations/ - Schema and RLS migrations
+utils/               - Money math and currency definitions
+```
+
 ## Runtime split: device vs server
 
 ### Runs on the device
@@ -130,6 +145,7 @@ For the exact SQL definitions and helper functions, see:
 - All monetary amounts are stored as fixed-point integers scaled by 10,000 (4 decimal places).
   - Scaling utilities are in `utils/money.ts` (`toScaled()`, `applyExchangeRate()`, `calculateEqualSplit()`, `calculatePercentageSplit()`).
 - Display formatting is always 2 decimal places via `formatNumber()` / `formatCurrency()`.
+- Remainders are distributed deterministically to the first N participants in the split order to avoid rounding drift.
 - Settlement logic runs entirely on the client:
   - `computeBalances()` produces per-member net balances using `expense.total_in_main_scaled`.
   - `computeSettlementsNoSimplify()` creates pairwise debts from raw shares.
