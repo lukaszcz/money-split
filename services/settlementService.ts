@@ -119,8 +119,8 @@ export function computeSettlementsSimplified(
   const balances = computeBalances(expenses, allMembers);
   const memberMap = new Map(allMembers.map((m) => [m.id, m]));
 
-  const debtors: Array<{ memberId: string; member: GroupMember; amountOwed: bigint }> = [];
-  const creditors: Array<{ memberId: string; member: GroupMember; amountDue: bigint }> = [];
+  const debtors: { memberId: string; member: GroupMember; amountOwed: bigint }[] = [];
+  const creditors: { memberId: string; member: GroupMember; amountDue: bigint }[] = [];
 
   for (const [memberId, balance] of balances.entries()) {
     const member = memberMap.get(memberId);
@@ -285,13 +285,13 @@ function findSimplificationPair(settlements: Settlement[]): SimplificationPair |
         const s1 = settlements[i];
         const s2 = settlements[j];
 
-        if (s0.from.id == s1.from.id && s0.to.id === s2.to.id) {
+        if (s0.from.id === s1.from.id && s0.to.id === s2.to.id) {
           return { firstIdx: i, secondIdx: j, type: 'swap' };
         }
       }
     }
   }
-  
+
   return null;
 }
 
@@ -306,19 +306,19 @@ function getResultIndices(
   if (type === 'merge') {
     return [idx];
   } else if (type === 'opposite') {
-    if (first.amountScaled == second.amountScaled) {
+    if (first.amountScaled === second.amountScaled) {
       return [];
     } else {
       return [idx];
     }
   } else if (type === 'chain') {
-    if (first.amountScaled == second.amountScaled) {
+    if (first.amountScaled === second.amountScaled) {
       return [idx];
     } else {
       return [idx, idx + 1];
     }
   } else {
-    if (first.amountScaled == second.amountScaled) {
+    if (first.amountScaled === second.amountScaled) {
       return [idx, idx + 1];
     } else {
       return [idx, idx + 1, idx + 2];
@@ -358,7 +358,7 @@ function applySimplification(
         amountScaled: -net,
       });
     }
-  } else if (type == 'chain') {
+  } else if (type === 'chain') {
     const transferAmount = first.amountScaled < second.amountScaled
       ? first.amountScaled
       : second.amountScaled;
@@ -382,7 +382,7 @@ function applySimplification(
       });
     }
 
-    newSettlements.splice(resultIndices.at(-1), 0, {
+    newSettlements.splice(resultIndices.at(-1) ?? 0, 0, {
       from: first.from,
       to: second.to,
       amountScaled: transferAmount,
@@ -433,7 +433,7 @@ function applySimplification(
         to: first.to,
         amountScaled: first.amountScaled,
       });
-    }    
+    }
   }
 
   return [newSettlements, resultIndices];

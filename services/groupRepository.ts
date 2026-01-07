@@ -272,7 +272,7 @@ export async function connectUserToGroupMembers(userId: string, email: string): 
 export async function createGroup(
   name: string,
   mainCurrencyCode: string,
-  initialMembers: Array<{ name: string; email?: string }>
+  initialMembers: { name: string; email?: string }[]
 ): Promise<Group | null> {
   try {
     const {
@@ -440,7 +440,7 @@ export async function createExpense(
   payerMemberId: string,
   exchangeRateToMainScaled: bigint,
   totalInMainScaled: bigint,
-  shares: Array<{ memberId: string; shareAmountScaled: bigint; shareInMainScaled: bigint }>,
+  shares: { memberId: string; shareAmountScaled: bigint; shareInMainScaled: bigint }[],
   paymentType: 'expense' | 'transfer' = 'expense',
   splitType: 'equal' | 'percentage' | 'exact' = 'equal'
 ): Promise<Expense | null> {
@@ -488,8 +488,8 @@ export async function createExpense(
       exchangeRateToMainScaled: BigInt(expenseData.exchange_rate_to_main_scaled),
       totalInMainScaled: BigInt(expenseData.total_in_main_scaled),
       createdAt: expenseData.created_at,
-      paymentType: expenseData.payment_type || 'expense',
-      splitType: expenseData.split_type || 'equal',
+      paymentType: (expenseData.payment_type as 'expense' | 'transfer') || 'expense',
+      splitType: (expenseData.split_type as 'equal' | 'percentage' | 'exact') || 'equal',
       shares: shares.map((s) => ({
         id: '',
         memberId: s.memberId,
@@ -576,8 +576,8 @@ export async function getExpense(expenseId: string): Promise<Expense | null> {
       exchangeRateToMainScaled: BigInt(expenseData.exchange_rate_to_main_scaled),
       totalInMainScaled: BigInt(expenseData.total_in_main_scaled),
       createdAt: expenseData.created_at,
-      paymentType: expenseData.payment_type || 'expense',
-      splitType: expenseData.split_type || 'equal',
+      paymentType: (expenseData.payment_type as 'expense' | 'transfer') || 'expense',
+      splitType: (expenseData.split_type as 'equal' | 'percentage' | 'exact') || 'equal',
       shares: (shareData || []).map((s) => ({
         id: s.id,
         memberId: s.member_id,
@@ -600,7 +600,7 @@ export async function updateExpense(
   payerMemberId: string,
   exchangeRateToMainScaled: bigint,
   totalInMainScaled: bigint,
-  shares: Array<{ memberId: string; shareAmountScaled: bigint; shareInMainScaled: bigint }>,
+  shares: { memberId: string; shareAmountScaled: bigint; shareInMainScaled: bigint }[],
   splitType: 'equal' | 'percentage' | 'exact' = 'equal'
 ): Promise<Expense | null> {
   try {
@@ -651,8 +651,8 @@ export async function updateExpense(
       exchangeRateToMainScaled: BigInt(expenseData.exchange_rate_to_main_scaled),
       totalInMainScaled: BigInt(expenseData.total_in_main_scaled),
       createdAt: expenseData.created_at,
-      paymentType: expenseData.payment_type || 'expense',
-      splitType: expenseData.split_type || 'equal',
+      paymentType: (expenseData.payment_type as 'expense' | 'transfer') || 'expense',
+      splitType: (expenseData.split_type as 'equal' | 'percentage' | 'exact') || 'equal',
       shares: shares.map((s) => ({
         id: '',
         memberId: s.memberId,
@@ -837,7 +837,7 @@ export async function reconnectGroupMembers(): Promise<number> {
 
     console.log('Attempting to reconnect group members for email:', user.email);
 
-    const { data, error, count } = await supabase
+    const { data, error } = await supabase
       .from('group_members')
       .update({ connected_user_id: user.id })
       .eq('email', user.email)

@@ -122,7 +122,7 @@ export function normalizeExactSplit(sharesScaled: bigint[], totalScaled: bigint)
 }
 
 export function sumScaled(values: (bigint | number)[]): bigint {
-  return values.reduce((sum, val) => {
+  return values.reduce((sum: bigint, val) => {
     const v = typeof val === 'bigint' ? val : BigInt(val);
     return sum + v;
   }, BigInt(0));
