@@ -27,6 +27,7 @@ import {
   calculatePercentageSplit,
   sumScaled,
   applyExchangeRate,
+  formatCurrency,
 } from '../../../utils/money';
 import { getExchangeRate } from '../../../services/exchangeRateService';
 import { useCurrencyOrder } from '../../../hooks/useCurrencyOrder';
@@ -68,7 +69,7 @@ export default function EditExpenseScreen() {
       setExpense(fetchedExpense);
 
       setDescription(fetchedExpense.description || '');
-      setAmount((Number(fetchedExpense.totalAmountScaled) / 10000).toFixed(2));
+      setAmount(formatCurrency(fetchedExpense.totalAmountScaled));
       setCurrency(fetchedExpense.currencyCode);
       setPayerId(fetchedExpense.payerMemberId);
 
@@ -92,7 +93,7 @@ export default function EditExpenseScreen() {
       } else if (splitType === 'exact') {
         const exactAmts: Record<string, string> = {};
         fetchedExpense.shares.forEach((share) => {
-          exactAmts[share.memberId] = (Number(share.shareAmountScaled) / 10000).toFixed(2);
+          exactAmts[share.memberId] = formatCurrency(share.shareAmountScaled);
         });
         setExactAmounts(exactAmts);
       }

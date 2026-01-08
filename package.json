@@ -46,16 +46,26 @@
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
-    "@types/jest": "^29.5.12",
+    "@types/jest": "^29.5.14",
     "@types/react": "~19.1.10",
     "baseline-browser-mapping": "^2.8.8",
     "eslint": "^9.0.0",
     "eslint-config-expo": "~10.0.0",
     "jest": "^29.7.0",
+    "jest-expo": "^54.0.16",
+    "react-native-worklets-core": "^1.6.2",
+    "ts-jest": "^29.4.6",
     "typescript": "~5.9.2"
   },
   "jest": {
-    "preset": "jest-expo",
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "testMatch": [
+      "**/__tests__/**/*.test.ts"
+    ],
+    "setupFiles": [
+      "<rootDir>/jest.setup.js"
+    ],
     "transformIgnorePatterns": [
       "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@unimodules/.*|unimodules|sentry-expo|native-base|react-native-svg)"
     ]

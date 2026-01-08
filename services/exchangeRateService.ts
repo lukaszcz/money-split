@@ -19,7 +19,7 @@ export async function getExchangeRate(
     return {
       baseCurrencyCode: baseCurrency,
       quoteCurrencyCode: quoteCurrency,
-      rateScaled: BigInt(10000),
+      rateScaled: toScaled(1),
       fetchedAt: new Date().toISOString(),
     };
   }

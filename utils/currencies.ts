@@ -4,6 +4,8 @@ export interface Currency {
   symbol: string;
 }
 
+import { assertNonEmptyString } from './validation';
+
 export const CURRENCIES: Currency[] = [
   { code: 'USD', name: 'US Dollar', symbol: '$' },
   { code: 'EUR', name: 'Euro', symbol: '€' },
@@ -38,11 +40,13 @@ export const CURRENCIES: Currency[] = [
 ];
 
 export function getCurrencySymbol(code: string): string {
+  assertNonEmptyString(code, 'code');
   const currency = CURRENCIES.find(c => c.code === code);
   return currency?.symbol || code;
 }
 
 export function getCurrencyName(code: string): string {
+  assertNonEmptyString(code, 'code');
   const currency = CURRENCIES.find(c => c.code === code);
   return currency?.name || code;
 }

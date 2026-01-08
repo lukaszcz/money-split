@@ -12,7 +12,7 @@ import {
   GroupMember,
 } from '../../services/groupRepository';
 import { computeBalances } from '../../services/settlementService';
-import { formatNumber } from '../../utils/money';
+import { formatNumber, multiplyScaled } from '../../utils/money';
 import { getCurrencySymbol } from '../../utils/currencies';
 import { getExchangeRate } from '../../services/exchangeRateService';
 import { recordGroupVisit } from '../../services/groupPreferenceService';
@@ -187,7 +187,7 @@ function ExpensesTab({
         if (expense.currencyCode !== group.mainCurrencyCode) {
           const rate = await getExchangeRate(expense.currencyCode, group.mainCurrencyCode);
           if (rate) {
-            const converted = (expense.totalAmountScaled * rate.rateScaled) / BigInt(10000);
+            const converted = multiplyScaled(expense.totalAmountScaled, rate.rateScaled);
             conversions.set(expense.id, converted);
           }
         }
