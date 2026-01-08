@@ -3,7 +3,7 @@ import { assertDefined, assertPositiveNumber, assertNonZero, assertPercentage, a
 const SCALE = 10000;
 
 export function toScaled(amount: number): bigint {
-  assertPositiveNumber(amount, 'amount');
+  assertNonNegativeNumber(amount, 'amount');
   return BigInt(Math.round(amount * SCALE));
 }
 
