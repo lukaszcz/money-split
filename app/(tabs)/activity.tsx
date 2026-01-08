@@ -1,6 +1,7 @@
 import { View, Text, FlatList, StyleSheet, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { getAllGroups, getGroupExpenses, getGroupMember, Expense } from '../../services/groupRepository';
 import { formatNumber } from '../../utils/money';
 
@@ -38,9 +39,11 @@ export default function ActivityScreen() {
     setRefreshing(false);
   }, []);
 
-  useEffect(() => {
-    loadActivities();
-  }, [loadActivities]);
+  useFocusEffect(
+    useCallback(() => {
+      loadActivities();
+    }, [loadActivities])
+  );
 
   const onRefresh = () => {
     setRefreshing(true);
