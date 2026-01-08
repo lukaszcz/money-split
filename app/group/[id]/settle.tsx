@@ -1,6 +1,6 @@
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, ArrowRight, Play, CheckSquare, Square } from 'lucide-react-native';
 import { getGroup, getGroupExpenses, GroupWithMembers, createExpense } from '../../../services/groupRepository';
@@ -11,7 +11,7 @@ import {
   computeSimplificationSteps,
   SimplificationStep,
 } from '../../../services/settlementService';
-import { formatNumber, toScaled, applyExchangeRate } from '../../../utils/money';
+import { formatNumber } from '../../../utils/money';
 import { getCurrencySymbol } from '../../../utils/currencies';
 import { getExchangeRate } from '../../../services/exchangeRateService';
 
@@ -27,11 +27,7 @@ export default function SettleScreen() {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const animationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
-    loadData();
-  }, [id]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!id || typeof id !== 'string') return;
 
     const fetchedGroup = await getGroup(id);
@@ -43,7 +39,11 @@ export default function SettleScreen() {
     setGroup(fetchedGroup);
     setSettlements(settlementsSimplified);
     setLoading(false);
-  };
+  }, [id]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const toggleSimplified = async () => {
     if (!group || !id || typeof id !== 'string') return;
@@ -104,6 +104,7 @@ export default function SettleScreen() {
         Alert.alert('Error', 'Failed to record transfer');
       }
     } catch (error) {
+      console.error('Failed to record transfer', error);
       Alert.alert('Error', 'An error occurred while recording transfer');
     }
   };

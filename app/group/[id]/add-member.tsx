@@ -124,7 +124,7 @@ export default function AddMemberScreen() {
             />
             <Text style={styles.hint}>
               If provided, the member will be connected to their account when they register. An
-              invitation email will be sent if they don't have an account yet.
+              invitation email will be sent if they don&apos;t have an account yet.
             </Text>
           </View>
         </ScrollView>

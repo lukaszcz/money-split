@@ -1,6 +1,6 @@
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
 import {
@@ -20,11 +20,7 @@ export default function EditMemberScreen() {
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
 
-  useEffect(() => {
-    loadMember();
-  }, [memberId]);
-
-  const loadMember = async () => {
+  const loadMember = useCallback(async () => {
     if (!memberId || typeof memberId !== 'string') {
       Alert.alert('Error', 'Invalid member');
       router.back();
@@ -41,7 +37,11 @@ export default function EditMemberScreen() {
       router.back();
     }
     setInitialLoading(false);
-  };
+  }, [memberId, router]);
+
+  useEffect(() => {
+    loadMember();
+  }, [loadMember]);
 
   const handleUpdateMember = async () => {
     if (!name.trim() && !email.trim()) {
