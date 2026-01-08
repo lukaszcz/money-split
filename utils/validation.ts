@@ -103,7 +103,7 @@ export function assertPercentages(percentages: number[]): void {
   }
 
   const sum = percentages.reduce((total, p) => total + p, 0);
-  if (Math.abs(sum - 100) > 0.01) {
+  if (Math.abs(100.00 - sum) > 0.01) {
     throw new ValidationError(`Percentages must sum to 100%, got ${sum}`, ValidationErrorCode.INVALID_PERCENTAGE_SUM, 'percentages');
   }
 }
@@ -115,4 +115,15 @@ export function assertNonEmptyString(value: string, fieldName: string): void {
   if (value.trim().length === 0) {
     throw new ValidationError(`${fieldName} cannot be empty`, ValidationErrorCode.EMPTY_STRING, fieldName);
   }
+}
+
+export function isValidEmail(value: string): boolean {
+  if (typeof value !== 'string') {
+    return false;
+  }
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return false;
+  }
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
 }
