@@ -48,4 +48,4 @@ MoneySplit is a React Native/Expo mobile app for tracking shared expenses and de
 
 - RLS and schema changes live in `supabase/migrations/`.
 - Edge functions run under `supabase/functions/` and should be referenced in `docs/ARCHITECTURE.md` when changed.
-- NEVER read or otherwise touch `.env`. NEVER add it to the repository.
+- NEVER read or otherwise touch `.env.local`. NEVER add it to the repository.

@@ -29,7 +29,6 @@ yarn-error.*
 
 # local env files
 .env*.local
-.env
 
 # typescript
 *.tsbuildinfo
@@ -37,3 +36,7 @@ yarn-error.*
 # other
 *.swp
 .vscode/
+
+# Supabase
+supabase/.temp/
+supabase/.branches/

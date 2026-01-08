@@ -14,25 +14,60 @@ A React Native/Expo mobile app for tracking shared expenses and debts among grou
 
 See `docs/ARCHITECTURE.md` for the full system overview, data model, and screen-level behavior.
 
+## Configuring the database
+
+Initializing and configuring the database is not necessary if you use the public supabase keys provided in `.env`.
+
+### Starting local database
+
+```
+npx supabase start
+```
+
+### Connecting cloud database
+
+```
+npx supabase login
+npx supabase link --project-ref <your_project_ref>
+```
+
+### Applying new migrations
+
+```
+npx supabase db push
+```
+
+### Configuring database credentials
+
+To override the public credentials from `.env`, configure Supabase credentials in `.env.local`:
+```
+EXPO_PUBLIC_SUPABASE_URL=your_supabase_url
+EXPO_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+```
+
+For a local Supabase instance, the URL and key can be obtained by running
+```
+npx supabase status
+```
+When running the app on a mobile device, you need to replace `127.0.0.1` in the Supabase URL with the IP of the computer running the local Supabase server (shown by Expo when executing `npm run dev`).
+
+The local database can be inspected with Supabase Studio accessible at `http://localhost:54323`.
+
 ## Setup
 
-1. Configure Supabase credentials in `.env`:
-   ```
-   EXPO_PUBLIC_SUPABASE_URL=your_supabase_url
-   EXPO_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
-   ```
+0. Optionally, initialize the database and configure Supabase credentials.
 
-2. Install dependencies:
+1. Install dependencies:
    ```bash
    npm install
    ```
 
-3. Start development server:
+2. Start development server:
    ```bash
    npm run dev
    ```
 
-4. Build for web:
+3. Build for web:
    ```bash
    npm run build:web
    ```
