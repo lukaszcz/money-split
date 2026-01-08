@@ -10,6 +10,7 @@ import {
   sendInvitationEmail,
   getGroup,
 } from '../../../services/groupRepository';
+import { isValidEmail } from '../../../utils/validation';
 
 export default function EditMemberScreen() {
   const { id, memberId } = useLocalSearchParams();
@@ -44,7 +45,10 @@ export default function EditMemberScreen() {
   }, [loadMember]);
 
   const handleUpdateMember = async () => {
-    if (!name.trim() && !email.trim()) {
+    const trimmedName = name.trim();
+    const trimmedEmail = email.trim();
+
+    if (!trimmedName && !trimmedEmail) {
       Alert.alert('Error', 'Please enter a name or email');
       return;
     }
@@ -54,11 +58,16 @@ export default function EditMemberScreen() {
       return;
     }
 
+    if (trimmedEmail && !isValidEmail(trimmedEmail)) {
+      Alert.alert('Error', 'Please enter a valid email address');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      let memberName = name.trim();
-      let memberEmail = email.trim() || undefined;
+      let memberName = trimmedName;
+      let memberEmail = trimmedEmail || undefined;
       let connectedUserId: string | undefined;
       const emailChanged = memberEmail !== originalEmail;
 
@@ -142,6 +151,7 @@ export default function EditMemberScreen() {
               style={styles.input}
               value={name}
               onChangeText={setName}
+              onBlur={() => setName(name.trim())}
               placeholder="Member name"
               placeholderTextColor="#9ca3af"
             />
@@ -153,6 +163,7 @@ export default function EditMemberScreen() {
               style={styles.input}
               value={email}
               onChangeText={setEmail}
+              onBlur={() => setEmail(email.trim())}
               placeholder="member@example.com"
               placeholderTextColor="#9ca3af"
               keyboardType="email-address"
