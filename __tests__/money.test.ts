@@ -8,7 +8,6 @@ import {
   calculateEqualSplit,
   ScaledPercentage,
   calculatePercentageSplit,
-  normalizeExactSplit,
   sumScaled,
   applyExchangeRate,
 } from '../utils/money';
@@ -294,62 +293,6 @@ describe('calculatePercentageSplit', () => {
     const shares = calculatePercentageSplit(total, [30, 40, 30]);
     const sum = shares.reduce((a, b) => a + b, BigInt(0));
     expect(sum).toBe(total);
-  });
-});
-
-describe('normalizeExactSplit', () => {
-  it('should return shares unchanged if they sum to total', () => {
-    const shares = [BigInt(10000), BigInt(20000), BigInt(30000)];
-    const total = BigInt(60000);
-    expect(normalizeExactSplit(shares, total)).toEqual(shares);
-  });
-
-  it('should add remainder to first shares', () => {
-    const shares = [BigInt(10000), BigInt(20000), BigInt(30000)];
-    const total = BigInt(60003);
-    const normalized = normalizeExactSplit(shares, total);
-    expect(normalized[0]).toBe(BigInt(10001));
-    expect(normalized[1]).toBe(BigInt(20001));
-    expect(normalized[2]).toBe(BigInt(30001));
-    expect(normalized.reduce((a, b) => a + b, BigInt(0))).toBe(total);
-  });
-
-  it('should subtract excess from last shares', () => {
-    const shares = [BigInt(10000), BigInt(20000), BigInt(30000)];
-    const total = BigInt(59997);
-    const normalized = normalizeExactSplit(shares, total);
-    expect(normalized[0]).toBe(BigInt(9999));
-    expect(normalized[1]).toBe(BigInt(19999));
-    expect(normalized[2]).toBe(BigInt(29999));
-    expect(normalized.reduce((a, b) => a + b, BigInt(0))).toBe(total);
-  });
-
-  it('should handle empty array', () => {
-    expect(normalizeExactSplit([], BigInt(10000))).toEqual([]);
-  });
-
-  it('should handle zero total and shares', () => {
-    const shares = [BigInt(0), BigInt(0), BigInt(0)];
-    const total = BigInt(0);
-    expect(normalizeExactSplit(shares, total)).toEqual(shares);
-  });
-
-  it('should not make shares negative when subtracting', () => {
-    const shares = [BigInt(0), BigInt(0), BigInt(0)];
-    const total = BigInt(-10);
-    const normalized = normalizeExactSplit(shares, total);
-    expect(normalized[0]).toBe(BigInt(0));
-    expect(normalized[1]).toBe(BigInt(0));
-    expect(normalized[2]).toBe(BigInt(0));
-  });
-
-  it('should handle multiple remainder units', () => {
-    const shares = [BigInt(10000), BigInt(20000), BigInt(30000)];
-    const total = BigInt(60003);
-    const normalized = normalizeExactSplit(shares, total);
-    expect(normalized[0]).toBe(BigInt(10001));
-    expect(normalized[1]).toBe(BigInt(20001));
-    expect(normalized[2]).toBe(BigInt(30001));
   });
 });
 

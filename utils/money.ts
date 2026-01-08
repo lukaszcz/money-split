@@ -86,41 +86,6 @@ export function calculatePercentageSplit(totalScaled: bigint, percentages: numbe
   return shares;
 }
 
-export function normalizeExactSplit(sharesScaled: bigint[], totalScaled: bigint): bigint[] {
-  if (sharesScaled.length === 0) return [];
-
-  const sum = sharesScaled.reduce((a, b) => a + b, BigInt(0));
-  const diff = totalScaled - sum;
-
-  if (diff === BigInt(0)) {
-    return sharesScaled;
-  }
-
-  const adjusted = [...sharesScaled];
-
-  if (diff > BigInt(0)) {
-    let remaining = diff;
-    let i = 0;
-    while (remaining > BigInt(0) && i < adjusted.length) {
-      adjusted[i] += BigInt(1);
-      remaining -= BigInt(1);
-      i++;
-    }
-  } else {
-    let remaining = -diff;
-    let i = adjusted.length - 1;
-    while (remaining > BigInt(0) && i >= 0) {
-      if (adjusted[i] > BigInt(0)) {
-        adjusted[i] -= BigInt(1);
-        remaining -= BigInt(1);
-      }
-      i--;
-    }
-  }
-
-  return adjusted;
-}
-
 export function sumScaled(values: (bigint | number)[]): bigint {
   return values.reduce((sum: bigint, val) => {
     const v = typeof val === 'bigint' ? val : BigInt(val);
