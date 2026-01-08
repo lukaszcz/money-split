@@ -4,9 +4,7 @@ import { useState, useCallback } from 'react';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Plus } from 'lucide-react-native';
 import { getAllGroups, GroupWithMembers } from '../../services/groupRepository';
-import { getGroupExpenses } from '../../services/groupRepository';
 import { computeBalances } from '../../services/settlementService';
-import { formatCurrency } from '../../utils/money';
 import { getOrderedGroups } from '../../services/groupPreferenceService';
 
 interface GroupWithSettledStatus extends GroupWithMembers {

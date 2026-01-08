@@ -1,10 +1,5 @@
 import { supabase } from '../lib/supabase';
-
-interface GroupPreference {
-  user_id: string;
-  group_order: string[];
-  updated_at: string;
-}
+import { GroupWithMembers } from './groupRepository';
 
 export async function getGroupPreferences(): Promise<string[]> {
   const {
@@ -86,14 +81,7 @@ export async function cleanupGroupPreferences(validGroupIds: string[]): Promise<
   }
 }
 
-interface Group {
-  id: string;
-  name: string;
-  main_currency: string;
-  created_at: string;
-}
-
-export async function getOrderedGroups(groups: Group[]): Promise<Group[]> {
+export async function getOrderedGroups(groups: GroupWithMembers[]): Promise<GroupWithMembers[]> {
   if (groups.length === 0) {
     return [];
   }
@@ -104,12 +92,12 @@ export async function getOrderedGroups(groups: Group[]): Promise<Group[]> {
 
   await cleanupGroupPreferences(validGroupIds);
 
-  const orderedGroups: Group[] = [];
+  const orderedGroups: GroupWithMembers[] = [];
   const groupsInOrder = new Set<string>();
 
   const newGroups = groups
     .filter((g) => !groupOrder.includes(g.id))
-    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   if (newGroups.length > 0) {
     const newGroupIds = newGroups.map((g) => g.id);

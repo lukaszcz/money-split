@@ -22,7 +22,7 @@ MoneySplit is a React Native/Expo mobile app for tracking shared expenses and de
 - `npm run dev` starts the Expo development server.
 - `npm run build:web` generates the web bundle via Expo export.
 - `npm run lint` runs Expo lint rules.
-- `npm run typecheck` runs TypeScript with `--noEmit`.
+- `npm run typecheck` runs TypeScript type checking.
 - `npm test` runs Jest (no tests are currently present in the repo).
 
 ## Coding Style & Naming Conventions
@@ -48,4 +48,4 @@ MoneySplit is a React Native/Expo mobile app for tracking shared expenses and de
 
 - RLS and schema changes live in `supabase/migrations/`.
 - Edge functions run under `supabase/functions/` and should be referenced in `docs/ARCHITECTURE.md` when changed.
-- NEVER read or otherwise touch `.env`. NEVER add it to the repository.
+- NEVER read or otherwise touch `.env.local`. NEVER add it to the repository.

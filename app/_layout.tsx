@@ -19,7 +19,7 @@ function RootLayoutNav() {
     } else if (user && inAuthGroup) {
       router.replace('/(tabs)/groups');
     }
-  }, [user, loading, segments]);
+  }, [user, loading, segments, router]);
 
   return (
     <Stack screenOptions={{ headerShown: false }}>

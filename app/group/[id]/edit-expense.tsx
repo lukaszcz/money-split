@@ -10,7 +10,7 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { X, Check, Trash2 } from 'lucide-react-native';
 import {
@@ -23,7 +23,6 @@ import {
 } from '../../../services/groupRepository';
 import {
   toScaled,
-  formatNumber,
   calculateEqualSplit,
   calculatePercentageSplit,
   sumScaled,
@@ -58,11 +57,7 @@ export default function EditExpenseScreen() {
     group?.mainCurrencyCode
   );
 
-  useEffect(() => {
-    loadData();
-  }, [id, expenseId]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!id || typeof id !== 'string' || !expenseId || typeof expenseId !== 'string') return;
 
     const fetchedGroup = await getGroup(id);
@@ -104,7 +99,11 @@ export default function EditExpenseScreen() {
     }
 
     setLoading(false);
-  };
+  }, [expenseId, id]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const validateDecimalInput = (text: string, maxDecimals: number = 2): string => {
     const sanitized = text.replace(/[^0-9.]/g, '');
@@ -241,6 +240,7 @@ export default function EditExpenseScreen() {
         Alert.alert('Error', 'Failed to update expense');
       }
     } catch (error) {
+      console.error('Failed to save expense', error);
       Alert.alert('Error', 'An error occurred while saving');
     } finally {
       setSaving(false);

@@ -367,7 +367,7 @@ function SettleTab({
       </Text>
 
       <Text style={[styles.settleInfo, {marginTop: 12}]}>
-        You'll have the option to simplify debts. Simplifying reduces the number of transfers, but may change who pays whom.
+        You{"'"}ll have the option to simplify debts. Simplifying reduces the number of transfers, but may change who pays whom.
       </Text>
     </View>
   );

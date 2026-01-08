@@ -10,7 +10,7 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { X, Check } from 'lucide-react-native';
 import { getGroup, createExpense, GroupWithMembers } from '../../../services/groupRepository';
@@ -51,11 +51,7 @@ export default function AddExpenseScreen() {
     group?.mainCurrencyCode
   );
 
-  useEffect(() => {
-    loadGroup();
-  }, [id]);
-
-  const loadGroup = async () => {
+  const loadGroup = useCallback(async () => {
     if (!id || typeof id !== 'string') return;
 
     const fetchedGroup = await getGroup(id);
@@ -69,7 +65,11 @@ export default function AddExpenseScreen() {
         setSelectedParticipants(allIds);
       }
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    loadGroup();
+  }, [loadGroup]);
 
   const validateDecimalInput = (text: string, maxDecimals: number = 2): string => {
     const sanitized = text.replace(/[^0-9.]/g, '');
@@ -218,6 +218,7 @@ export default function AddExpenseScreen() {
         Alert.alert('Error', 'Failed to create transfer');
       }
     } catch (error) {
+      console.error('Failed to save transfer', error);
       Alert.alert('Error', 'An error occurred while saving');
     } finally {
       setSaving(false);
@@ -267,6 +268,7 @@ export default function AddExpenseScreen() {
         Alert.alert('Error', 'Failed to create expense');
       }
     } catch (error) {
+      console.error('Failed to save expense', error);
       Alert.alert('Error', 'An error occurred while saving');
     } finally {
       setSaving(false);

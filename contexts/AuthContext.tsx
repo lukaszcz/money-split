@@ -54,7 +54,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: userData } = await supabase.auth.getUser();
     if (userData.user?.id) {
       const now = new Date().toISOString();
-      // @ts-ignore
       await supabase
         .from('users')
         .update({ last_login: now })

@@ -10,7 +10,7 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { X, Check, Trash2 } from 'lucide-react-native';
 import {
@@ -45,11 +45,7 @@ export default function EditTransferScreen() {
     group?.mainCurrencyCode
   );
 
-  useEffect(() => {
-    loadData();
-  }, [id, expenseId]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!id || typeof id !== 'string' || !expenseId || typeof expenseId !== 'string') return;
 
     const fetchedGroup = await getGroup(id);
@@ -70,7 +66,11 @@ export default function EditTransferScreen() {
     }
 
     setLoading(false);
-  };
+  }, [expenseId, id]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const validateDecimalInput = (text: string, maxDecimals: number = 2): string => {
     const sanitized = text.replace(/[^0-9.]/g, '');
@@ -152,6 +152,7 @@ export default function EditTransferScreen() {
         Alert.alert('Error', 'Failed to update transfer');
       }
     } catch (error) {
+      console.error('Failed to save transfer', error);
       Alert.alert('Error', 'An error occurred while saving');
     } finally {
       setSaving(false);

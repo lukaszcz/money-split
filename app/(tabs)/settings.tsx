@@ -1,33 +1,30 @@
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, TextInput, Modal, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useState, useEffect } from 'react';
-import { RefreshCw, LogOut, User, Edit2, Check, X, Trash2 } from 'lucide-react-native';
+import { useState, useEffect, useCallback } from 'react';
+import { LogOut, User, Edit2, Check, X, Trash2 } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { router } from 'expo-router';
 import { getUser, updateUserName, deleteUserAccount } from '../../services/groupRepository';
 
 export default function SettingsScreen() {
   const { user, signOut } = useAuth();
-  const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
-  const [rateCount, setRateCount] = useState(0);
   const [userName, setUserName] = useState<string>('');
   const [editingName, setEditingName] = useState(false);
   const [tempName, setTempName] = useState<string>('');
   const [deletingAccount, setDeletingAccount] = useState(false);
 
-  useEffect(() => {
-    loadUserProfile();
-  }, [user]);
-
-  const loadUserProfile = async () => {
+  const loadUserProfile = useCallback(async () => {
     if (!user?.id) return;
     const userData = await getUser(user.id);
     if (userData) {
       setUserName(userData.name);
       setTempName(userData.name);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    loadUserProfile();
+  }, [loadUserProfile]);
 
   const handleSaveName = async () => {
     if (!user?.id || !tempName.trim()) return;
@@ -42,6 +39,7 @@ export default function SettingsScreen() {
         Alert.alert('Error', 'Failed to update name');
       }
     } catch (error) {
+      console.error('Failed to update name', error);
       Alert.alert('Error', 'Failed to update name');
     }
   };
@@ -65,6 +63,7 @@ export default function SettingsScreen() {
             await signOut();
             router.replace('/auth');
           } catch (error) {
+            console.error('Failed to logout', error);
             Alert.alert('Error', 'Failed to logout');
           }
         },

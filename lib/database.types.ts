@@ -1,3 +1,11 @@
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[];
+
 export type Database = {
   public: {
     Tables: {
@@ -23,6 +31,7 @@ export type Database = {
           created_at?: string;
           last_login?: string | null;
         };
+        Relationships: [];
       };
       groups: {
         Row: {
@@ -43,6 +52,7 @@ export type Database = {
           main_currency_code?: string;
           created_at?: string;
         };
+        Relationships: [];
       };
       group_members: {
         Row: {
@@ -69,6 +79,22 @@ export type Database = {
           connected_user_id?: string | null;
           created_at?: string;
         };
+        Relationships: [
+          {
+            foreignKeyName: "group_members_group_id_fkey";
+            columns: ["group_id"];
+            isOneToOne: false;
+            referencedRelation: "groups";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "group_members_connected_user_id_fkey";
+            columns: ["connected_user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       expenses: {
         Row: {
@@ -113,6 +139,22 @@ export type Database = {
           payment_type?: string;
           split_type?: string;
         };
+        Relationships: [
+          {
+            foreignKeyName: "expenses_group_id_fkey";
+            columns: ["group_id"];
+            isOneToOne: false;
+            referencedRelation: "groups";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "expenses_payer_member_id_fkey";
+            columns: ["payer_member_id"];
+            isOneToOne: false;
+            referencedRelation: "group_members";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       expense_shares: {
         Row: {
@@ -136,6 +178,22 @@ export type Database = {
           share_amount_scaled?: number;
           share_in_main_scaled?: number;
         };
+        Relationships: [
+          {
+            foreignKeyName: "expense_shares_expense_id_fkey";
+            columns: ["expense_id"];
+            isOneToOne: false;
+            referencedRelation: "expenses";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "expense_shares_member_id_fkey";
+            columns: ["member_id"];
+            isOneToOne: false;
+            referencedRelation: "group_members";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       exchange_rates: {
         Row: {
@@ -159,6 +217,7 @@ export type Database = {
           rate_scaled?: number;
           fetched_at?: string;
         };
+        Relationships: [];
       };
       user_currency_preferences: {
         Row: {
@@ -182,6 +241,15 @@ export type Database = {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [
+          {
+            foreignKeyName: "user_currency_preferences_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       user_group_preferences: {
         Row: {
@@ -199,10 +267,28 @@ export type Database = {
           group_order?: string[];
           updated_at?: string;
         };
+        Relationships: [
+          {
+            foreignKeyName: "user_group_preferences_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: true;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+        ];
       };
     };
-    Views: Record<string, never>;
-    Functions: Record<string, never>;
-    Enums: Record<string, never>;
+    Views: {
+      [_ in never]: never;
+    };
+    Functions: {
+      [_ in never]: never;
+    };
+    Enums: {
+      [_ in never]: never;
+    };
+    CompositeTypes: {
+      [_ in never]: never;
+    };
   };
 };
