@@ -3,7 +3,6 @@ import {
   computeSettlementsNoSimplify,
   computeSettlementsSimplified,
   computeSimplificationSteps,
-  Settlement,
 } from '../services/settlementService';
 import { Expense, GroupMember } from '../services/groupRepository';
 
@@ -488,11 +487,28 @@ describe('computeSettlementsNoSimplify', () => {
 
     const settlements = computeSettlementsNoSimplify(expenses, members);
 
-    expect(settlements.length).toBeGreaterThan(0);
+    // computeSettlementsNoSimplify tracks direct debts per expense, canceling opposite debts between same pairs:
+    // Expense 1: m2 owes m1: 40000, m3 owes m1: 40000
+    // Expense 2: m1 owes m2: 20000, m3 owes m2: 20000
+    // After netting: m2 → m1: 20000, m3 → m1: 40000, m3 → m2: 20000
 
-    const totalFromSettlements = settlements.reduce((total, settlement) => total + settlement.amountScaled, BigInt(0));
-    const totalToSettlements = settlements.reduce((total, settlement) => total + settlement.amountScaled, BigInt(0));
-    expect(totalFromSettlements).toBe(totalToSettlements);
+    expect(settlements.length).toBe(3);
+
+    const totalSettled = settlements.reduce((sum, s) => sum + s.amountScaled, BigInt(0));
+    expect(totalSettled).toBe(BigInt(80000)); // 20000 + 40000 + 20000
+
+    // Verify each expected settlement exists
+    const findSettlement = (fromId: string, toId: string) =>
+      settlements.find(s => s.from.id === fromId && s.to.id === toId);
+
+    expect(findSettlement('m2', 'm1')?.amountScaled).toBe(BigInt(20000));
+    expect(findSettlement('m3', 'm1')?.amountScaled).toBe(BigInt(40000));
+    expect(findSettlement('m3', 'm2')?.amountScaled).toBe(BigInt(20000));
+
+    // Verify balances sum to zero
+    const balances = computeBalances(expenses, members);
+    const totalBalance = Array.from(balances.values()).reduce((sum, b) => sum + b, BigInt(0));
+    expect(totalBalance).toBe(BigInt(0));
   });
 });
 
