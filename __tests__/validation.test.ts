@@ -145,27 +145,16 @@ describe('utils/validation - assertPercentage', () => {
 });
 
 describe('utils/validation - assertPercentages', () => {
-  it('should not throw for percentages summing to 100', () => {
+  it('should not throw for percentages summing to <= 100', () => {
     const { assertPercentages } = require('../utils/validation');
     expect(() => assertPercentages([50, 50])).not.toThrow();
     expect(() => assertPercentages([100])).not.toThrow();
-    expect(() => assertPercentages([33.33, 33.33, 33.34])).not.toThrow();
-  });
-
-  it('should throw for percentages not summing to 100', () => {
-    const { assertPercentages } = require('../utils/validation');
-    expect(() => assertPercentages([50, 40])).toThrow(ValidationError);
-    expect(() => assertPercentages([50, 40])).toThrowError(/must sum to 100/);
+    expect(() => assertPercentages([33.33, 33.33, 33.33])).not.toThrow();
   });
 
   it('should throw for percentages summing to > 100', () => {
     const { assertPercentages } = require('../utils/validation');
     expect(() => assertPercentages([60, 50])).toThrow(ValidationError);
-  });
-
-  it('should throw for percentages summing to < 100', () => {
-    const { assertPercentages } = require('../utils/validation');
-    expect(() => assertPercentages([40, 30])).toThrow(ValidationError);
   });
 });
 
@@ -324,8 +313,7 @@ describe('money validation', () => {
     expect(() => calculatePercentageSplit(BigInt(100000), null as any)).toThrow(ValidationError);
   });
 
-  it('should throw for percentages not summing to 100', () => {
-    expect(() => calculatePercentageSplit(BigInt(100000), [50, 40])).toThrow(ValidationError);
+  it('should throw for percentages summing to > 100', () => {
     expect(() => calculatePercentageSplit(BigInt(100000), [60, 50])).toThrow(ValidationError);
   });
 

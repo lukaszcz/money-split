@@ -80,7 +80,6 @@ export class ScaledPercentage {
 export function calculatePercentageSplit(totalScaled: bigint, percentages: number[]): bigint[] {
   assertDefined(totalScaled, 'totalScaled');
   assertDefined(percentages, 'percentages');
-  if (percentages.length === 0) return [];
   assertPercentages(percentages);
 
   const scaledPercentages = percentages.map(p => new ScaledPercentage(p));

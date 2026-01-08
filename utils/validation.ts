@@ -103,8 +103,8 @@ export function assertPercentages(percentages: number[]): void {
   }
 
   const sum = percentages.reduce((total, p) => total + p, 0);
-  if (Math.abs(sum - 100) > 0.0001) {
-    throw new ValidationError(`Percentages must sum to 100, got ${sum}`, ValidationErrorCode.INVALID_PERCENTAGE_SUM, 'percentages');
+  if (sum > 100) {
+    throw new ValidationError(`Percentages cannot exceed 100%, got ${sum}`, ValidationErrorCode.INVALID_PERCENTAGE_SUM, 'percentages');
   }
 }
 
