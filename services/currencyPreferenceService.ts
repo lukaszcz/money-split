@@ -71,7 +71,6 @@ export async function getUserCurrencyOrder(): Promise<string[]> {
     return CURRENCIES.map(c => c.code);
   }
 
-  // @ts-ignore
   const { data, error } = await supabase
     .from('user_currency_preferences')
     .select('currency_order')
@@ -123,7 +122,6 @@ async function saveCurrencyOrder(currencyOrder: string[]): Promise<void> {
     return;
   }
 
-  // @ts-ignore
   const { data: existing } = await supabase
     .from('user_currency_preferences')
     .select('id')
@@ -131,7 +129,6 @@ async function saveCurrencyOrder(currencyOrder: string[]): Promise<void> {
     .maybeSingle();
 
   if (existing) {
-    // @ts-ignore
     const { error } = await supabase
       .from('user_currency_preferences')
       .update({
@@ -144,7 +141,6 @@ async function saveCurrencyOrder(currencyOrder: string[]): Promise<void> {
       console.error('Error updating currency preferences:', error);
     }
   } else {
-    // @ts-ignore
     const { error } = await supabase
       .from('user_currency_preferences')
       .insert({
