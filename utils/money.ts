@@ -1,10 +1,14 @@
+import { assertDefined, assertPositiveNumber, assertNonZero, assertPercentage, assertPercentages, assertNonNegativeNumber } from './validation';
+
 const SCALE = 10000;
 
 export function toScaled(amount: number): bigint {
+  assertPositiveNumber(amount, 'amount');
   return BigInt(Math.round(amount * SCALE));
 }
 
 export function fromScaled(scaled: bigint | number): number {
+  assertDefined(scaled, 'scaled');
   const val = typeof scaled === 'bigint' ? Number(scaled) : scaled;
   return val / SCALE;
 }
@@ -25,11 +29,16 @@ export function multiplyScaled(a: bigint, b: bigint): bigint {
 }
 
 export function divideScaled(dividend: bigint, divisor: number): bigint {
+  assertDefined(dividend, 'dividend');
+  assertDefined(divisor, 'divisor');
+  assertNonZero(divisor, 'divisor');
   return dividend / BigInt(divisor);
 }
 
 export function calculateEqualSplit(totalScaled: bigint, participantCount: number): bigint[] {
-  if (participantCount <= 0) return [];
+  assertDefined(totalScaled, 'totalScaled');
+  assertDefined(participantCount, 'participantCount');
+  assertPositiveNumber(participantCount, 'participantCount');
 
   const baseShare = totalScaled / BigInt(participantCount);
   const remainder = totalScaled - baseShare * BigInt(participantCount);
@@ -54,6 +63,7 @@ export class ScaledPercentage {
   readonly percent4dp: number;
 
   constructor(percent: number) {
+    assertPercentage(percent, 'percent');
     this.percent4dp = Math.round(percent * SCALE);
   }
 
@@ -68,7 +78,10 @@ export class ScaledPercentage {
 }
 
 export function calculatePercentageSplit(totalScaled: bigint, percentages: number[]): bigint[] {
+  assertDefined(totalScaled, 'totalScaled');
+  assertDefined(percentages, 'percentages');
   if (percentages.length === 0) return [];
+  assertPercentages(percentages);
 
   const scaledPercentages = percentages.map(p => new ScaledPercentage(p));
   const shares = scaledPercentages.map(sp => sp.calculateShare(totalScaled));
@@ -87,6 +100,7 @@ export function calculatePercentageSplit(totalScaled: bigint, percentages: numbe
 }
 
 export function sumScaled(values: (bigint | number)[]): bigint {
+  assertDefined(values, 'values');
   return values.reduce((sum: bigint, val) => {
     const v = typeof val === 'bigint' ? val : BigInt(val);
     return sum + v;

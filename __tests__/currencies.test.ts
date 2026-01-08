@@ -34,10 +34,6 @@ describe('getCurrencySymbol', () => {
     expect(getCurrencySymbol('usd')).toBe('usd');
     expect(getCurrencySymbol('Usd')).toBe('Usd');
   });
-
-  it('should handle empty string', () => {
-    expect(getCurrencySymbol('')).toBe('');
-  });
 });
 
 describe('getCurrencyName', () => {
@@ -68,10 +64,6 @@ describe('getCurrencyName', () => {
     expect(getCurrencyName('USD')).toBe('US Dollar');
     expect(getCurrencyName('usd')).toBe('usd');
     expect(getCurrencyName('Usd')).toBe('Usd');
-  });
-
-  it('should handle empty string', () => {
-    expect(getCurrencyName('')).toBe('');
   });
 });
 

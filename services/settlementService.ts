@@ -1,4 +1,5 @@
 import { Expense, GroupMember } from './groupRepository';
+import { assertDefined, assertNoDuplicateIds, assertMemberReferencesExist, assertNonNegativeBigInt } from '../utils/validation';
 
 export interface Settlement {
   from: GroupMember;
@@ -10,6 +11,11 @@ export function computeBalances(
   expenses: Expense[],
   allMembers: GroupMember[]
 ): Map<string, bigint> {
+  assertDefined(expenses, 'expenses');
+  assertDefined(allMembers, 'allMembers');
+  assertNoDuplicateIds(allMembers, 'member');
+  assertMemberReferencesExist(expenses, allMembers);
+
   const balances = new Map<string, bigint>();
 
   for (const member of allMembers) {
@@ -35,6 +41,11 @@ export function computeSettlementsNoSimplify(
   expenses: Expense[],
   allMembers: GroupMember[]
 ): Settlement[] {
+  assertDefined(expenses, 'expenses');
+  assertDefined(allMembers, 'allMembers');
+  assertNoDuplicateIds(allMembers, 'member');
+  assertMemberReferencesExist(expenses, allMembers);
+
   const debtMap = new Map<string, Map<string, bigint>>();
 
   for (const member of allMembers) {
@@ -116,6 +127,11 @@ export function computeSettlementsSimplified(
   expenses: Expense[],
   allMembers: GroupMember[]
 ): Settlement[] {
+  assertDefined(expenses, 'expenses');
+  assertDefined(allMembers, 'allMembers');
+  assertNoDuplicateIds(allMembers, 'member');
+  assertMemberReferencesExist(expenses, allMembers);
+
   const balances = computeBalances(expenses, allMembers);
   const memberMap = new Map(allMembers.map((m) => [m.id, m]));
 
@@ -443,6 +459,11 @@ export function computeSimplificationSteps(
   expenses: Expense[],
   allMembers: GroupMember[]
 ): SimplificationStep[] {
+  assertDefined(expenses, 'expenses');
+  assertDefined(allMembers, 'allMembers');
+  assertNoDuplicateIds(allMembers, 'member');
+  assertMemberReferencesExist(expenses, allMembers);
+
   const steps: SimplificationStep[] = [];
   let currentSettlements = computeRawDebts(expenses, allMembers);
 

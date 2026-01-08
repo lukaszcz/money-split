@@ -21,7 +21,7 @@ import {
   GroupWithMembers,
   Expense,
 } from '../../../services/groupRepository';
-import { toScaled, applyExchangeRate } from '../../../utils/money';
+import { toScaled, applyExchangeRate, formatCurrency } from '../../../utils/money';
 import { getExchangeRate } from '../../../services/exchangeRateService';
 import { useCurrencyOrder } from '../../../hooks/useCurrencyOrder';
 
@@ -56,7 +56,7 @@ export default function EditTransferScreen() {
       setExpense(fetchedExpense);
 
       setDescription(fetchedExpense.description || '');
-      setAmount((Number(fetchedExpense.totalAmountScaled) / 10000).toFixed(2));
+      setAmount(formatCurrency(fetchedExpense.totalAmountScaled));
       setCurrency(fetchedExpense.currencyCode);
       setPayerId(fetchedExpense.payerMemberId);
 
