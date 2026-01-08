@@ -128,10 +128,6 @@ export function sumScaled(values: (bigint | number)[]): bigint {
   }, BigInt(0));
 }
 
-export function scaledEqual(a: bigint, b: bigint, tolerance: bigint = BigInt(1)): boolean {
-  return a >= b - tolerance && a <= b + tolerance;
-}
-
 export function applyExchangeRate(valueScaled: bigint, rateScaled: bigint): bigint {
   return multiplyScaled(valueScaled, rateScaled);
 }
