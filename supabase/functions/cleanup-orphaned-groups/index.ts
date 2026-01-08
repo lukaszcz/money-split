@@ -1,5 +1,5 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "npm:@supabase/supabase-js@2.58.0";
+import "jsr:@supabase/functions-js@2/edge-runtime.d.ts";
+import { createClient, SupabaseClient } from "npm:@supabase/supabase-js@2.58.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,7 +7,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
-async function deleteGroup(supabase: any, groupId: string): Promise<void> {
+async function deleteGroup(supabase: SupabaseClient, groupId: string): Promise<void> {
   const { error } = await supabase
     .from('groups')
     .delete()
@@ -120,8 +120,9 @@ Deno.serve(async (req: Request) => {
     );
   } catch (error) {
     console.error("Error in cleanup-orphaned-groups function:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return new Response(
-      JSON.stringify({ error: "Internal server error", details: error.message }),
+      JSON.stringify({ error: "Internal server error", details: errorMessage }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

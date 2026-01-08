@@ -31,11 +31,10 @@ npx supabase login
 npx supabase link --project-ref <your_project_ref>
 ```
 
-### Applying new migrations
+### Updating the database
 
-```
-npx supabase db push
-```
+- Applying new migrations: `npx supabase db push`.
+- Deploying edge functions: `npx supabase functions deploy`
 
 ### Configuring database credentials
 
