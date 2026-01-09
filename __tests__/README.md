@@ -320,7 +320,7 @@ Configured in `package.json`:
 
 ```json
 {
-  "coverageThresholds": {
+  "coverageThreshold": {
     "global": {
       "branches": 70,
       "functions": 80,
