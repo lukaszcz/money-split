@@ -56,8 +56,4 @@ See also: [expenses](expenses.md), [groups](groups.md)
 
 ## Usage in Code
 
-The application uses this table in the following functions:
-
-- Fetching and caching rates (`getExchangeRate()` in `services/exchangeRateService.ts`)
-- Listing cached rates (`getCachedRates()` in `services/exchangeRateService.ts`)
-- Determining last refresh time (`getLastRefreshTime()` in `services/exchangeRateService.ts`)
+The application uses this table in the function `getExchangeRate` in `services/exchangeRateService.ts`.
