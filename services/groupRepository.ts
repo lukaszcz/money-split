@@ -744,32 +744,19 @@ export async function leaveGroup(groupId: string): Promise<boolean> {
 
     if (error) throw error;
 
-    const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    const token = session?.access_token;
-
-    if (supabaseUrl && token) {
-      try {
-        console.log('Triggering cleanup-orphaned-groups function...');
-        const cleanupResponse = await fetch(`${supabaseUrl}/functions/v1/cleanup-orphaned-groups`, {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
-        console.log('Cleanup response status:', cleanupResponse.status);
-        if (!cleanupResponse.ok) {
-          const cleanupError = await cleanupResponse.text().catch(() => 'Unknown error');
-          console.error('Cleanup function failed:', cleanupError);
-        } else {
-          console.log('Cleanup function succeeded');
+    try {
+      console.log('Triggering cleanup-orphaned-groups function...');
+      const { error: cleanupError } = await supabase.functions.invoke('cleanup-orphaned-groups');
+      if (cleanupError) {
+        console.error('Cleanup function failed:', cleanupError);
+        if ('context' in cleanupError) {
+          console.error('Cleanup function error context:', cleanupError.context);
         }
-      } catch (cleanupError) {
-        console.error('Failed to trigger cleanup:', cleanupError);
+      } else {
+        console.log('Cleanup function succeeded');
       }
+    } catch (cleanupError) {
+      console.error('Failed to trigger cleanup:', cleanupError);
     }
 
     return true;
@@ -798,22 +785,13 @@ export async function deleteUserAccount(): Promise<boolean> {
       throw new Error('No session token available');
     }
 
-    const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
-    if (!supabaseUrl) {
-      throw new Error('Supabase URL not configured');
-    }
-
-    const response = await fetch(`${supabaseUrl}/functions/v1/delete-user`, {
-      method: 'POST',
+    const { error: deleteError } = await supabase.functions.invoke('delete-user', {
       headers: {
         Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
       },
     });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || 'Failed to delete user account');
+    if (deleteError) {
+      throw new Error(deleteError.message || 'Failed to delete user account');
     }
 
     await supabase.auth.signOut();
@@ -860,24 +838,13 @@ export async function reconnectGroupMembers(): Promise<number> {
 
 export async function sendInvitationEmail(email: string, groupName: string): Promise<boolean> {
   try {
-    const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
-    const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
-
-    if (!supabaseUrl || !supabaseAnonKey) {
-      console.error('Missing Supabase configuration');
-      return false;
-    }
-
-    const response = await fetch(`${supabaseUrl}/functions/v1/send-invitation`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${supabaseAnonKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ email, groupName }),
+    const { error } = await supabase.functions.invoke('send-invitation', {
+      body: { email, groupName },
     });
 
-    return response.ok;
+    if (error) throw error;
+
+    return true;
   } catch (error) {
     console.error('Failed to send invitation email:', error);
     return false;
