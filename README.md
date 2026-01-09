@@ -34,7 +34,9 @@ npx supabase link --project-ref <your_project_ref>
 ### Updating the database
 
 - Applying new migrations: `npx supabase db push`.
-- Deploying edge functions: `npx supabase functions deploy`
+- Deploying edge functions: `npx supabase functions deploy`.
+
+For each deployed edge function, you need to turn off "Verify JWT with legacy secret" in the Supabase dashboard.
 
 ### Configuring database credentials
 
@@ -54,7 +56,7 @@ The local database can be inspected with Supabase Studio accessible at `http://l
 
 ## Setup
 
-0. Optionally, initialize the database and configure Supabase credentials.
+0. Initialize the database and configure Supabase credentials (optional).
 
 1. Install dependencies:
    ```bash
