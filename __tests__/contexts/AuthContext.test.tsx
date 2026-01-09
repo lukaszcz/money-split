@@ -2,7 +2,7 @@
  * @jest-environment jsdom
  */
 import React from 'react';
-import { renderHook, act, waitFor } from '@testing-library/react';
+import { renderHook, act, waitFor } from '@testing-library/react-native';
 import { createMockSupabaseClient, createMockUser, createMockSession, MockSupabaseClient } from '../utils/mockSupabase';
 
 jest.mock('../../lib/supabase', () => ({
