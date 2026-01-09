@@ -47,9 +47,24 @@ describe('computeBalances', () => {
       totalInMainScaled: BigInt(100000),
       createdAt: new Date().toISOString(),
       shares: [
-        { id: 's1', memberId: 'm1', shareAmountScaled: BigInt(33334), shareInMainScaled: BigInt(33334) },
-        { id: 's2', memberId: 'm2', shareAmountScaled: BigInt(33333), shareInMainScaled: BigInt(33333) },
-        { id: 's3', memberId: 'm3', shareAmountScaled: BigInt(33333), shareInMainScaled: BigInt(33333) },
+        {
+          id: 's1',
+          memberId: 'm1',
+          shareAmountScaled: BigInt(33334),
+          shareInMainScaled: BigInt(33334),
+        },
+        {
+          id: 's2',
+          memberId: 'm2',
+          shareAmountScaled: BigInt(33333),
+          shareInMainScaled: BigInt(33333),
+        },
+        {
+          id: 's3',
+          memberId: 'm3',
+          shareAmountScaled: BigInt(33333),
+          shareInMainScaled: BigInt(33333),
+        },
       ],
     };
 
@@ -61,10 +76,7 @@ describe('computeBalances', () => {
   });
 
   it('should handle payer who is also a participant', () => {
-    const members = [
-      createMember('m1', 'Alice'),
-      createMember('m2', 'Bob'),
-    ];
+    const members = [createMember('m1', 'Alice'), createMember('m2', 'Bob')];
 
     const expense: Expense = {
       id: 'e1',
@@ -78,8 +90,18 @@ describe('computeBalances', () => {
       totalInMainScaled: BigInt(100000),
       createdAt: new Date().toISOString(),
       shares: [
-        { id: 's1', memberId: 'm1', shareAmountScaled: BigInt(50000), shareInMainScaled: BigInt(50000) },
-        { id: 's2', memberId: 'm2', shareAmountScaled: BigInt(50000), shareInMainScaled: BigInt(50000) },
+        {
+          id: 's1',
+          memberId: 'm1',
+          shareAmountScaled: BigInt(50000),
+          shareInMainScaled: BigInt(50000),
+        },
+        {
+          id: 's2',
+          memberId: 'm2',
+          shareAmountScaled: BigInt(50000),
+          shareInMainScaled: BigInt(50000),
+        },
       ],
     };
 
@@ -108,9 +130,24 @@ describe('computeBalances', () => {
       totalInMainScaled: BigInt(90000),
       createdAt: new Date().toISOString(),
       shares: [
-        { id: 's1', memberId: 'm1', shareAmountScaled: BigInt(30000), shareInMainScaled: BigInt(30000) },
-        { id: 's2', memberId: 'm2', shareAmountScaled: BigInt(30000), shareInMainScaled: BigInt(30000) },
-        { id: 's3', memberId: 'm3', shareAmountScaled: BigInt(30000), shareInMainScaled: BigInt(30000) },
+        {
+          id: 's1',
+          memberId: 'm1',
+          shareAmountScaled: BigInt(30000),
+          shareInMainScaled: BigInt(30000),
+        },
+        {
+          id: 's2',
+          memberId: 'm2',
+          shareAmountScaled: BigInt(30000),
+          shareInMainScaled: BigInt(30000),
+        },
+        {
+          id: 's3',
+          memberId: 'm3',
+          shareAmountScaled: BigInt(30000),
+          shareInMainScaled: BigInt(30000),
+        },
       ],
     };
 
@@ -126,9 +163,24 @@ describe('computeBalances', () => {
       totalInMainScaled: BigInt(60000),
       createdAt: new Date().toISOString(),
       shares: [
-        { id: 's4', memberId: 'm1', shareAmountScaled: BigInt(20000), shareInMainScaled: BigInt(20000) },
-        { id: 's5', memberId: 'm2', shareAmountScaled: BigInt(20000), shareInMainScaled: BigInt(20000) },
-        { id: 's6', memberId: 'm3', shareAmountScaled: BigInt(20000), shareInMainScaled: BigInt(20000) },
+        {
+          id: 's4',
+          memberId: 'm1',
+          shareAmountScaled: BigInt(20000),
+          shareInMainScaled: BigInt(20000),
+        },
+        {
+          id: 's5',
+          memberId: 'm2',
+          shareAmountScaled: BigInt(20000),
+          shareInMainScaled: BigInt(20000),
+        },
+        {
+          id: 's6',
+          memberId: 'm3',
+          shareAmountScaled: BigInt(20000),
+          shareInMainScaled: BigInt(20000),
+        },
       ],
     };
 
@@ -140,10 +192,7 @@ describe('computeBalances', () => {
   });
 
   it('should handle zero amount expenses', () => {
-    const members = [
-      createMember('m1', 'Alice'),
-      createMember('m2', 'Bob'),
-    ];
+    const members = [createMember('m1', 'Alice'), createMember('m2', 'Bob')];
 
     const expense: Expense = {
       id: 'e1',
@@ -157,8 +206,18 @@ describe('computeBalances', () => {
       totalInMainScaled: BigInt(0),
       createdAt: new Date().toISOString(),
       shares: [
-        { id: 's1', memberId: 'm1', shareAmountScaled: BigInt(0), shareInMainScaled: BigInt(0) },
-        { id: 's2', memberId: 'm2', shareAmountScaled: BigInt(0), shareInMainScaled: BigInt(0) },
+        {
+          id: 's1',
+          memberId: 'm1',
+          shareAmountScaled: BigInt(0),
+          shareInMainScaled: BigInt(0),
+        },
+        {
+          id: 's2',
+          memberId: 'm2',
+          shareAmountScaled: BigInt(0),
+          shareInMainScaled: BigInt(0),
+        },
       ],
     };
 
@@ -169,10 +228,7 @@ describe('computeBalances', () => {
   });
 
   it('should handle negative amounts (transfers)', () => {
-    const members = [
-      createMember('m1', 'Alice'),
-      createMember('m2', 'Bob'),
-    ];
+    const members = [createMember('m1', 'Alice'), createMember('m2', 'Bob')];
 
     const expense: Expense = {
       id: 'e1',
@@ -186,7 +242,12 @@ describe('computeBalances', () => {
       totalInMainScaled: BigInt(-100000),
       createdAt: new Date().toISOString(),
       shares: [
-        { id: 's1', memberId: 'm1', shareAmountScaled: BigInt(-100000), shareInMainScaled: BigInt(-100000) },
+        {
+          id: 's1',
+          memberId: 'm1',
+          shareAmountScaled: BigInt(-100000),
+          shareInMainScaled: BigInt(-100000),
+        },
       ],
     };
 
@@ -217,10 +278,30 @@ describe('computeBalances', () => {
         totalInMainScaled: BigInt(100000),
         createdAt: new Date().toISOString(),
         shares: [
-          { id: 's1', memberId: 'm1', shareAmountScaled: BigInt(25000), shareInMainScaled: BigInt(25000) },
-          { id: 's2', memberId: 'm2', shareAmountScaled: BigInt(25000), shareInMainScaled: BigInt(25000) },
-          { id: 's3', memberId: 'm3', shareAmountScaled: BigInt(25000), shareInMainScaled: BigInt(25000) },
-          { id: 's4', memberId: 'm4', shareAmountScaled: BigInt(25000), shareInMainScaled: BigInt(25000) },
+          {
+            id: 's1',
+            memberId: 'm1',
+            shareAmountScaled: BigInt(25000),
+            shareInMainScaled: BigInt(25000),
+          },
+          {
+            id: 's2',
+            memberId: 'm2',
+            shareAmountScaled: BigInt(25000),
+            shareInMainScaled: BigInt(25000),
+          },
+          {
+            id: 's3',
+            memberId: 'm3',
+            shareAmountScaled: BigInt(25000),
+            shareInMainScaled: BigInt(25000),
+          },
+          {
+            id: 's4',
+            memberId: 'm4',
+            shareAmountScaled: BigInt(25000),
+            shareInMainScaled: BigInt(25000),
+          },
         ],
       },
       {
@@ -235,16 +316,39 @@ describe('computeBalances', () => {
         totalInMainScaled: BigInt(200000),
         createdAt: new Date().toISOString(),
         shares: [
-          { id: 's5', memberId: 'm1', shareAmountScaled: BigInt(50000), shareInMainScaled: BigInt(50000) },
-          { id: 's6', memberId: 'm2', shareAmountScaled: BigInt(50000), shareInMainScaled: BigInt(50000) },
-          { id: 's7', memberId: 'm3', shareAmountScaled: BigInt(50000), shareInMainScaled: BigInt(50000) },
-          { id: 's8', memberId: 'm4', shareAmountScaled: BigInt(50000), shareInMainScaled: BigInt(50000) },
+          {
+            id: 's5',
+            memberId: 'm1',
+            shareAmountScaled: BigInt(50000),
+            shareInMainScaled: BigInt(50000),
+          },
+          {
+            id: 's6',
+            memberId: 'm2',
+            shareAmountScaled: BigInt(50000),
+            shareInMainScaled: BigInt(50000),
+          },
+          {
+            id: 's7',
+            memberId: 'm3',
+            shareAmountScaled: BigInt(50000),
+            shareInMainScaled: BigInt(50000),
+          },
+          {
+            id: 's8',
+            memberId: 'm4',
+            shareAmountScaled: BigInt(50000),
+            shareInMainScaled: BigInt(50000),
+          },
         ],
       },
     ];
 
     const balances = computeBalances(expenses, members);
-    const totalBalance = Array.from(balances.values()).reduce((sum, balance) => sum + balance, BigInt(0));
+    const totalBalance = Array.from(balances.values()).reduce(
+      (sum, balance) => sum + balance,
+      BigInt(0),
+    );
 
     expect(totalBalance).toBe(BigInt(0));
   });
@@ -285,9 +389,24 @@ describe('computeSettlementsNoSimplify', () => {
         totalInMainScaled: BigInt(90000),
         createdAt: new Date().toISOString(),
         shares: [
-          { id: 's1', memberId: 'm1', shareAmountScaled: BigInt(30000), shareInMainScaled: BigInt(30000) },
-          { id: 's2', memberId: 'm2', shareAmountScaled: BigInt(30000), shareInMainScaled: BigInt(30000) },
-          { id: 's3', memberId: 'm3', shareAmountScaled: BigInt(30000), shareInMainScaled: BigInt(30000) },
+          {
+            id: 's1',
+            memberId: 'm1',
+            shareAmountScaled: BigInt(30000),
+            shareInMainScaled: BigInt(30000),
+          },
+          {
+            id: 's2',
+            memberId: 'm2',
+            shareAmountScaled: BigInt(30000),
+            shareInMainScaled: BigInt(30000),
+          },
+          {
+            id: 's3',
+            memberId: 'm3',
+            shareAmountScaled: BigInt(30000),
+            shareInMainScaled: BigInt(30000),
+          },
         ],
       },
     ];
@@ -304,10 +423,7 @@ describe('computeSettlementsNoSimplify', () => {
   });
 
   it('should handle opposite debts by canceling them', () => {
-    const members = [
-      createMember('m1', 'Alice'),
-      createMember('m2', 'Bob'),
-    ];
+    const members = [createMember('m1', 'Alice'), createMember('m2', 'Bob')];
 
     const expenses: Expense[] = [
       {
@@ -322,7 +438,12 @@ describe('computeSettlementsNoSimplify', () => {
         totalInMainScaled: BigInt(100000),
         createdAt: new Date().toISOString(),
         shares: [
-          { id: 's1', memberId: 'm2', shareAmountScaled: BigInt(100000), shareInMainScaled: BigInt(100000) },
+          {
+            id: 's1',
+            memberId: 'm2',
+            shareAmountScaled: BigInt(100000),
+            shareInMainScaled: BigInt(100000),
+          },
         ],
       },
       {
@@ -337,7 +458,12 @@ describe('computeSettlementsNoSimplify', () => {
         totalInMainScaled: BigInt(50000),
         createdAt: new Date().toISOString(),
         shares: [
-          { id: 's2', memberId: 'm1', shareAmountScaled: BigInt(50000), shareInMainScaled: BigInt(50000) },
+          {
+            id: 's2',
+            memberId: 'm1',
+            shareAmountScaled: BigInt(50000),
+            shareInMainScaled: BigInt(50000),
+          },
         ],
       },
     ];
@@ -351,10 +477,7 @@ describe('computeSettlementsNoSimplify', () => {
   });
 
   it('should fully cancel equal opposite debts', () => {
-    const members = [
-      createMember('m1', 'Alice'),
-      createMember('m2', 'Bob'),
-    ];
+    const members = [createMember('m1', 'Alice'), createMember('m2', 'Bob')];
 
     const expenses: Expense[] = [
       {
@@ -369,7 +492,12 @@ describe('computeSettlementsNoSimplify', () => {
         totalInMainScaled: BigInt(100000),
         createdAt: new Date().toISOString(),
         shares: [
-          { id: 's1', memberId: 'm2', shareAmountScaled: BigInt(100000), shareInMainScaled: BigInt(100000) },
+          {
+            id: 's1',
+            memberId: 'm2',
+            shareAmountScaled: BigInt(100000),
+            shareInMainScaled: BigInt(100000),
+          },
         ],
       },
       {
@@ -384,7 +512,12 @@ describe('computeSettlementsNoSimplify', () => {
         totalInMainScaled: BigInt(100000),
         createdAt: new Date().toISOString(),
         shares: [
-          { id: 's2', memberId: 'm1', shareAmountScaled: BigInt(100000), shareInMainScaled: BigInt(100000) },
+          {
+            id: 's2',
+            memberId: 'm1',
+            shareAmountScaled: BigInt(100000),
+            shareInMainScaled: BigInt(100000),
+          },
         ],
       },
     ];
@@ -395,10 +528,7 @@ describe('computeSettlementsNoSimplify', () => {
   });
 
   it('should merge settlements between same people', () => {
-    const members = [
-      createMember('m1', 'Alice'),
-      createMember('m2', 'Bob'),
-    ];
+    const members = [createMember('m1', 'Alice'), createMember('m2', 'Bob')];
 
     const expenses: Expense[] = [
       {
@@ -413,7 +543,12 @@ describe('computeSettlementsNoSimplify', () => {
         totalInMainScaled: BigInt(50000),
         createdAt: new Date().toISOString(),
         shares: [
-          { id: 's1', memberId: 'm2', shareAmountScaled: BigInt(50000), shareInMainScaled: BigInt(50000) },
+          {
+            id: 's1',
+            memberId: 'm2',
+            shareAmountScaled: BigInt(50000),
+            shareInMainScaled: BigInt(50000),
+          },
         ],
       },
       {
@@ -428,7 +563,12 @@ describe('computeSettlementsNoSimplify', () => {
         totalInMainScaled: BigInt(60000),
         createdAt: new Date().toISOString(),
         shares: [
-          { id: 's2', memberId: 'm2', shareAmountScaled: BigInt(60000), shareInMainScaled: BigInt(60000) },
+          {
+            id: 's2',
+            memberId: 'm2',
+            shareAmountScaled: BigInt(60000),
+            shareInMainScaled: BigInt(60000),
+          },
         ],
       },
     ];
@@ -461,9 +601,24 @@ describe('computeSettlementsNoSimplify', () => {
         totalInMainScaled: BigInt(120000),
         createdAt: new Date().toISOString(),
         shares: [
-          { id: 's1', memberId: 'm1', shareAmountScaled: BigInt(40000), shareInMainScaled: BigInt(40000) },
-          { id: 's2', memberId: 'm2', shareAmountScaled: BigInt(40000), shareInMainScaled: BigInt(40000) },
-          { id: 's3', memberId: 'm3', shareAmountScaled: BigInt(40000), shareInMainScaled: BigInt(40000) },
+          {
+            id: 's1',
+            memberId: 'm1',
+            shareAmountScaled: BigInt(40000),
+            shareInMainScaled: BigInt(40000),
+          },
+          {
+            id: 's2',
+            memberId: 'm2',
+            shareAmountScaled: BigInt(40000),
+            shareInMainScaled: BigInt(40000),
+          },
+          {
+            id: 's3',
+            memberId: 'm3',
+            shareAmountScaled: BigInt(40000),
+            shareInMainScaled: BigInt(40000),
+          },
         ],
       },
       {
@@ -478,9 +633,24 @@ describe('computeSettlementsNoSimplify', () => {
         totalInMainScaled: BigInt(60000),
         createdAt: new Date().toISOString(),
         shares: [
-          { id: 's4', memberId: 'm1', shareAmountScaled: BigInt(20000), shareInMainScaled: BigInt(20000) },
-          { id: 's5', memberId: 'm2', shareAmountScaled: BigInt(20000), shareInMainScaled: BigInt(20000) },
-          { id: 's6', memberId: 'm3', shareAmountScaled: BigInt(20000), shareInMainScaled: BigInt(20000) },
+          {
+            id: 's4',
+            memberId: 'm1',
+            shareAmountScaled: BigInt(20000),
+            shareInMainScaled: BigInt(20000),
+          },
+          {
+            id: 's5',
+            memberId: 'm2',
+            shareAmountScaled: BigInt(20000),
+            shareInMainScaled: BigInt(20000),
+          },
+          {
+            id: 's6',
+            memberId: 'm3',
+            shareAmountScaled: BigInt(20000),
+            shareInMainScaled: BigInt(20000),
+          },
         ],
       },
     ];
@@ -494,12 +664,15 @@ describe('computeSettlementsNoSimplify', () => {
 
     expect(settlements.length).toBe(3);
 
-    const totalSettled = settlements.reduce((sum, s) => sum + s.amountScaled, BigInt(0));
+    const totalSettled = settlements.reduce(
+      (sum, s) => sum + s.amountScaled,
+      BigInt(0),
+    );
     expect(totalSettled).toBe(BigInt(80000)); // 20000 + 40000 + 20000
 
     // Verify each expected settlement exists
     const findSettlement = (fromId: string, toId: string) =>
-      settlements.find(s => s.from.id === fromId && s.to.id === toId);
+      settlements.find((s) => s.from.id === fromId && s.to.id === toId);
 
     expect(findSettlement('m2', 'm1')?.amountScaled).toBe(BigInt(20000));
     expect(findSettlement('m3', 'm1')?.amountScaled).toBe(BigInt(40000));
@@ -507,7 +680,10 @@ describe('computeSettlementsNoSimplify', () => {
 
     // Verify balances sum to zero
     const balances = computeBalances(expenses, members);
-    const totalBalance = Array.from(balances.values()).reduce((sum, b) => sum + b, BigInt(0));
+    const totalBalance = Array.from(balances.values()).reduce(
+      (sum, b) => sum + b,
+      BigInt(0),
+    );
     expect(totalBalance).toBe(BigInt(0));
   });
 });
@@ -521,10 +697,7 @@ describe('computeSettlementsSimplified', () => {
   });
 
   it('should return empty settlements when all balances are zero', () => {
-    const members = [
-      createMember('m1', 'Alice'),
-      createMember('m2', 'Bob'),
-    ];
+    const members = [createMember('m1', 'Alice'), createMember('m2', 'Bob')];
 
     const expenses: Expense[] = [
       {
@@ -539,8 +712,18 @@ describe('computeSettlementsSimplified', () => {
         totalInMainScaled: BigInt(100000),
         createdAt: new Date().toISOString(),
         shares: [
-          { id: 's1', memberId: 'm1', shareAmountScaled: BigInt(100000), shareInMainScaled: BigInt(100000) },
-          { id: 's2', memberId: 'm2', shareAmountScaled: BigInt(0), shareInMainScaled: BigInt(0) },
+          {
+            id: 's1',
+            memberId: 'm1',
+            shareAmountScaled: BigInt(100000),
+            shareInMainScaled: BigInt(100000),
+          },
+          {
+            id: 's2',
+            memberId: 'm2',
+            shareAmountScaled: BigInt(0),
+            shareInMainScaled: BigInt(0),
+          },
         ],
       },
     ];
@@ -551,10 +734,7 @@ describe('computeSettlementsSimplified', () => {
   });
 
   it('should create single settlement for simple debt', () => {
-    const members = [
-      createMember('m1', 'Alice'),
-      createMember('m2', 'Bob'),
-    ];
+    const members = [createMember('m1', 'Alice'), createMember('m2', 'Bob')];
 
     const expenses: Expense[] = [
       {
@@ -569,7 +749,12 @@ describe('computeSettlementsSimplified', () => {
         totalInMainScaled: BigInt(100000),
         createdAt: new Date().toISOString(),
         shares: [
-          { id: 's1', memberId: 'm2', shareAmountScaled: BigInt(100000), shareInMainScaled: BigInt(100000) },
+          {
+            id: 's1',
+            memberId: 'm2',
+            shareAmountScaled: BigInt(100000),
+            shareInMainScaled: BigInt(100000),
+          },
         ],
       },
     ];
@@ -602,8 +787,18 @@ describe('computeSettlementsSimplified', () => {
         totalInMainScaled: BigInt(120000),
         createdAt: new Date().toISOString(),
         shares: [
-          { id: 's1', memberId: 'm2', shareAmountScaled: BigInt(60000), shareInMainScaled: BigInt(60000) },
-          { id: 's2', memberId: 'm3', shareAmountScaled: BigInt(60000), shareInMainScaled: BigInt(60000) },
+          {
+            id: 's1',
+            memberId: 'm2',
+            shareAmountScaled: BigInt(60000),
+            shareInMainScaled: BigInt(60000),
+          },
+          {
+            id: 's2',
+            memberId: 'm3',
+            shareAmountScaled: BigInt(60000),
+            shareInMainScaled: BigInt(60000),
+          },
         ],
       },
     ];
@@ -611,9 +806,12 @@ describe('computeSettlementsSimplified', () => {
     const settlements = computeSettlementsSimplified(expenses, members);
 
     expect(settlements.length).toBe(2);
-    expect(settlements.every(s => s.amountScaled > BigInt(0))).toBe(true);
+    expect(settlements.every((s) => s.amountScaled > BigInt(0))).toBe(true);
 
-    const totalSettled = settlements.reduce((sum, s) => sum + s.amountScaled, BigInt(0));
+    const totalSettled = settlements.reduce(
+      (sum, s) => sum + s.amountScaled,
+      BigInt(0),
+    );
     expect(totalSettled).toBe(BigInt(120000));
   });
 
@@ -638,10 +836,30 @@ describe('computeSettlementsSimplified', () => {
         totalInMainScaled: BigInt(400000),
         createdAt: new Date().toISOString(),
         shares: [
-          { id: 's1', memberId: 'm1', shareAmountScaled: BigInt(100000), shareInMainScaled: BigInt(100000) },
-          { id: 's2', memberId: 'm2', shareAmountScaled: BigInt(100000), shareInMainScaled: BigInt(100000) },
-          { id: 's3', memberId: 'm3', shareAmountScaled: BigInt(100000), shareInMainScaled: BigInt(100000) },
-          { id: 's4', memberId: 'm4', shareAmountScaled: BigInt(100000), shareInMainScaled: BigInt(100000) },
+          {
+            id: 's1',
+            memberId: 'm1',
+            shareAmountScaled: BigInt(100000),
+            shareInMainScaled: BigInt(100000),
+          },
+          {
+            id: 's2',
+            memberId: 'm2',
+            shareAmountScaled: BigInt(100000),
+            shareInMainScaled: BigInt(100000),
+          },
+          {
+            id: 's3',
+            memberId: 'm3',
+            shareAmountScaled: BigInt(100000),
+            shareInMainScaled: BigInt(100000),
+          },
+          {
+            id: 's4',
+            memberId: 'm4',
+            shareAmountScaled: BigInt(100000),
+            shareInMainScaled: BigInt(100000),
+          },
         ],
       },
       {
@@ -656,9 +874,24 @@ describe('computeSettlementsSimplified', () => {
         totalInMainScaled: BigInt(225000),
         createdAt: new Date().toISOString(),
         shares: [
-          { id: 's5', memberId: 'm2', shareAmountScaled: BigInt(75000), shareInMainScaled: BigInt(75000) },
-          { id: 's6', memberId: 'm3', shareAmountScaled: BigInt(75000), shareInMainScaled: BigInt(75000) },
-          { id: 's7', memberId: 'm4', shareAmountScaled: BigInt(75000), shareInMainScaled: BigInt(75000) },
+          {
+            id: 's5',
+            memberId: 'm2',
+            shareAmountScaled: BigInt(75000),
+            shareInMainScaled: BigInt(75000),
+          },
+          {
+            id: 's6',
+            memberId: 'm3',
+            shareAmountScaled: BigInt(75000),
+            shareInMainScaled: BigInt(75000),
+          },
+          {
+            id: 's7',
+            memberId: 'm4',
+            shareAmountScaled: BigInt(75000),
+            shareInMainScaled: BigInt(75000),
+          },
         ],
       },
     ];
@@ -678,7 +911,10 @@ describe('computeSettlementsSimplified', () => {
 
     expect(positiveBalances).toBe(negativeBalances);
 
-    const totalSettled = settlements.reduce((sum, s) => sum + s.amountScaled, BigInt(0));
+    const totalSettled = settlements.reduce(
+      (sum, s) => sum + s.amountScaled,
+      BigInt(0),
+    );
     expect(totalSettled).toBe(positiveBalances);
   });
 
@@ -702,8 +938,18 @@ describe('computeSettlementsSimplified', () => {
         totalInMainScaled: BigInt(90000),
         createdAt: new Date().toISOString(),
         shares: [
-          { id: 's1', memberId: 'm2', shareAmountScaled: BigInt(45000), shareInMainScaled: BigInt(45000) },
-          { id: 's2', memberId: 'm3', shareAmountScaled: BigInt(45000), shareInMainScaled: BigInt(45000) },
+          {
+            id: 's1',
+            memberId: 'm2',
+            shareAmountScaled: BigInt(45000),
+            shareInMainScaled: BigInt(45000),
+          },
+          {
+            id: 's2',
+            memberId: 'm3',
+            shareAmountScaled: BigInt(45000),
+            shareInMainScaled: BigInt(45000),
+          },
         ],
       },
       {
@@ -718,8 +964,18 @@ describe('computeSettlementsSimplified', () => {
         totalInMainScaled: BigInt(60000),
         createdAt: new Date().toISOString(),
         shares: [
-          { id: 's3', memberId: 'm1', shareAmountScaled: BigInt(30000), shareInMainScaled: BigInt(30000) },
-          { id: 's4', memberId: 'm3', shareAmountScaled: BigInt(30000), shareInMainScaled: BigInt(30000) },
+          {
+            id: 's3',
+            memberId: 'm1',
+            shareAmountScaled: BigInt(30000),
+            shareInMainScaled: BigInt(30000),
+          },
+          {
+            id: 's4',
+            memberId: 'm3',
+            shareAmountScaled: BigInt(30000),
+            shareInMainScaled: BigInt(30000),
+          },
         ],
       },
     ];
@@ -750,14 +1006,27 @@ describe('computeSettlementsSimplified', () => {
         totalInMainScaled: BigInt(120000),
         createdAt: new Date().toISOString(),
         shares: [
-          { id: 's1', memberId: 'm2', shareAmountScaled: BigInt(60000), shareInMainScaled: BigInt(60000) },
-          { id: 's2', memberId: 'm3', shareAmountScaled: BigInt(60000), shareInMainScaled: BigInt(60000) },
+          {
+            id: 's1',
+            memberId: 'm2',
+            shareAmountScaled: BigInt(60000),
+            shareInMainScaled: BigInt(60000),
+          },
+          {
+            id: 's2',
+            memberId: 'm3',
+            shareAmountScaled: BigInt(60000),
+            shareInMainScaled: BigInt(60000),
+          },
         ],
       },
     ];
 
     const settlements = computeSettlementsSimplified(expenses, members);
-    const totalSettled = settlements.reduce((sum, s) => sum + s.amountScaled, BigInt(0));
+    const totalSettled = settlements.reduce(
+      (sum, s) => sum + s.amountScaled,
+      BigInt(0),
+    );
 
     expect(totalSettled).toBe(BigInt(120000));
   });
@@ -772,10 +1041,7 @@ describe('computeSimplificationSteps', () => {
   });
 
   it('should return initial step for no expenses', () => {
-    const members = [
-      createMember('m1', 'Alice'),
-      createMember('m2', 'Bob'),
-    ];
+    const members = [createMember('m1', 'Alice'), createMember('m2', 'Bob')];
 
     const steps = computeSimplificationSteps([], members);
 
@@ -786,10 +1052,7 @@ describe('computeSimplificationSteps', () => {
   });
 
   it('should return initial step when no simplification possible', () => {
-    const members = [
-      createMember('m1', 'Alice'),
-      createMember('m2', 'Bob'),
-    ];
+    const members = [createMember('m1', 'Alice'), createMember('m2', 'Bob')];
 
     const expenses: Expense[] = [
       {
@@ -804,7 +1067,12 @@ describe('computeSimplificationSteps', () => {
         totalInMainScaled: BigInt(100000),
         createdAt: new Date().toISOString(),
         shares: [
-          { id: 's1', memberId: 'm2', shareAmountScaled: BigInt(100000), shareInMainScaled: BigInt(100000) },
+          {
+            id: 's1',
+            memberId: 'm2',
+            shareAmountScaled: BigInt(100000),
+            shareInMainScaled: BigInt(100000),
+          },
         ],
       },
     ];
@@ -816,10 +1084,7 @@ describe('computeSimplificationSteps', () => {
   });
 
   it('should show simplification steps for opposite debts', () => {
-    const members = [
-      createMember('m1', 'Alice'),
-      createMember('m2', 'Bob'),
-    ];
+    const members = [createMember('m1', 'Alice'), createMember('m2', 'Bob')];
 
     const expenses: Expense[] = [
       {
@@ -834,7 +1099,12 @@ describe('computeSimplificationSteps', () => {
         totalInMainScaled: BigInt(100000),
         createdAt: new Date().toISOString(),
         shares: [
-          { id: 's1', memberId: 'm2', shareAmountScaled: BigInt(100000), shareInMainScaled: BigInt(100000) },
+          {
+            id: 's1',
+            memberId: 'm2',
+            shareAmountScaled: BigInt(100000),
+            shareInMainScaled: BigInt(100000),
+          },
         ],
       },
       {
@@ -849,7 +1119,12 @@ describe('computeSimplificationSteps', () => {
         totalInMainScaled: BigInt(50000),
         createdAt: new Date().toISOString(),
         shares: [
-          { id: 's2', memberId: 'm1', shareAmountScaled: BigInt(50000), shareInMainScaled: BigInt(50000) },
+          {
+            id: 's2',
+            memberId: 'm1',
+            shareAmountScaled: BigInt(50000),
+            shareInMainScaled: BigInt(50000),
+          },
         ],
       },
     ];
@@ -883,7 +1158,12 @@ describe('computeSimplificationSteps', () => {
         totalInMainScaled: BigInt(100000),
         createdAt: new Date().toISOString(),
         shares: [
-          { id: 's1', memberId: 'm2', shareAmountScaled: BigInt(100000), shareInMainScaled: BigInt(100000) },
+          {
+            id: 's1',
+            memberId: 'm2',
+            shareAmountScaled: BigInt(100000),
+            shareInMainScaled: BigInt(100000),
+          },
         ],
       },
       {
@@ -898,7 +1178,12 @@ describe('computeSimplificationSteps', () => {
         totalInMainScaled: BigInt(100000),
         createdAt: new Date().toISOString(),
         shares: [
-          { id: 's2', memberId: 'm3', shareAmountScaled: BigInt(100000), shareInMainScaled: BigInt(100000) },
+          {
+            id: 's2',
+            memberId: 'm3',
+            shareAmountScaled: BigInt(100000),
+            shareInMainScaled: BigInt(100000),
+          },
         ],
       },
     ];
@@ -936,7 +1221,12 @@ describe('computeSimplificationSteps', () => {
         totalInMainScaled: BigInt(100000),
         createdAt: new Date().toISOString(),
         shares: [
-          { id: 's1', memberId: 'm2', shareAmountScaled: BigInt(100000), shareInMainScaled: BigInt(100000) },
+          {
+            id: 's1',
+            memberId: 'm2',
+            shareAmountScaled: BigInt(100000),
+            shareInMainScaled: BigInt(100000),
+          },
         ],
       },
       {
@@ -951,7 +1241,12 @@ describe('computeSimplificationSteps', () => {
         totalInMainScaled: BigInt(50000),
         createdAt: new Date().toISOString(),
         shares: [
-          { id: 's2', memberId: 'm1', shareAmountScaled: BigInt(50000), shareInMainScaled: BigInt(50000) },
+          {
+            id: 's2',
+            memberId: 'm1',
+            shareAmountScaled: BigInt(50000),
+            shareInMainScaled: BigInt(50000),
+          },
         ],
       },
     ];
@@ -960,9 +1255,15 @@ describe('computeSimplificationSteps', () => {
 
     for (let i = 1; i < steps.length; i += 2) {
       expect(steps[i].highlightedIndices.length).toBe(2);
-      expect(steps[i].highlightedIndices[0]).toBeLessThan(steps[i].settlements.length);
-      expect(steps[i].highlightedIndices[1]).toBeLessThan(steps[i].settlements.length);
-      expect(steps[i].highlightedIndices[0]).not.toBe(steps[i].highlightedIndices[1]);
+      expect(steps[i].highlightedIndices[0]).toBeLessThan(
+        steps[i].settlements.length,
+      );
+      expect(steps[i].highlightedIndices[1]).toBeLessThan(
+        steps[i].settlements.length,
+      );
+      expect(steps[i].highlightedIndices[0]).not.toBe(
+        steps[i].highlightedIndices[1],
+      );
     }
   });
 
@@ -986,8 +1287,18 @@ describe('computeSimplificationSteps', () => {
         totalInMainScaled: BigInt(120000),
         createdAt: new Date().toISOString(),
         shares: [
-          { id: 's1', memberId: 'm2', shareAmountScaled: BigInt(60000), shareInMainScaled: BigInt(60000) },
-          { id: 's2', memberId: 'm3', shareAmountScaled: BigInt(60000), shareInMainScaled: BigInt(60000) },
+          {
+            id: 's1',
+            memberId: 'm2',
+            shareAmountScaled: BigInt(60000),
+            shareInMainScaled: BigInt(60000),
+          },
+          {
+            id: 's2',
+            memberId: 'm3',
+            shareAmountScaled: BigInt(60000),
+            shareInMainScaled: BigInt(60000),
+          },
         ],
       },
       {
@@ -1002,23 +1313,37 @@ describe('computeSimplificationSteps', () => {
         totalInMainScaled: BigInt(60000),
         createdAt: new Date().toISOString(),
         shares: [
-          { id: 's3', memberId: 'm1', shareAmountScaled: BigInt(30000), shareInMainScaled: BigInt(30000) },
-          { id: 's4', memberId: 'm3', shareAmountScaled: BigInt(30000), shareInMainScaled: BigInt(30000) },
+          {
+            id: 's3',
+            memberId: 'm1',
+            shareAmountScaled: BigInt(30000),
+            shareInMainScaled: BigInt(30000),
+          },
+          {
+            id: 's4',
+            memberId: 'm3',
+            shareAmountScaled: BigInt(30000),
+            shareInMainScaled: BigInt(30000),
+          },
         ],
       },
     ];
 
     const steps = computeSimplificationSteps(expenses, members);
     const finalStep = steps[steps.length - 1];
-    const simplifiedSettlements = computeSettlementsSimplified(expenses, members);
+    const simplifiedSettlements = computeSettlementsSimplified(
+      expenses,
+      members,
+    );
 
     expect(finalStep.settlements.length).toBe(simplifiedSettlements.length);
 
     for (const settlement of simplifiedSettlements) {
-      const found = finalStep.settlements.some(s =>
-        s.from.id === settlement.from.id &&
-        s.to.id === settlement.to.id &&
-        s.amountScaled === settlement.amountScaled
+      const found = finalStep.settlements.some(
+        (s) =>
+          s.from.id === settlement.from.id &&
+          s.to.id === settlement.to.id &&
+          s.amountScaled === settlement.amountScaled,
       );
       expect(found).toBe(true);
     }

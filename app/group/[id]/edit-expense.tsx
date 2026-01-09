@@ -44,7 +44,9 @@ export default function EditExpenseScreen() {
   const [amount, setAmount] = useState('');
   const [currency, setCurrency] = useState('USD');
   const [payerId, setPayerId] = useState('');
-  const [selectedParticipants, setSelectedParticipants] = useState<string[]>([]);
+  const [selectedParticipants, setSelectedParticipants] = useState<string[]>(
+    [],
+  );
   const [splitMethod, setSplitMethod] = useState<SplitMethod>('equal');
 
   const [percentages, setPercentages] = useState<Record<string, string>>({});
@@ -55,11 +57,17 @@ export default function EditExpenseScreen() {
   const [loading, setLoading] = useState(true);
 
   const { currencies: orderedCurrencies, selectCurrency } = useCurrencyOrder(
-    group?.mainCurrencyCode
+    group?.mainCurrencyCode,
   );
 
   const loadData = useCallback(async () => {
-    if (!id || typeof id !== 'string' || !expenseId || typeof expenseId !== 'string') return;
+    if (
+      !id ||
+      typeof id !== 'string' ||
+      !expenseId ||
+      typeof expenseId !== 'string'
+    )
+      return;
 
     const fetchedGroup = await getGroup(id);
     const fetchedExpense = await getExpense(expenseId);
@@ -106,7 +114,10 @@ export default function EditExpenseScreen() {
     loadData();
   }, [loadData]);
 
-  const validateDecimalInput = (text: string, maxDecimals: number = 2): string => {
+  const validateDecimalInput = (
+    text: string,
+    maxDecimals: number = 2,
+  ): string => {
     const sanitized = text.replace(/[^0-9.]/g, '');
     const parts = sanitized.split('.');
     if (parts.length > 2) {
@@ -120,30 +131,36 @@ export default function EditExpenseScreen() {
 
   const toggleParticipant = (userId: string) => {
     if (selectedParticipants.includes(userId)) {
-      setSelectedParticipants(selectedParticipants.filter((id) => id !== userId));
+      setSelectedParticipants(
+        selectedParticipants.filter((id) => id !== userId),
+      );
     } else {
       setSelectedParticipants([...selectedParticipants, userId]);
     }
   };
 
   const handleDelete = () => {
-    Alert.alert('Delete Expense', 'Are you sure you want to delete this expense?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          if (!expenseId || typeof expenseId !== 'string') return;
+    Alert.alert(
+      'Delete Expense',
+      'Are you sure you want to delete this expense?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            if (!expenseId || typeof expenseId !== 'string') return;
 
-          const success = await deleteExpense(expenseId);
-          if (success) {
-            router.back();
-          } else {
-            Alert.alert('Error', 'Failed to delete expense');
-          }
+            const success = await deleteExpense(expenseId);
+            if (success) {
+              router.back();
+            } else {
+              Alert.alert('Error', 'Failed to delete expense');
+            }
+          },
         },
-      },
-    ]);
+      ],
+    );
   };
 
   const handleSave = async () => {
@@ -171,8 +188,8 @@ export default function EditExpenseScreen() {
     if (splitMethod === 'equal') {
       shares = calculateEqualSplit(totalScaled, selectedParticipants.length);
     } else if (splitMethod === 'percentage') {
-      const percentValues = selectedParticipants.map(
-        (userId) => parseFloat(percentages[userId] || '0')
+      const percentValues = selectedParticipants.map((userId) =>
+        parseFloat(percentages[userId] || '0'),
       );
       const totalPercent = percentValues.reduce((sum, p) => sum + p, 0);
 
@@ -184,7 +201,7 @@ export default function EditExpenseScreen() {
       shares = calculatePercentageSplit(totalScaled, percentValues);
     } else {
       const exactValues = selectedParticipants.map((userId) =>
-        toScaled(parseFloat(exactAmounts[userId] || '0'))
+        toScaled(parseFloat(exactAmounts[userId] || '0')),
       );
       const totalExact = sumScaled(exactValues);
 
@@ -208,7 +225,10 @@ export default function EditExpenseScreen() {
       const rate = await getExchangeRate(currency, group.mainCurrencyCode);
 
       if (!rate) {
-        Alert.alert('Error', 'Could not fetch exchange rate. Please try again.');
+        Alert.alert(
+          'Error',
+          'Could not fetch exchange rate. Please try again.',
+        );
         setSaving(false);
         return;
       }
@@ -232,7 +252,7 @@ export default function EditExpenseScreen() {
         rate.rateScaled,
         totalInMainScaled,
         shareData,
-        splitMethod
+        splitMethod,
       );
 
       if (updatedExpense) {
@@ -252,7 +272,10 @@ export default function EditExpenseScreen() {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.closeButton}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.closeButton}
+          >
             <X color="#111827" size={24} />
           </TouchableOpacity>
           <Text style={styles.title}>Loading...</Text>
@@ -262,12 +285,17 @@ export default function EditExpenseScreen() {
     );
   }
 
-  const participants = group.members.filter((m) => selectedParticipants.includes(m.id));
+  const participants = group.members.filter((m) =>
+    selectedParticipants.includes(m.id),
+  );
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.closeButton}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.closeButton}
+        >
           <X color="#111827" size={24} />
         </TouchableOpacity>
         <Text style={styles.title}>Edit Expense</Text>
@@ -279,257 +307,308 @@ export default function EditExpenseScreen() {
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}>
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      >
         <ScrollView
           style={styles.content}
           contentContainerStyle={styles.contentContainer}
           keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={true}>
+          showsVerticalScrollIndicator={true}
+        >
           <View style={styles.section}>
             <Text style={styles.label}>Description</Text>
-          <TextInput
-            style={styles.input}
-            value={description}
-            onChangeText={setDescription}
-            placeholder="What was this for?"
-            placeholderTextColor="#9ca3af"
-          />
-        </View>
+            <TextInput
+              style={styles.input}
+              value={description}
+              onChangeText={setDescription}
+              placeholder="What was this for?"
+              placeholderTextColor="#9ca3af"
+            />
+          </View>
 
-        <View style={styles.section}>
-          <Text style={styles.label}>Amount *</Text>
-          <TextInput
-            style={styles.input}
-            value={amount}
-            onChangeText={text => setAmount(validateDecimalInput(text))}
-            placeholder="0.00"
-            placeholderTextColor="#9ca3af"
-            keyboardType="decimal-pad"
-          />
-        </View>
+          <View style={styles.section}>
+            <Text style={styles.label}>Amount *</Text>
+            <TextInput
+              style={styles.input}
+              value={amount}
+              onChangeText={(text) => setAmount(validateDecimalInput(text))}
+              placeholder="0.00"
+              placeholderTextColor="#9ca3af"
+              keyboardType="decimal-pad"
+            />
+          </View>
 
-        <View style={styles.section}>
-          <Text style={styles.label}>Currency *</Text>
-          <TouchableOpacity
-            style={styles.currencyButton}
-            onPress={() => setShowCurrencyPicker(!showCurrencyPicker)}>
-            <Text style={styles.currencyButtonText}>{currency}</Text>
-          </TouchableOpacity>
+          <View style={styles.section}>
+            <Text style={styles.label}>Currency *</Text>
+            <TouchableOpacity
+              style={styles.currencyButton}
+              onPress={() => setShowCurrencyPicker(!showCurrencyPicker)}
+            >
+              <Text style={styles.currencyButtonText}>{currency}</Text>
+            </TouchableOpacity>
 
-          {showCurrencyPicker && (
-            <ScrollView style={styles.currencyList} nestedScrollEnabled>
-              {orderedCurrencies.map((curr) => (
-                <TouchableOpacity
-                  key={curr.code}
-                  style={styles.currencyItem}
-                  onPress={() => {
-                    setCurrency(curr.code);
-                    selectCurrency(curr.code);
-                    setShowCurrencyPicker(false);
-                  }}>
-                  <Text style={styles.currencyCode}>{curr.code}</Text>
-                  <Text style={styles.currencyName}>{curr.name}</Text>
-                  {currency === curr.code && <Check color="#2563eb" size={20} />}
-                </TouchableOpacity>
+            {showCurrencyPicker && (
+              <ScrollView style={styles.currencyList} nestedScrollEnabled>
+                {orderedCurrencies.map((curr) => (
+                  <TouchableOpacity
+                    key={curr.code}
+                    style={styles.currencyItem}
+                    onPress={() => {
+                      setCurrency(curr.code);
+                      selectCurrency(curr.code);
+                      setShowCurrencyPicker(false);
+                    }}
+                  >
+                    <Text style={styles.currencyCode}>{curr.code}</Text>
+                    <Text style={styles.currencyName}>{curr.name}</Text>
+                    {currency === curr.code && (
+                      <Check color="#2563eb" size={20} />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            )}
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.label}>Paid by *</Text>
+            {group.members.map((member) => (
+              <TouchableOpacity
+                key={member.id}
+                style={[
+                  styles.optionItem,
+                  payerId === member.id && styles.optionItemSelected,
+                ]}
+                onPress={() => setPayerId(member.id)}
+              >
+                <Text
+                  style={[
+                    styles.optionText,
+                    payerId === member.id && styles.optionTextSelected,
+                  ]}
+                >
+                  {member.name}
+                </Text>
+                {payerId === member.id && <Check color="#2563eb" size={20} />}
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.label}>For whom *</Text>
+            {group.members.map((member) => (
+              <TouchableOpacity
+                key={member.id}
+                style={[
+                  styles.optionItem,
+                  selectedParticipants.includes(member.id) &&
+                    styles.optionItemSelected,
+                ]}
+                onPress={() => toggleParticipant(member.id)}
+              >
+                <Text
+                  style={[
+                    styles.optionText,
+                    selectedParticipants.includes(member.id) &&
+                      styles.optionTextSelected,
+                  ]}
+                >
+                  {member.name}
+                </Text>
+                {selectedParticipants.includes(member.id) && (
+                  <Check color="#2563eb" size={20} />
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.label}>Split Method *</Text>
+            <View style={styles.splitMethodRow}>
+              <TouchableOpacity
+                style={[
+                  styles.methodButton,
+                  splitMethod === 'equal' && styles.methodButtonActive,
+                ]}
+                onPress={() => setSplitMethod('equal')}
+              >
+                <Text
+                  style={[
+                    styles.methodButtonText,
+                    splitMethod === 'equal' && styles.methodButtonTextActive,
+                  ]}
+                >
+                  Equal
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.methodButton,
+                  splitMethod === 'percentage' && styles.methodButtonActive,
+                ]}
+                onPress={() => setSplitMethod('percentage')}
+              >
+                <Text
+                  style={[
+                    styles.methodButtonText,
+                    splitMethod === 'percentage' &&
+                      styles.methodButtonTextActive,
+                  ]}
+                >
+                  Percentage
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.methodButton,
+                  splitMethod === 'exact' && styles.methodButtonActive,
+                ]}
+                onPress={() => setSplitMethod('exact')}
+              >
+                <Text
+                  style={[
+                    styles.methodButtonText,
+                    splitMethod === 'exact' && styles.methodButtonTextActive,
+                  ]}
+                >
+                  Exact
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {splitMethod === 'percentage' && (
+            <View style={styles.section}>
+              <View style={styles.labelWithRemaining}>
+                <Text style={styles.label}>Percentages</Text>
+                <Text style={styles.remainingText}>
+                  Remaining:{' '}
+                  {(() => {
+                    const total = participants.reduce((sum, m) => {
+                      const value = parseFloat(percentages[m.id] || '0');
+                      return sum + (isNaN(value) ? 0 : value);
+                    }, 0);
+                    return Math.max(0, 100 - total);
+                  })()}
+                  %
+                </Text>
+              </View>
+              {participants.map((member) => (
+                <View key={member.id} style={styles.inputRow}>
+                  <Text style={styles.inputRowLabel}>{member.name}</Text>
+                  <TextInput
+                    style={styles.inputRowField}
+                    value={percentages[member.id] || ''}
+                    onChangeText={(text) => {
+                      const sanitized = text.replace(/[^0-9]/g, '');
+                      if (sanitized === '') {
+                        setPercentages({ ...percentages, [member.id]: '' });
+                        return;
+                      }
+                      const value = parseInt(sanitized, 10);
+                      if (isNaN(value)) return;
+
+                      const currentTotal = participants.reduce((sum, m) => {
+                        if (m.id === member.id) return sum;
+                        const val = parseFloat(percentages[m.id] || '0');
+                        return sum + (isNaN(val) ? 0 : val);
+                      }, 0);
+
+                      const remaining = 100 - currentTotal;
+                      const finalValue = Math.min(value, remaining);
+                      setPercentages({
+                        ...percentages,
+                        [member.id]: finalValue.toString(),
+                      });
+                    }}
+                    placeholder="0"
+                    placeholderTextColor="#9ca3af"
+                    keyboardType="number-pad"
+                  />
+                  <Text style={styles.inputRowUnit}>%</Text>
+                </View>
               ))}
-            </ScrollView>
+            </View>
           )}
-        </View>
 
-        <View style={styles.section}>
-          <Text style={styles.label}>Paid by *</Text>
-          {group.members.map((member) => (
-            <TouchableOpacity
-              key={member.id}
-              style={[styles.optionItem, payerId === member.id && styles.optionItemSelected]}
-              onPress={() => setPayerId(member.id)}>
-              <Text
-                style={[
-                  styles.optionText,
-                  payerId === member.id && styles.optionTextSelected,
-                ]}>
-                {member.name}
-              </Text>
-              {payerId === member.id && <Check color="#2563eb" size={20} />}
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.label}>For whom *</Text>
-          {group.members.map((member) => (
-            <TouchableOpacity
-              key={member.id}
-              style={[
-                styles.optionItem,
-                selectedParticipants.includes(member.id) && styles.optionItemSelected,
-              ]}
-              onPress={() => toggleParticipant(member.id)}>
-              <Text
-                style={[
-                  styles.optionText,
-                  selectedParticipants.includes(member.id) && styles.optionTextSelected,
-                ]}>
-                {member.name}
-              </Text>
-              {selectedParticipants.includes(member.id) && <Check color="#2563eb" size={20} />}
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.label}>Split Method *</Text>
-          <View style={styles.splitMethodRow}>
-            <TouchableOpacity
-              style={[styles.methodButton, splitMethod === 'equal' && styles.methodButtonActive]}
-              onPress={() => setSplitMethod('equal')}>
-              <Text
-                style={[
-                  styles.methodButtonText,
-                  splitMethod === 'equal' && styles.methodButtonTextActive,
-                ]}>
-                Equal
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.methodButton,
-                splitMethod === 'percentage' && styles.methodButtonActive,
-              ]}
-              onPress={() => setSplitMethod('percentage')}>
-              <Text
-                style={[
-                  styles.methodButtonText,
-                  splitMethod === 'percentage' && styles.methodButtonTextActive,
-                ]}>
-                Percentage
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.methodButton, splitMethod === 'exact' && styles.methodButtonActive]}
-              onPress={() => setSplitMethod('exact')}>
-              <Text
-                style={[
-                  styles.methodButtonText,
-                  splitMethod === 'exact' && styles.methodButtonTextActive,
-                ]}>
-                Exact
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {splitMethod === 'percentage' && (
-          <View style={styles.section}>
-            <View style={styles.labelWithRemaining}>
-              <Text style={styles.label}>Percentages</Text>
-              <Text style={styles.remainingText}>
-                Remaining: {(() => {
-                  const total = participants.reduce((sum, m) => {
-                    const value = parseFloat(percentages[m.id] || '0');
-                    return sum + (isNaN(value) ? 0 : value);
-                  }, 0);
-                  return Math.max(0, 100 - total);
-                })()}%
-              </Text>
-            </View>
-            {participants.map((member) => (
-              <View key={member.id} style={styles.inputRow}>
-                <Text style={styles.inputRowLabel}>{member.name}</Text>
-                <TextInput
-                  style={styles.inputRowField}
-                  value={percentages[member.id] || ''}
-                  onChangeText={(text) => {
-                    const sanitized = text.replace(/[^0-9]/g, '');
-                    if (sanitized === '') {
-                      setPercentages({ ...percentages, [member.id]: '' });
-                      return;
-                    }
-                    const value = parseInt(sanitized, 10);
-                    if (isNaN(value)) return;
-
-                    const currentTotal = participants.reduce((sum, m) => {
-                      if (m.id === member.id) return sum;
-                      const val = parseFloat(percentages[m.id] || '0');
-                      return sum + (isNaN(val) ? 0 : val);
-                    }, 0);
-
-                    const remaining = 100 - currentTotal;
-                    const finalValue = Math.min(value, remaining);
-                    setPercentages({ ...percentages, [member.id]: finalValue.toString() });
-                  }}
-                  placeholder="0"
-                  placeholderTextColor="#9ca3af"
-                  keyboardType="number-pad"
-                />
-                <Text style={styles.inputRowUnit}>%</Text>
-              </View>
-            ))}
-          </View>
-        )}
-
-        {splitMethod === 'exact' && (
-          <View style={styles.section}>
-            <View style={styles.labelWithRemaining}>
-              <Text style={styles.label}>Exact Amounts</Text>
-              <Text style={styles.remainingText}>
-                Remaining: {(() => {
-                  const totalAmount = parseFloat(amount) || 0;
-                  const allocated = participants.reduce((sum, m) => {
-                    const value = parseFloat(exactAmounts[m.id] || '0');
-                    return sum + (isNaN(value) ? 0 : value);
-                  }, 0);
-                  return Math.max(0, totalAmount - allocated).toFixed(2);
-                })()}
-              </Text>
-            </View>
-            {participants.map((member) => (
-              <View key={member.id} style={styles.inputRow}>
-                <Text style={styles.inputRowLabel}>{member.name}</Text>
-                <TextInput
-                  style={styles.inputRowField}
-                  value={exactAmounts[member.id] || ''}
-                  onChangeText={(text) => {
-                    const sanitized = validateDecimalInput(text);
-                    if (sanitized === '' || sanitized === '.') {
-                      setExactAmounts({ ...exactAmounts, [member.id]: sanitized });
-                      return;
-                    }
-
-                    const value = parseFloat(sanitized);
-                    if (isNaN(value)) return;
-
+          {splitMethod === 'exact' && (
+            <View style={styles.section}>
+              <View style={styles.labelWithRemaining}>
+                <Text style={styles.label}>Exact Amounts</Text>
+                <Text style={styles.remainingText}>
+                  Remaining:{' '}
+                  {(() => {
                     const totalAmount = parseFloat(amount) || 0;
-                    const currentTotal = participants.reduce((sum, m) => {
-                      if (m.id === member.id) return sum;
-                      const val = parseFloat(exactAmounts[m.id] || '0');
-                      return sum + (isNaN(val) ? 0 : val);
+                    const allocated = participants.reduce((sum, m) => {
+                      const value = parseFloat(exactAmounts[m.id] || '0');
+                      return sum + (isNaN(value) ? 0 : value);
                     }, 0);
-
-                    const remaining = totalAmount - currentTotal;
-                    const finalValue = Math.min(value, Math.max(0, remaining));
-                    setExactAmounts({ ...exactAmounts, [member.id]: sanitized });
-
-                    if (value > remaining) {
-                      setExactAmounts({ ...exactAmounts, [member.id]: finalValue.toFixed(2) });
-                    }
-                  }}
-                  placeholder="0.00"
-                  placeholderTextColor="#9ca3af"
-                  keyboardType="decimal-pad"
-                />
+                    return Math.max(0, totalAmount - allocated).toFixed(2);
+                  })()}
+                </Text>
               </View>
-            ))}
-          </View>
-        )}
+              {participants.map((member) => (
+                <View key={member.id} style={styles.inputRow}>
+                  <Text style={styles.inputRowLabel}>{member.name}</Text>
+                  <TextInput
+                    style={styles.inputRowField}
+                    value={exactAmounts[member.id] || ''}
+                    onChangeText={(text) => {
+                      const sanitized = validateDecimalInput(text);
+                      if (sanitized === '' || sanitized === '.') {
+                        setExactAmounts({
+                          ...exactAmounts,
+                          [member.id]: sanitized,
+                        });
+                        return;
+                      }
+
+                      const value = parseFloat(sanitized);
+                      if (isNaN(value)) return;
+
+                      const totalAmount = parseFloat(amount) || 0;
+                      const currentTotal = participants.reduce((sum, m) => {
+                        if (m.id === member.id) return sum;
+                        const val = parseFloat(exactAmounts[m.id] || '0');
+                        return sum + (isNaN(val) ? 0 : val);
+                      }, 0);
+
+                      const remaining = totalAmount - currentTotal;
+                      const finalValue = Math.min(
+                        value,
+                        Math.max(0, remaining),
+                      );
+                      setExactAmounts({
+                        ...exactAmounts,
+                        [member.id]: sanitized,
+                      });
+
+                      if (value > remaining) {
+                        setExactAmounts({
+                          ...exactAmounts,
+                          [member.id]: finalValue.toFixed(2),
+                        });
+                      }
+                    }}
+                    placeholder="0.00"
+                    placeholderTextColor="#9ca3af"
+                    keyboardType="decimal-pad"
+                  />
+                </View>
+              ))}
+            </View>
+          )}
         </ScrollView>
 
         <View style={styles.footer}>
           <TouchableOpacity
             style={[styles.saveButton, saving && styles.saveButtonDisabled]}
             onPress={handleSave}
-            disabled={saving}>
-            <Text style={styles.saveButtonText}>{saving ? 'Saving...' : 'Update Expense'}</Text>
+            disabled={saving}
+          >
+            <Text style={styles.saveButtonText}>
+              {saving ? 'Saving...' : 'Update Expense'}
+            </Text>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>

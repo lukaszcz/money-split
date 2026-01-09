@@ -1,4 +1,14 @@
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -57,9 +67,14 @@ export default function AddMemberScreen() {
           }
           const group = await getGroup(id);
           if (group) {
-            const emailSent = await sendInvitationEmail(memberEmail, group.name);
+            const emailSent = await sendInvitationEmail(
+              memberEmail,
+              group.name,
+            );
             if (!emailSent) {
-              console.warn('Failed to send invitation email, but continuing with member creation');
+              console.warn(
+                'Failed to send invitation email, but continuing with member creation',
+              );
             }
           }
         }
@@ -71,7 +86,12 @@ export default function AddMemberScreen() {
         return;
       }
 
-      const member = await createGroupMember(id, memberName, memberEmail, connectedUserId);
+      const member = await createGroupMember(
+        id,
+        memberName,
+        memberEmail,
+        connectedUserId,
+      );
 
       if (member) {
         router.back();
@@ -89,7 +109,10 @@ export default function AddMemberScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.backButton}
+        >
           <ArrowLeft color="#111827" size={24} />
         </TouchableOpacity>
         <Text style={styles.title}>Add Member</Text>
@@ -99,25 +122,27 @@ export default function AddMemberScreen() {
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}>
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      >
         <ScrollView
           style={styles.content}
           contentContainerStyle={styles.contentContainer}
           keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={true}>
+          showsVerticalScrollIndicator={true}
+        >
           <View style={styles.section}>
             <Text style={styles.label}>Name</Text>
             <TextInput
               style={styles.input}
               value={name}
               onChangeText={setName}
-              onBlur={() => setName(nm => nm.trim())}
+              onBlur={() => setName((nm) => nm.trim())}
               placeholder="Member name"
               placeholderTextColor="#9ca3af"
             />
             <Text style={styles.hint}>
-              Required if email is not provided. If email matches an existing user, their name will be
-              used if you leave this blank.
+              Required if email is not provided. If email matches an existing
+              user, their name will be used if you leave this blank.
             </Text>
           </View>
 
@@ -127,15 +152,16 @@ export default function AddMemberScreen() {
               style={styles.input}
               value={email}
               onChangeText={setEmail}
-              onBlur={() => setEmail(em => em.trim())}
+              onBlur={() => setEmail((em) => em.trim())}
               placeholder="member@example.com"
               placeholderTextColor="#9ca3af"
               keyboardType="email-address"
               autoCapitalize="none"
             />
             <Text style={styles.hint}>
-              If provided, the member will be connected to their account when they register. An
-              invitation email will be sent if they don{"'"}t have an account yet.
+              If provided, the member will be connected to their account when
+              they register. An invitation email will be sent if they don{"'"}t
+              have an account yet.
             </Text>
           </View>
         </ScrollView>
@@ -144,8 +170,11 @@ export default function AddMemberScreen() {
           <TouchableOpacity
             style={[styles.addButton, loading && styles.addButtonDisabled]}
             onPress={handleAddMember}
-            disabled={loading}>
-            <Text style={styles.addButtonText}>{loading ? 'Adding...' : 'Add Member'}</Text>
+            disabled={loading}
+          >
+            <Text style={styles.addButtonText}>
+              {loading ? 'Adding...' : 'Add Member'}
+            </Text>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>

@@ -58,7 +58,7 @@ export function createMockRouter(): MockRouter {
  */
 export function createMockRouterHooks(
   params: Record<string, any> = {},
-  segments: string[] = []
+  segments: string[] = [],
 ): MockRouterHooks {
   const mockRouter = createMockRouter();
 
@@ -119,7 +119,7 @@ export function resetMockRouter(hooks: MockRouterHooks): void {
  */
 export function updateMockParams(
   hooks: MockRouterHooks,
-  newParams: Record<string, any>
+  newParams: Record<string, any>,
 ): void {
   hooks.useLocalSearchParams.mockReturnValue(newParams);
 }
@@ -138,7 +138,7 @@ export function updateMockParams(
  */
 export function updateMockSegments(
   hooks: MockRouterHooks,
-  newSegments: string[]
+  newSegments: string[],
 ): void {
   hooks.useSegments.mockReturnValue(newSegments);
 }

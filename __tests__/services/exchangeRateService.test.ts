@@ -168,7 +168,7 @@ describe('exchangeRateService', () => {
 
         // Should have called API
         expect(global.fetch).toHaveBeenCalledWith(
-          'https://api.exchangerate-api.com/v4/latest/USD'
+          'https://api.exchangerate-api.com/v4/latest/USD',
         );
       });
 
@@ -244,7 +244,7 @@ describe('exchangeRateService', () => {
         });
 
         expect(global.fetch).toHaveBeenCalledWith(
-          'https://api.exchangerate-api.com/v4/latest/USD'
+          'https://api.exchangerate-api.com/v4/latest/USD',
         );
       });
     });
@@ -289,7 +289,7 @@ describe('exchangeRateService', () => {
           },
           {
             onConflict: 'base_currency_code,quote_currency_code',
-          }
+          },
         );
       });
 
@@ -339,7 +339,9 @@ describe('exchangeRateService', () => {
         mockSupabase.from.mockReturnValue({
           select: jest.fn().mockReturnThis(),
           eq: jest.fn().mockReturnThis(),
-          maybeSingle: jest.fn().mockRejectedValue(new Error('Database connection failed')),
+          maybeSingle: jest
+            .fn()
+            .mockRejectedValue(new Error('Database connection failed')),
         } as any);
 
         // Mock API response
@@ -384,7 +386,7 @@ describe('exchangeRateService', () => {
 
         expect(console.warn).toHaveBeenCalledWith(
           'Failed to query cached exchange rate:',
-          expect.any(Error)
+          expect.any(Error),
         );
       });
     });
@@ -402,7 +404,9 @@ describe('exchangeRateService', () => {
         } as any);
 
         // Mock API failure
-        (global.fetch as jest.Mock).mockRejectedValue(new Error('Network error'));
+        (global.fetch as jest.Mock).mockRejectedValue(
+          new Error('Network error'),
+        );
 
         const result = await getExchangeRate('USD', 'EUR');
 
@@ -456,7 +460,7 @@ describe('exchangeRateService', () => {
 
         expect(result).toBeNull();
         expect(console.warn).toHaveBeenCalledWith(
-          'No rate found for USD to JPY'
+          'No rate found for USD to JPY',
         );
       });
 
@@ -494,13 +498,15 @@ describe('exchangeRateService', () => {
           }),
         } as any);
 
-        (global.fetch as jest.Mock).mockRejectedValue(new Error('Network timeout'));
+        (global.fetch as jest.Mock).mockRejectedValue(
+          new Error('Network timeout'),
+        );
 
         await getExchangeRate('USD', 'EUR');
 
         expect(console.error).toHaveBeenCalledWith(
           'Failed to fetch exchange rate:',
-          expect.any(Error)
+          expect.any(Error),
         );
       });
     });
@@ -532,7 +538,7 @@ describe('exchangeRateService', () => {
 
         expect(console.error).toHaveBeenCalledWith(
           'Failed to cache exchange rate:',
-          expect.objectContaining({ message: 'Constraint violation' })
+          expect.objectContaining({ message: 'Constraint violation' }),
         );
       });
 
@@ -553,14 +559,16 @@ describe('exchangeRateService', () => {
 
         // Mock upsert throwing
         mockSupabase.from.mockReturnValueOnce({
-          upsert: jest.fn().mockRejectedValue(new Error('Database unavailable')),
+          upsert: jest
+            .fn()
+            .mockRejectedValue(new Error('Database unavailable')),
         } as any);
 
         await getExchangeRate('USD', 'EUR');
 
         expect(console.error).toHaveBeenCalledWith(
           'Failed to cache exchange rate:',
-          expect.any(Error)
+          expect.any(Error),
         );
       });
     });
@@ -591,7 +599,7 @@ describe('exchangeRateService', () => {
         expect(result!.baseCurrencyCode).toBe('EUR');
         expect(result!.quoteCurrencyCode).toBe('USD');
         expect(global.fetch).toHaveBeenCalledWith(
-          'https://api.exchangerate-api.com/v4/latest/EUR'
+          'https://api.exchangerate-api.com/v4/latest/EUR',
         );
       });
 

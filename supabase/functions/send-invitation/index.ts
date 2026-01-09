@@ -1,10 +1,11 @@
-import "jsr:@supabase/functions-js@2/edge-runtime.d.ts";
-import { Resend } from "npm:resend@4.0.0";
+import 'jsr:@supabase/functions-js@2/edge-runtime.d.ts';
+import { Resend } from 'npm:resend@4.0.0';
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers':
+    'Content-Type, Authorization, X-Client-Info, Apikey',
 };
 
 interface InvitationRequest {
@@ -14,17 +15,17 @@ interface InvitationRequest {
 
 Deno.serve(async (req: Request) => {
   try {
-    if (req.method === "OPTIONS") {
+    if (req.method === 'OPTIONS') {
       return new Response(null, {
         status: 200,
         headers: corsHeaders,
       });
     }
 
-    if (req.method !== "POST") {
-      return new Response(JSON.stringify({ error: "Method not allowed" }), {
+    if (req.method !== 'POST') {
+      return new Response(JSON.stringify({ error: 'Method not allowed' }), {
         status: 405,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
@@ -32,24 +33,26 @@ Deno.serve(async (req: Request) => {
 
     if (!email || !groupName) {
       return new Response(
-        JSON.stringify({ error: "Missing email or groupName" }),
+        JSON.stringify({ error: 'Missing email or groupName' }),
         {
           status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
       );
     }
 
     const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
 
     if (!RESEND_API_KEY) {
-      console.error("RESEND_API_KEY environment variable is not set");
+      console.error('RESEND_API_KEY environment variable is not set');
       return new Response(
-        JSON.stringify({ error: "Server configuration error: Missing API key" }),
+        JSON.stringify({
+          error: 'Server configuration error: Missing API key',
+        }),
         {
           status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
       );
     }
 
@@ -141,24 +144,29 @@ Deno.serve(async (req: Request) => {
     `;
 
     const { data, error } = await resend.emails.send({
-      from: "moneysplit@moneysplit.polapp.pl",
+      from: 'moneysplit@moneysplit.polapp.pl',
       to: email,
       subject: `You're invited to join "${groupName}"`,
       html: emailHtml,
     });
 
     if (error) {
-      console.error("Failed to send email:", error);
+      console.error('Failed to send email:', error);
       return new Response(
-        JSON.stringify({ error: "Failed to send invitation email", details: error }),
+        JSON.stringify({
+          error: 'Failed to send invitation email',
+          details: error,
+        }),
         {
           status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
       );
     }
 
-    console.log(`Invitation email sent to ${email} for group ${groupName}. Email ID: ${data?.id}`);
+    console.log(
+      `Invitation email sent to ${email} for group ${groupName}. Email ID: ${data?.id}`,
+    );
 
     return new Response(
       JSON.stringify({
@@ -168,17 +176,20 @@ Deno.serve(async (req: Request) => {
       }),
       {
         status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      },
     );
   } catch (error) {
-    console.error("Error processing invitation:", error);
+    console.error('Error processing invitation:', error);
     return new Response(
-      JSON.stringify({ error: "Internal server error", details: String(error) }),
+      JSON.stringify({
+        error: 'Internal server error',
+        details: String(error),
+      }),
       {
         status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      },
     );
   }
 });

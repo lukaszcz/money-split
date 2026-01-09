@@ -81,18 +81,18 @@ export type Database = {
         };
         Relationships: [
           {
-            foreignKeyName: "group_members_group_id_fkey";
-            columns: ["group_id"];
+            foreignKeyName: 'group_members_group_id_fkey';
+            columns: ['group_id'];
             isOneToOne: false;
-            referencedRelation: "groups";
-            referencedColumns: ["id"];
+            referencedRelation: 'groups';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: "group_members_connected_user_id_fkey";
-            columns: ["connected_user_id"];
+            foreignKeyName: 'group_members_connected_user_id_fkey';
+            columns: ['connected_user_id'];
             isOneToOne: false;
-            referencedRelation: "users";
-            referencedColumns: ["id"];
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
           },
         ];
       };
@@ -141,18 +141,18 @@ export type Database = {
         };
         Relationships: [
           {
-            foreignKeyName: "expenses_group_id_fkey";
-            columns: ["group_id"];
+            foreignKeyName: 'expenses_group_id_fkey';
+            columns: ['group_id'];
             isOneToOne: false;
-            referencedRelation: "groups";
-            referencedColumns: ["id"];
+            referencedRelation: 'groups';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: "expenses_payer_member_id_fkey";
-            columns: ["payer_member_id"];
+            foreignKeyName: 'expenses_payer_member_id_fkey';
+            columns: ['payer_member_id'];
             isOneToOne: false;
-            referencedRelation: "group_members";
-            referencedColumns: ["id"];
+            referencedRelation: 'group_members';
+            referencedColumns: ['id'];
           },
         ];
       };
@@ -180,18 +180,18 @@ export type Database = {
         };
         Relationships: [
           {
-            foreignKeyName: "expense_shares_expense_id_fkey";
-            columns: ["expense_id"];
+            foreignKeyName: 'expense_shares_expense_id_fkey';
+            columns: ['expense_id'];
             isOneToOne: false;
-            referencedRelation: "expenses";
-            referencedColumns: ["id"];
+            referencedRelation: 'expenses';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: "expense_shares_member_id_fkey";
-            columns: ["member_id"];
+            foreignKeyName: 'expense_shares_member_id_fkey';
+            columns: ['member_id'];
             isOneToOne: false;
-            referencedRelation: "group_members";
-            referencedColumns: ["id"];
+            referencedRelation: 'group_members';
+            referencedColumns: ['id'];
           },
         ];
       };
@@ -243,11 +243,11 @@ export type Database = {
         };
         Relationships: [
           {
-            foreignKeyName: "user_currency_preferences_user_id_fkey";
-            columns: ["user_id"];
+            foreignKeyName: 'user_currency_preferences_user_id_fkey';
+            columns: ['user_id'];
             isOneToOne: false;
-            referencedRelation: "users";
-            referencedColumns: ["id"];
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
           },
         ];
       };
@@ -269,11 +269,11 @@ export type Database = {
         };
         Relationships: [
           {
-            foreignKeyName: "user_group_preferences_user_id_fkey";
-            columns: ["user_id"];
+            foreignKeyName: 'user_group_preferences_user_id_fkey';
+            columns: ['user_id'];
             isOneToOne: true;
-            referencedRelation: "users";
-            referencedColumns: ["id"];
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
           },
         ];
       };

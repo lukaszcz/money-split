@@ -1,10 +1,24 @@
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, TextInput, Modal, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+  Alert,
+  TextInput,
+  Modal,
+  ActivityIndicator,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useEffect, useCallback } from 'react';
 import { LogOut, User, Edit2, Check, X, Trash2 } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { router } from 'expo-router';
-import { getUser, updateUserName, deleteUserAccount } from '../../services/groupRepository';
+import {
+  getUser,
+  updateUserName,
+  deleteUserAccount,
+} from '../../services/groupRepository';
 
 export default function SettingsScreen() {
   const { user, signOut } = useAuth();
@@ -102,15 +116,18 @@ export default function SettingsScreen() {
                       router.replace('/auth');
                     } else {
                       setDeletingAccount(false);
-                      Alert.alert('Error', 'Failed to delete account. Please try again later.');
+                      Alert.alert(
+                        'Error',
+                        'Failed to delete account. Please try again later.',
+                      );
                     }
                   },
                 },
-              ]
+              ],
             );
           },
         },
-      ]
+      ],
     );
   };
 
@@ -121,87 +138,108 @@ export default function SettingsScreen() {
           <Text style={styles.title}>Settings</Text>
         </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Profile</Text>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Profile</Text>
 
-        <View style={styles.card}>
-          <View style={styles.profileHeader}>
-            <View style={styles.profileIcon}>
-              <User color="#2563eb" size={24} />
+          <View style={styles.card}>
+            <View style={styles.profileHeader}>
+              <View style={styles.profileIcon}>
+                <User color="#2563eb" size={24} />
+              </View>
+              <View style={styles.profileInfo}>
+                <Text style={styles.profileEmail}>{user?.email}</Text>
+                <Text style={styles.profileLabel}>Signed in</Text>
+              </View>
             </View>
-            <View style={styles.profileInfo}>
-              <Text style={styles.profileEmail}>{user?.email}</Text>
-              <Text style={styles.profileLabel}>Signed in</Text>
-            </View>
-          </View>
 
-          <View style={styles.nameSection}>
-            <Text style={styles.nameLabel}>Display Name</Text>
-            {editingName ? (
-              <View style={styles.nameEditContainer}>
-                <TextInput
-                  style={styles.nameInput}
-                  value={tempName}
-                  onChangeText={setTempName}
-                  onBlur={() => setTempName(name => name.trim())}
-                  placeholder="Enter your name"
-                  autoFocus
-                />
-                <View style={styles.nameEditButtons}>
-                  <TouchableOpacity style={styles.nameEditButton} onPress={handleSaveName}>
-                    <Check color="#059669" size={20} />
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.nameEditButton} onPress={handleCancelEdit}>
-                    <X color="#6b7280" size={20} />
+            <View style={styles.nameSection}>
+              <Text style={styles.nameLabel}>Display Name</Text>
+              {editingName ? (
+                <View style={styles.nameEditContainer}>
+                  <TextInput
+                    style={styles.nameInput}
+                    value={tempName}
+                    onChangeText={setTempName}
+                    onBlur={() => setTempName((name) => name.trim())}
+                    placeholder="Enter your name"
+                    autoFocus
+                  />
+                  <View style={styles.nameEditButtons}>
+                    <TouchableOpacity
+                      style={styles.nameEditButton}
+                      onPress={handleSaveName}
+                    >
+                      <Check color="#059669" size={20} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.nameEditButton}
+                      onPress={handleCancelEdit}
+                    >
+                      <X color="#6b7280" size={20} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ) : (
+                <View style={styles.nameDisplayContainer}>
+                  <Text style={styles.nameText}>
+                    {userName || 'No name set'}
+                  </Text>
+                  <TouchableOpacity onPress={() => setEditingName(true)}>
+                    <Edit2 color="#2563eb" size={18} />
                   </TouchableOpacity>
                 </View>
-              </View>
-            ) : (
-              <View style={styles.nameDisplayContainer}>
-                <Text style={styles.nameText}>{userName || 'No name set'}</Text>
-                <TouchableOpacity onPress={() => setEditingName(true)}>
-                  <Edit2 color="#2563eb" size={18} />
-                </TouchableOpacity>
-              </View>
-            )}
+              )}
+            </View>
+
+            <TouchableOpacity
+              style={styles.logoutButton}
+              onPress={handleLogout}
+            >
+              <LogOut color="#ef4444" size={20} />
+              <Text style={styles.logoutButtonText}>Logout</Text>
+            </TouchableOpacity>
           </View>
-
-          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-            <LogOut color="#ef4444" size={20} />
-            <Text style={styles.logoutButtonText}>Logout</Text>
-          </TouchableOpacity>
         </View>
-      </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Danger Zone</Text>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Danger Zone</Text>
 
-        <View style={styles.card}>
-          <Text style={styles.dangerWarning}>
-            Deleting your account is permanent and cannot be undone.
-          </Text>
+          <View style={styles.card}>
+            <Text style={styles.dangerWarning}>
+              Deleting your account is permanent and cannot be undone.
+            </Text>
 
-          <TouchableOpacity style={styles.deleteAccountButton} onPress={handleDeleteAccount}>
-            <Trash2 color="#ffffff" size={20} />
-            <Text style={styles.deleteAccountButtonText}>Delete My Account</Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.deleteAccountButton}
+              onPress={handleDeleteAccount}
+            >
+              <Trash2 color="#ffffff" size={20} />
+              <Text style={styles.deleteAccountButtonText}>
+                Delete My Account
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>About</Text>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>About</Text>
 
-        <View style={styles.card}>
-          <Text style={styles.appName}>MoneySplit</Text>
-          <Text style={styles.appVersion}>Version 1.0.0 beta</Text>
-          <Text style={styles.appDescription}>
-            Track shared expenses and debts with friends.
-          </Text>
+          <View style={styles.card}>
+            <Text style={styles.appName}>MoneySplit</Text>
+            <Text style={styles.appVersion}>Version 1.0.0 beta</Text>
+            <Text style={styles.appDescription}>
+              Track shared expenses and debts with friends.
+            </Text>
+          </View>
         </View>
-      </View>
       </ScrollView>
 
-      <Modal visible={deletingAccount} transparent animationType="fade" presentationStyle="overFullScreen">
+      <Modal
+        visible={deletingAccount}
+        transparent
+        animationType="fade"
+        presentationStyle="overFullScreen"
+      >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <ActivityIndicator size="large" color="#2563eb" />

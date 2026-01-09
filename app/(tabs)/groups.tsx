@@ -1,4 +1,11 @@
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl } from 'react-native';
+import {
+  View,
+  Text,
+  FlatList,
+  TouchableOpacity,
+  StyleSheet,
+  RefreshControl,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useCallback } from 'react';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -21,14 +28,17 @@ export default function GroupsScreen() {
     const fetchedGroups = await getAllGroups();
     const orderedGroups = await getOrderedGroups(fetchedGroups);
 
-    const groupIds = orderedGroups.map(g => g.id);
+    const groupIds = orderedGroups.map((g) => g.id);
 
     const allExpensesMap = new Map<string, any[]>();
 
     if (groupIds.length > 0) {
-      const { data: allExpenses } = await (await import('../../lib/supabase')).supabase
+      const { data: allExpenses } = await (
+        await import('../../lib/supabase')
+      ).supabase
         .from('expenses')
-        .select(`
+        .select(
+          `
           *,
           expense_shares (
             id,
@@ -36,7 +46,8 @@ export default function GroupsScreen() {
             share_amount_scaled,
             share_in_main_scaled
           )
-        `)
+        `,
+        )
         .in('group_id', groupIds);
 
       (allExpenses || []).forEach((e: any) => {
@@ -71,7 +82,9 @@ export default function GroupsScreen() {
       let isSettled = false;
       if (expenses.length > 0) {
         const balances = computeBalances(expenses, group.members);
-        isSettled = Array.from(balances.values()).every(balance => balance === 0n);
+        isSettled = Array.from(balances.values()).every(
+          (balance) => balance === 0n,
+        );
       }
 
       return {
@@ -88,7 +101,7 @@ export default function GroupsScreen() {
   useFocusEffect(
     useCallback(() => {
       loadGroups();
-    }, [loadGroups])
+    }, [loadGroups]),
   );
 
   const onRefresh = () => {
@@ -99,10 +112,19 @@ export default function GroupsScreen() {
   const renderGroupItem = ({ item }: { item: GroupWithSettledStatus }) => (
     <TouchableOpacity
       style={[styles.groupCard, item.isSettled && styles.groupCardSettled]}
-      onPress={() => router.push(`/group/${item.id}` as any)}>
+      onPress={() => router.push(`/group/${item.id}` as any)}
+    >
       <View style={styles.groupHeader}>
-        <Text style={[styles.groupName, item.isSettled && styles.groupNameSettled]}>{item.name}</Text>
-        <Text style={[styles.currency, item.isSettled && styles.currencySettled]}>{item.mainCurrencyCode}</Text>
+        <Text
+          style={[styles.groupName, item.isSettled && styles.groupNameSettled]}
+        >
+          {item.name}
+        </Text>
+        <Text
+          style={[styles.currency, item.isSettled && styles.currencySettled]}
+        >
+          {item.mainCurrencyCode}
+        </Text>
       </View>
       <Text style={[styles.members, item.isSettled && styles.membersSettled]}>
         {item.members.length} {item.members.length === 1 ? 'member' : 'members'}
@@ -117,7 +139,8 @@ export default function GroupsScreen() {
         <Text style={styles.title}>Groups</Text>
         <TouchableOpacity
           style={styles.addButton}
-          onPress={() => router.push('/create-group' as any)}>
+          onPress={() => router.push('/create-group' as any)}
+        >
           <Plus color="#ffffff" size={24} />
         </TouchableOpacity>
       </View>
@@ -129,15 +152,19 @@ export default function GroupsScreen() {
       ) : groups.length === 0 ? (
         <View style={styles.centered}>
           <Text style={styles.emptyText}>No groups yet</Text>
-          <Text style={styles.emptySubtext}>Create your first group to get started</Text>
+          <Text style={styles.emptySubtext}>
+            Create your first group to get started
+          </Text>
         </View>
       ) : (
         <FlatList
           data={groups}
           renderItem={renderGroupItem}
-          keyExtractor={item => item.id}
+          keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
         />
       )}
     </SafeAreaView>

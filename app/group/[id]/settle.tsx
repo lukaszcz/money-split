@@ -1,9 +1,27 @@
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+  Alert,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, ArrowRight, Play, CheckSquare, Square } from 'lucide-react-native';
-import { getGroup, getGroupExpenses, GroupWithMembers, createExpense } from '../../../services/groupRepository';
+import {
+  ArrowLeft,
+  ArrowRight,
+  Play,
+  CheckSquare,
+  Square,
+} from 'lucide-react-native';
+import {
+  getGroup,
+  getGroupExpenses,
+  GroupWithMembers,
+  createExpense,
+} from '../../../services/groupRepository';
 import {
   computeSettlementsNoSimplify,
   computeSettlementsSimplified,
@@ -23,7 +41,9 @@ export default function SettleScreen() {
   const [simplified, setSimplified] = useState(true);
   const [loading, setLoading] = useState(true);
   const [isAnimating, setIsAnimating] = useState(false);
-  const [animationSteps, setAnimationSteps] = useState<SimplificationStep[]>([]);
+  const [animationSteps, setAnimationSteps] = useState<SimplificationStep[]>(
+    [],
+  );
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const animationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -34,7 +54,10 @@ export default function SettleScreen() {
     if (!fetchedGroup) return;
 
     const expenses = await getGroupExpenses(id);
-    const settlementsSimplified = computeSettlementsSimplified(expenses, fetchedGroup.members);
+    const settlementsSimplified = computeSettlementsSimplified(
+      expenses,
+      fetchedGroup.members,
+    );
 
     setGroup(fetchedGroup);
     setSettlements(settlementsSimplified);
@@ -52,10 +75,16 @@ export default function SettleScreen() {
     const newSimplified = !simplified;
 
     if (newSimplified) {
-      const settlementsSimplified = computeSettlementsSimplified(expenses, group.members);
+      const settlementsSimplified = computeSettlementsSimplified(
+        expenses,
+        group.members,
+      );
       setSettlements(settlementsSimplified);
     } else {
-      const settlementsNormal = computeSettlementsNoSimplify(expenses, group.members);
+      const settlementsNormal = computeSettlementsNoSimplify(
+        expenses,
+        group.members,
+      );
       setSettlements(settlementsNormal);
     }
 
@@ -66,7 +95,10 @@ export default function SettleScreen() {
     if (!group || !id || typeof id !== 'string') return;
 
     try {
-      const rate = await getExchangeRate(group.mainCurrencyCode, group.mainCurrencyCode);
+      const rate = await getExchangeRate(
+        group.mainCurrencyCode,
+        group.mainCurrencyCode,
+      );
 
       if (!rate) {
         Alert.alert('Error', 'Could not process transfer. Please try again.');
@@ -76,11 +108,13 @@ export default function SettleScreen() {
       const totalScaled = settlement.amountScaled;
       const transferDescription = `Settlement: ${settlement.from.name} → ${settlement.to.name}`;
 
-      const shareData = [{
-        memberId: settlement.to.id,
-        shareAmountScaled: totalScaled,
-        shareInMainScaled: totalScaled,
-      }];
+      const shareData = [
+        {
+          memberId: settlement.to.id,
+          shareAmountScaled: totalScaled,
+          shareInMainScaled: totalScaled,
+        },
+      ];
 
       const expense = await createExpense(
         group.id,
@@ -92,13 +126,18 @@ export default function SettleScreen() {
         rate.rateScaled,
         totalScaled,
         shareData,
-        'transfer'
+        'transfer',
       );
 
       if (expense) {
-        setSettlements(prev => prev.filter(s =>
-          !(s.from.id === settlement.from.id && s.to.id === settlement.to.id)
-        ));
+        setSettlements((prev) =>
+          prev.filter(
+            (s) =>
+              !(
+                s.from.id === settlement.from.id && s.to.id === settlement.to.id
+              ),
+          ),
+        );
         Alert.alert('Success', 'Transfer recorded successfully');
       } else {
         Alert.alert('Error', 'Failed to record transfer');
@@ -117,14 +156,21 @@ export default function SettleScreen() {
 
     console.log(`Generated ${steps.length} animation steps:`);
     steps.forEach((step, idx, _) => {
-      console.log(`  Step ${idx}: ${step.settlements.length} settlements, highlights: [${step.highlightedIndices.join(', ')}]`);
+      console.log(
+        `  Step ${idx}: ${step.settlements.length} settlements, highlights: [${step.highlightedIndices.join(', ')}]`,
+      );
       step.settlements.forEach((s, sidx) => {
-        console.log(`    ${sidx}: ${s.from.name} → ${s.to.name}: ${formatNumber(s.amountScaled)}`);
+        console.log(
+          `    ${sidx}: ${s.from.name} → ${s.to.name}: ${formatNumber(s.amountScaled)}`,
+        );
       });
     });
 
     if (steps.length <= 1) {
-      Alert.alert('No Simplification', 'There are no simplification steps to show for these debts.');
+      Alert.alert(
+        'No Simplification',
+        'There are no simplification steps to show for these debts.',
+      );
       return;
     }
 
@@ -147,7 +193,7 @@ export default function SettleScreen() {
     const delay = 3000;
 
     animationTimerRef.current = setTimeout(() => {
-      setCurrentStepIndex(prev => prev + 1);
+      setCurrentStepIndex((prev) => prev + 1);
     }, delay);
 
     return () => {
@@ -183,7 +229,10 @@ export default function SettleScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.backButton}
+        >
           <ArrowLeft color="#111827" size={24} />
         </TouchableOpacity>
         <View style={styles.headerInfo}>
@@ -192,7 +241,10 @@ export default function SettleScreen() {
         </View>
       </View>
 
-      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={styles.contentContainer}
+      >
         {settlements.length === 0 && !isAnimating && (
           <View style={styles.emptyState}>
             <Text style={styles.emptyText}>All settled up!</Text>
@@ -200,76 +252,87 @@ export default function SettleScreen() {
           </View>
         )}
 
-        {isAnimating && animationSteps.length > 0 && currentStepIndex < animationSteps.length && (() => {
-          const currentStep = animationSteps[currentStepIndex];
-          const hasHighlights = currentStep.highlightedIndices.length > 0;
-          const hasResults = currentStep.resultIndices.length > 0;
-          const stepNumber = currentStepIndex + 1;
-          const totalSteps = animationSteps.length;
+        {isAnimating &&
+          animationSteps.length > 0 &&
+          currentStepIndex < animationSteps.length &&
+          (() => {
+            const currentStep = animationSteps[currentStepIndex];
+            const hasHighlights = currentStep.highlightedIndices.length > 0;
+            const hasResults = currentStep.resultIndices.length > 0;
+            const stepNumber = currentStepIndex + 1;
+            const totalSteps = animationSteps.length;
 
-          let stepTitle = '';
-          let stepDescription = '';
+            let stepTitle = '';
+            let stepDescription = '';
 
-          if (stepNumber === 1 && !hasHighlights && !hasResults) {
-            stepTitle = 'Initial transfers';
-            stepDescription = `${currentStep.settlements.length} transfer${currentStep.settlements.length !== 1 ? 's' : ''} before simplification`;
-          } else if (hasHighlights) {
-            stepTitle = 'Next step';
-            stepDescription = 'Highlighted transfers will be combined';
-          } else if (hasResults) {
-            const isLastStep = currentStepIndex === animationSteps.length - 1;
-            stepTitle = isLastStep ? 'Final result' : 'Result';
-            const resultCount = (currentStep.resultIndices || []).length;
-            stepDescription = isLastStep
-              ? `Simplified to ${currentStep.settlements.length} transfer${currentStep.settlements.length !== 1 ? 's' : ''}`
-              : `${resultCount} new transfer${resultCount !== 1 ? 's' : ''} highlighted in green`;
-          } else {
-            const isLastStep = currentStepIndex === animationSteps.length - 1;
-            stepTitle = isLastStep ? 'Final result' : 'Result';
-            stepDescription = isLastStep
-              ? `Simplified to ${currentStep.settlements.length} transfer${currentStep.settlements.length !== 1 ? 's' : ''}`
-              : `${currentStep.settlements.length} transfer${currentStep.settlements.length !== 1 ? 's' : ''} remaining`;
-          }
+            if (stepNumber === 1 && !hasHighlights && !hasResults) {
+              stepTitle = 'Initial transfers';
+              stepDescription = `${currentStep.settlements.length} transfer${currentStep.settlements.length !== 1 ? 's' : ''} before simplification`;
+            } else if (hasHighlights) {
+              stepTitle = 'Next step';
+              stepDescription = 'Highlighted transfers will be combined';
+            } else if (hasResults) {
+              const isLastStep = currentStepIndex === animationSteps.length - 1;
+              stepTitle = isLastStep ? 'Final result' : 'Result';
+              const resultCount = (currentStep.resultIndices || []).length;
+              stepDescription = isLastStep
+                ? `Simplified to ${currentStep.settlements.length} transfer${currentStep.settlements.length !== 1 ? 's' : ''}`
+                : `${resultCount} new transfer${resultCount !== 1 ? 's' : ''} highlighted in green`;
+            } else {
+              const isLastStep = currentStepIndex === animationSteps.length - 1;
+              stepTitle = isLastStep ? 'Final result' : 'Result';
+              stepDescription = isLastStep
+                ? `Simplified to ${currentStep.settlements.length} transfer${currentStep.settlements.length !== 1 ? 's' : ''}`
+                : `${currentStep.settlements.length} transfer${currentStep.settlements.length !== 1 ? 's' : ''} remaining`;
+            }
 
-          return (
-            <>
-              <View style={styles.infoBox}>
-                <Text style={styles.infoText}>{stepTitle}</Text>
-                <Text style={styles.infoSubtext}>
-                  {stepDescription} ({stepNumber}/{totalSteps})
-                </Text>
-              </View>
+            return (
+              <>
+                <View style={styles.infoBox}>
+                  <Text style={styles.infoText}>{stepTitle}</Text>
+                  <Text style={styles.infoSubtext}>
+                    {stepDescription} ({stepNumber}/{totalSteps})
+                  </Text>
+                </View>
 
-              {currentStep.settlements.map((settlement, idx) => {
-                const isHighlighted = currentStep.highlightedIndices.includes(idx);
-                const isResult = (currentStep.resultIndices || []).includes(idx);
-                return (
-                  <View
-                    key={`${currentStepIndex}-${settlement.from.id}-${settlement.to.id}-${idx}`}
-                    style={[
-                      styles.settlementCard,
-                      isHighlighted && styles.settlementCardHighlighted,
-                      isResult && styles.settlementCardResult,
-                    ]}>
-                    <View style={styles.settlementContent}>
-                      <View style={styles.settlementInfo}>
-                        <View style={styles.settlementRow}>
-                          <Text style={styles.fromUser}>{settlement.from.name}</Text>
-                          <Text style={styles.arrow}>→</Text>
-                          <Text style={styles.toUser}>{settlement.to.name}</Text>
+                {currentStep.settlements.map((settlement, idx) => {
+                  const isHighlighted =
+                    currentStep.highlightedIndices.includes(idx);
+                  const isResult = (currentStep.resultIndices || []).includes(
+                    idx,
+                  );
+                  return (
+                    <View
+                      key={`${currentStepIndex}-${settlement.from.id}-${settlement.to.id}-${idx}`}
+                      style={[
+                        styles.settlementCard,
+                        isHighlighted && styles.settlementCardHighlighted,
+                        isResult && styles.settlementCardResult,
+                      ]}
+                    >
+                      <View style={styles.settlementContent}>
+                        <View style={styles.settlementInfo}>
+                          <View style={styles.settlementRow}>
+                            <Text style={styles.fromUser}>
+                              {settlement.from.name}
+                            </Text>
+                            <Text style={styles.arrow}>→</Text>
+                            <Text style={styles.toUser}>
+                              {settlement.to.name}
+                            </Text>
+                          </View>
+                          <Text style={styles.amount}>
+                            {currencySymbol}
+                            {formatNumber(settlement.amountScaled)}
+                          </Text>
                         </View>
-                        <Text style={styles.amount}>
-                          {currencySymbol}
-                          {formatNumber(settlement.amountScaled)}
-                        </Text>
                       </View>
                     </View>
-                  </View>
-                );
-              })}
-            </>
-          );
-        })()}
+                  );
+                })}
+              </>
+            );
+          })()}
 
         {!isAnimating && settlements.length > 0 && (
           <>
@@ -278,7 +341,8 @@ export default function SettleScreen() {
                 {simplified ? 'Simplified settlements' : 'Standard settlements'}
               </Text>
               <Text style={styles.infoSubtext}>
-                {settlements.length} transfer{settlements.length !== 1 ? 's' : ''}
+                {settlements.length} transfer
+                {settlements.length !== 1 ? 's' : ''}
               </Text>
             </View>
 
@@ -287,7 +351,9 @@ export default function SettleScreen() {
                 <View style={styles.settlementContent}>
                   <View style={styles.settlementInfo}>
                     <View style={styles.settlementRow}>
-                      <Text style={styles.fromUser}>{settlement.from.name}</Text>
+                      <Text style={styles.fromUser}>
+                        {settlement.from.name}
+                      </Text>
                       <Text style={styles.arrow}>→</Text>
                       <Text style={styles.toUser}>{settlement.to.name}</Text>
                     </View>
@@ -298,7 +364,8 @@ export default function SettleScreen() {
                   </View>
                   <TouchableOpacity
                     style={styles.transferButton}
-                    onPress={() => handleAddTransfer(settlement)}>
+                    onPress={() => handleAddTransfer(settlement)}
+                  >
                     <Text style={styles.transferButtonText}>Transfer</Text>
                     <ArrowRight color="#2563eb" size={16} />
                   </TouchableOpacity>
@@ -308,7 +375,8 @@ export default function SettleScreen() {
 
             <TouchableOpacity
               style={styles.checkboxContainer}
-              onPress={toggleSimplified}>
+              onPress={toggleSimplified}
+            >
               {simplified ? (
                 <CheckSquare color="#2563eb" size={24} />
               ) : (
@@ -320,7 +388,8 @@ export default function SettleScreen() {
             {simplified && (
               <TouchableOpacity
                 style={styles.explainButton}
-                onPress={startAnimation}>
+                onPress={startAnimation}
+              >
                 <Play color="#059669" size={16} />
                 <Text style={styles.explainButtonText}>Explain Debts</Text>
               </TouchableOpacity>

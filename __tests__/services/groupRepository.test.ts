@@ -1,5 +1,15 @@
-import { createMockSupabaseClient, createMockUser, resetAllMocks, MockSupabaseClient } from '../utils/mockSupabase';
-import { mockUsers, mockGroups, mockMembers, createMockDatabaseRow } from '../fixtures/testData';
+import {
+  createMockSupabaseClient,
+  createMockUser,
+  resetAllMocks,
+  MockSupabaseClient,
+} from '../utils/mockSupabase';
+import {
+  mockUsers,
+  mockGroups,
+  mockMembers,
+  createMockDatabaseRow,
+} from '../fixtures/testData';
 
 jest.mock('../../lib/supabase', () => ({
   supabase: null,
@@ -38,7 +48,10 @@ describe('groupRepository', () => {
   describe('ensureUserProfile', () => {
     it('should return existing user if already exists', async () => {
       const { ensureUserProfile } = require('../../services/groupRepository');
-      const mockUser = createMockUser({ id: 'user-123', email: 'test@example.com' });
+      const mockUser = createMockUser({
+        id: 'user-123',
+        email: 'test@example.com',
+      });
 
       mockSupabase.auth.getUser.mockResolvedValue({
         data: { user: mockUser },
@@ -64,7 +77,10 @@ describe('groupRepository', () => {
 
     it('should create new user if not exists', async () => {
       const { ensureUserProfile } = require('../../services/groupRepository');
-      const mockUser = createMockUser({ id: 'user-new', email: 'new@example.com' });
+      const mockUser = createMockUser({
+        id: 'user-new',
+        email: 'new@example.com',
+      });
 
       mockSupabase.auth.getUser.mockResolvedValue({
         data: { user: mockUser },
@@ -136,7 +152,10 @@ describe('groupRepository', () => {
 
     it('should use custom name when provided', async () => {
       const { ensureUserProfile } = require('../../services/groupRepository');
-      const mockUser = createMockUser({ id: 'user-new', email: 'new@example.com' });
+      const mockUser = createMockUser({
+        id: 'user-new',
+        email: 'new@example.com',
+      });
 
       mockSupabase.auth.getUser.mockResolvedValue({
         data: { user: mockUser },
@@ -241,7 +260,9 @@ describe('groupRepository', () => {
       const getUserBuilder = {
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
-        maybeSingle: jest.fn().mockResolvedValue({ data: mockDbUser, error: null }),
+        maybeSingle: jest
+          .fn()
+          .mockResolvedValue({ data: mockDbUser, error: null }),
       };
 
       const insertGroupBuilder = {
@@ -294,9 +315,10 @@ describe('groupRepository', () => {
       const getUserBuilder = {
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
-      maybeSingle: jest.fn()
-        .mockResolvedValueOnce({ data: mockDbUser, error: null })
-        .mockResolvedValueOnce({ data: mockDbBob, error: null }),
+        maybeSingle: jest
+          .fn()
+          .mockResolvedValueOnce({ data: mockDbUser, error: null })
+          .mockResolvedValueOnce({ data: mockDbBob, error: null }),
       };
 
       const insertGroupBuilder = {
@@ -359,13 +381,17 @@ describe('groupRepository', () => {
       const groupBuilder = {
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
-        maybeSingle: jest.fn().mockResolvedValue({ data: mockDbGroup, error: null }),
+        maybeSingle: jest
+          .fn()
+          .mockResolvedValue({ data: mockDbGroup, error: null }),
       };
 
       const membersBuilder = {
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
-        order: jest.fn().mockResolvedValue({ data: mockDbMembers, error: null }),
+        order: jest
+          .fn()
+          .mockResolvedValue({ data: mockDbMembers, error: null }),
       };
 
       let callCount = 0;
@@ -421,7 +447,9 @@ describe('groupRepository', () => {
       const expenseBuilder = {
         insert: jest.fn().mockReturnThis(),
         select: jest.fn().mockReturnThis(),
-        single: jest.fn().mockResolvedValue({ data: mockDbExpense, error: null }),
+        single: jest
+          .fn()
+          .mockResolvedValue({ data: mockDbExpense, error: null }),
       };
 
       const sharesBuilder = {
@@ -435,9 +463,21 @@ describe('groupRepository', () => {
       });
 
       const shares = [
-        { memberId: 'member-alice-trip', shareAmountScaled: BigInt(40000), shareInMainScaled: BigInt(40000) },
-        { memberId: 'member-bob-trip', shareAmountScaled: BigInt(40000), shareInMainScaled: BigInt(40000) },
-        { memberId: 'member-charlie-trip', shareAmountScaled: BigInt(40000), shareInMainScaled: BigInt(40000) },
+        {
+          memberId: 'member-alice-trip',
+          shareAmountScaled: BigInt(40000),
+          shareInMainScaled: BigInt(40000),
+        },
+        {
+          memberId: 'member-bob-trip',
+          shareAmountScaled: BigInt(40000),
+          shareInMainScaled: BigInt(40000),
+        },
+        {
+          memberId: 'member-charlie-trip',
+          shareAmountScaled: BigInt(40000),
+          shareInMainScaled: BigInt(40000),
+        },
       ];
 
       const result = await createExpense(
@@ -449,16 +489,31 @@ describe('groupRepository', () => {
         'member-alice-trip',
         BigInt(10000),
         BigInt(120000),
-        shares
+        shares,
       );
 
       expect(result).toBeTruthy();
       expect(result?.id).toBe('expense-1');
       expect(expenseBuilder.insert).toHaveBeenCalled();
       expect(sharesBuilder.insert).toHaveBeenCalledWith([
-        { expense_id: 'expense-1', member_id: 'member-alice-trip', share_amount_scaled: 40000, share_in_main_scaled: 40000 },
-        { expense_id: 'expense-1', member_id: 'member-bob-trip', share_amount_scaled: 40000, share_in_main_scaled: 40000 },
-        { expense_id: 'expense-1', member_id: 'member-charlie-trip', share_amount_scaled: 40000, share_in_main_scaled: 40000 },
+        {
+          expense_id: 'expense-1',
+          member_id: 'member-alice-trip',
+          share_amount_scaled: 40000,
+          share_in_main_scaled: 40000,
+        },
+        {
+          expense_id: 'expense-1',
+          member_id: 'member-bob-trip',
+          share_amount_scaled: 40000,
+          share_in_main_scaled: 40000,
+        },
+        {
+          expense_id: 'expense-1',
+          member_id: 'member-charlie-trip',
+          share_amount_scaled: 40000,
+          share_in_main_scaled: 40000,
+        },
       ]);
     });
 
@@ -483,7 +538,9 @@ describe('groupRepository', () => {
       const expenseBuilder = {
         insert: jest.fn().mockReturnThis(),
         select: jest.fn().mockReturnThis(),
-        single: jest.fn().mockResolvedValue({ data: mockDbExpense, error: null }),
+        single: jest
+          .fn()
+          .mockResolvedValue({ data: mockDbExpense, error: null }),
       };
 
       const sharesBuilder = {
@@ -505,9 +562,15 @@ describe('groupRepository', () => {
         'member-bob-trip',
         BigInt(10000),
         BigInt(50000),
-        [{ memberId: 'member-alice-trip', shareAmountScaled: BigInt(50000), shareInMainScaled: BigInt(50000) }],
+        [
+          {
+            memberId: 'member-alice-trip',
+            shareAmountScaled: BigInt(50000),
+            shareInMainScaled: BigInt(50000),
+          },
+        ],
         'transfer',
-        'exact'
+        'exact',
       );
 
       expect(result?.paymentType).toBe('transfer');
@@ -538,7 +601,9 @@ describe('groupRepository', () => {
         update: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
         select: jest.fn().mockReturnThis(),
-        single: jest.fn().mockResolvedValue({ data: mockDbExpense, error: null }),
+        single: jest
+          .fn()
+          .mockResolvedValue({ data: mockDbExpense, error: null }),
       };
 
       const deleteSharesBuilder = {
@@ -570,7 +635,13 @@ describe('groupRepository', () => {
         'member-alice-trip',
         BigInt(10000),
         BigInt(150000),
-        [{ memberId: 'member-alice-trip', shareAmountScaled: BigInt(50000), shareInMainScaled: BigInt(50000) }]
+        [
+          {
+            memberId: 'member-alice-trip',
+            shareAmountScaled: BigInt(50000),
+            shareInMainScaled: BigInt(50000),
+          },
+        ],
       );
 
       expect(result?.description).toBe('Updated Dinner');
@@ -657,8 +728,12 @@ describe('groupRepository', () => {
       const result = await leaveGroup('group-trip');
 
       expect(result).toBe(true);
-      expect(updateBuilder.update).toHaveBeenCalledWith({ connected_user_id: null });
-      expect(mockSupabase.functions.invoke).toHaveBeenCalledWith('cleanup-orphaned-groups');
+      expect(updateBuilder.update).toHaveBeenCalledWith({
+        connected_user_id: null,
+      });
+      expect(mockSupabase.functions.invoke).toHaveBeenCalledWith(
+        'cleanup-orphaned-groups',
+      );
     });
 
     it('should return false when user is not a member', async () => {
@@ -703,9 +778,12 @@ describe('groupRepository', () => {
       const result = await deleteUserAccount();
 
       expect(result).toBe(true);
-      expect(mockSupabase.functions.invoke).toHaveBeenCalledWith('delete-user', {
-        headers: { Authorization: 'Bearer test-token' },
-      });
+      expect(mockSupabase.functions.invoke).toHaveBeenCalledWith(
+        'delete-user',
+        {
+          headers: { Authorization: 'Bearer test-token' },
+        },
+      );
       expect(mockSupabase.auth.signOut).toHaveBeenCalled();
     });
 
@@ -725,8 +803,13 @@ describe('groupRepository', () => {
 
   describe('reconnectGroupMembers', () => {
     it('should reconnect unconnected members by email', async () => {
-      const { reconnectGroupMembers } = require('../../services/groupRepository');
-      const mockUser = createMockUser({ id: 'user-alice', email: 'alice@example.com' });
+      const {
+        reconnectGroupMembers,
+      } = require('../../services/groupRepository');
+      const mockUser = createMockUser({
+        id: 'user-alice',
+        email: 'alice@example.com',
+      });
 
       mockSupabase.auth.getUser.mockResolvedValue({
         data: { user: mockUser },
@@ -748,12 +831,19 @@ describe('groupRepository', () => {
       const result = await reconnectGroupMembers();
 
       expect(result).toBe(1);
-      expect(updateBuilder.update).toHaveBeenCalledWith({ connected_user_id: 'user-alice' });
-      expect(updateBuilder.eq).toHaveBeenCalledWith('email', 'alice@example.com');
+      expect(updateBuilder.update).toHaveBeenCalledWith({
+        connected_user_id: 'user-alice',
+      });
+      expect(updateBuilder.eq).toHaveBeenCalledWith(
+        'email',
+        'alice@example.com',
+      );
     });
 
     it('should return 0 when no user email', async () => {
-      const { reconnectGroupMembers } = require('../../services/groupRepository');
+      const {
+        reconnectGroupMembers,
+      } = require('../../services/groupRepository');
       const mockUser = createMockUser({ id: 'user-alice', email: undefined });
 
       mockSupabase.auth.getUser.mockResolvedValue({
@@ -773,12 +863,18 @@ describe('groupRepository', () => {
 
       mockSupabase.functions.invoke.mockResolvedValue({ error: null });
 
-      const result = await sendInvitationEmail('test@example.com', 'Weekend Trip');
+      const result = await sendInvitationEmail(
+        'test@example.com',
+        'Weekend Trip',
+      );
 
       expect(result).toBe(true);
-      expect(mockSupabase.functions.invoke).toHaveBeenCalledWith('send-invitation', {
-        body: { email: 'test@example.com', groupName: 'Weekend Trip' },
-      });
+      expect(mockSupabase.functions.invoke).toHaveBeenCalledWith(
+        'send-invitation',
+        {
+          body: { email: 'test@example.com', groupName: 'Weekend Trip' },
+        },
+      );
     });
 
     it('should return false on error', async () => {
@@ -788,7 +884,10 @@ describe('groupRepository', () => {
         error: new Error('Invitation failed'),
       });
 
-      const result = await sendInvitationEmail('test@example.com', 'Weekend Trip');
+      const result = await sendInvitationEmail(
+        'test@example.com',
+        'Weekend Trip',
+      );
 
       expect(result).toBe(false);
     });

@@ -73,7 +73,7 @@ describe('CURRENCIES array', () => {
   });
 
   it('should have all unique currency codes', () => {
-    const codes = CURRENCIES.map(c => c.code);
+    const codes = CURRENCIES.map((c) => c.code);
     const uniqueCodes = new Set(codes);
     expect(uniqueCodes.size).toBe(codes.length);
   });
@@ -109,7 +109,7 @@ describe('CURRENCIES array', () => {
 
   it('should include major world currencies', () => {
     const majorCurrencies = ['USD', 'EUR', 'GBP', 'JPY', 'CNY'];
-    const codes = CURRENCIES.map(c => c.code);
+    const codes = CURRENCIES.map((c) => c.code);
 
     for (const code of majorCurrencies) {
       expect(codes).toContain(code);
@@ -117,7 +117,7 @@ describe('CURRENCIES array', () => {
   });
 
   it('should include currencies from different regions', () => {
-    const codes = CURRENCIES.map(c => c.code);
+    const codes = CURRENCIES.map((c) => c.code);
 
     expect(codes).toContain('USD');
     expect(codes).toContain('EUR');

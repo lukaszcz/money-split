@@ -7,7 +7,13 @@
  * - Error handling
  */
 
-import { createMockAuthContext, mockSignInSuccess, mockSignInFailure, mockSignUpSuccess, mockSignUpFailure } from '../utils/mockAuthContext';
+import {
+  createMockAuthContext,
+  mockSignInSuccess,
+  mockSignInFailure,
+  mockSignUpSuccess,
+  mockSignUpFailure,
+} from '../utils/mockAuthContext';
 import type { MockAuthContext } from '../utils/mockAuthContext';
 
 // Mock dependencies
@@ -45,15 +51,19 @@ describe('Auth Screen', () => {
 
       await mockAuthContext.signIn('test@example.com', 'password123');
 
-      expect(mockAuthContext.signIn).toHaveBeenCalledWith('test@example.com', 'password123');
+      expect(mockAuthContext.signIn).toHaveBeenCalledWith(
+        'test@example.com',
+        'password123',
+      );
     });
 
     it('should handle sign-in errors', async () => {
       const error = new Error('Invalid login credentials');
       mockSignInFailure(mockAuthContext, error);
 
-      await expect(mockAuthContext.signIn('test@example.com', 'wrongpassword'))
-        .rejects.toThrow('Invalid login credentials');
+      await expect(
+        mockAuthContext.signIn('test@example.com', 'wrongpassword'),
+      ).rejects.toThrow('Invalid login credentials');
     });
 
     it('should validate email format using isValidEmail', () => {
@@ -72,7 +82,10 @@ describe('Auth Screen', () => {
 
       await mockAuthContext.signUp('newuser@example.com', 'password123');
 
-      expect(mockAuthContext.signUp).toHaveBeenCalledWith('newuser@example.com', 'password123');
+      expect(mockAuthContext.signUp).toHaveBeenCalledWith(
+        'newuser@example.com',
+        'password123',
+      );
       expect(mockAuthContext.user).not.toBeNull();
     });
 
@@ -80,8 +93,9 @@ describe('Auth Screen', () => {
       const error = new Error('Email already registered');
       mockSignUpFailure(mockAuthContext, error);
 
-      await expect(mockAuthContext.signUp('existing@example.com', 'password123'))
-        .rejects.toThrow('Email already registered');
+      await expect(
+        mockAuthContext.signUp('existing@example.com', 'password123'),
+      ).rejects.toThrow('Email already registered');
     });
   });
 

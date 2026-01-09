@@ -56,7 +56,7 @@ export function createMockUser(overrides?: Partial<User>): User {
  */
 export function createMockSession(
   user?: User,
-  overrides?: Partial<Session>
+  overrides?: Partial<Session>,
 ): Session {
   const mockUser = user || createMockUser();
 
@@ -97,7 +97,7 @@ export function createMockSession(
  * expect(authContext.loading).toBe(true);
  */
 export function createMockAuthContext(
-  overrides?: Partial<MockAuthContext>
+  overrides?: Partial<MockAuthContext>,
 ): MockAuthContext {
   return {
     user: null,
@@ -126,7 +126,7 @@ export function createMockAuthContext(
  * expect(authContext.session).not.toBeNull();
  */
 export function createAuthenticatedContext(
-  userOverrides?: Partial<User>
+  userOverrides?: Partial<User>,
 ): MockAuthContext {
   const user = createMockUser(userOverrides);
   const session = createMockSession(user);
@@ -192,7 +192,7 @@ export function resetMockAuthContext(authContext: MockAuthContext): void {
  */
 export function mockSignInSuccess(
   authContext: MockAuthContext,
-  user?: User
+  user?: User,
 ): void {
   const mockUser = user || createMockUser();
   const mockSession = createMockSession(mockUser);
@@ -220,7 +220,7 @@ export function mockSignInSuccess(
  */
 export function mockSignInFailure(
   authContext: MockAuthContext,
-  error?: Error
+  error?: Error,
 ): void {
   const mockError = error || new Error('Invalid credentials');
   authContext.signIn.mockRejectedValue(mockError);
@@ -242,7 +242,7 @@ export function mockSignInFailure(
  */
 export function mockSignUpSuccess(
   authContext: MockAuthContext,
-  user?: User
+  user?: User,
 ): void {
   const mockUser = user || createMockUser();
   const mockSession = createMockSession(mockUser);
@@ -270,7 +270,7 @@ export function mockSignUpSuccess(
  */
 export function mockSignUpFailure(
   authContext: MockAuthContext,
-  error?: Error
+  error?: Error,
 ): void {
   const mockError = error || new Error('Email already registered');
   authContext.signUp.mockRejectedValue(mockError);

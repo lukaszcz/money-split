@@ -114,7 +114,10 @@ export async function getUserByEmail(email: string): Promise<User | null> {
   }
 }
 
-export async function updateUserName(userId: string, name: string): Promise<User | null> {
+export async function updateUserName(
+  userId: string,
+  name: string,
+): Promise<User | null> {
   try {
     const { data, error } = await supabase
       .from('users')
@@ -141,7 +144,7 @@ export async function createGroupMember(
   groupId: string,
   name: string,
   email?: string,
-  connectedUserId?: string
+  connectedUserId?: string,
 ): Promise<GroupMember | null> {
   try {
     const { data, error } = await supabase
@@ -195,7 +198,9 @@ export async function getGroupMembers(groupId: string): Promise<GroupMember[]> {
   }
 }
 
-export async function getGroupMember(memberId: string): Promise<GroupMember | null> {
+export async function getGroupMember(
+  memberId: string,
+): Promise<GroupMember | null> {
   try {
     const { data, error } = await supabase
       .from('group_members')
@@ -220,7 +225,9 @@ export async function getGroupMember(memberId: string): Promise<GroupMember | nu
   }
 }
 
-export async function getCurrentUserMemberInGroup(groupId: string): Promise<GroupMember | null> {
+export async function getCurrentUserMemberInGroup(
+  groupId: string,
+): Promise<GroupMember | null> {
   try {
     const {
       data: { user },
@@ -251,7 +258,10 @@ export async function getCurrentUserMemberInGroup(groupId: string): Promise<Grou
   }
 }
 
-export async function connectUserToGroupMembers(userId: string, email: string): Promise<number> {
+export async function connectUserToGroupMembers(
+  userId: string,
+  email: string,
+): Promise<number> {
   try {
     const { data, error } = await supabase
       .from('group_members')
@@ -272,7 +282,7 @@ export async function connectUserToGroupMembers(userId: string, email: string): 
 export async function createGroup(
   name: string,
   mainCurrencyCode: string,
-  initialMembers: { name: string; email?: string }[]
+  initialMembers: { name: string; email?: string }[],
 ): Promise<Group | null> {
   try {
     const {
@@ -304,7 +314,7 @@ export async function createGroup(
       groupId,
       userProfile.name,
       userProfile.email,
-      user.id
+      user.id,
     );
 
     if (!creatorMember) {
@@ -324,7 +334,12 @@ export async function createGroup(
       const memberName =
         member.name || (member.email ? member.email.split('@')[0] : 'Unknown');
 
-      await createGroupMember(groupId, memberName, member.email, connectedUserId);
+      await createGroupMember(
+        groupId,
+        memberName,
+        member.email,
+        connectedUserId,
+      );
     }
 
     return {
@@ -339,7 +354,9 @@ export async function createGroup(
   }
 }
 
-export async function getGroup(groupId: string): Promise<GroupWithMembers | null> {
+export async function getGroup(
+  groupId: string,
+): Promise<GroupWithMembers | null> {
   try {
     const { data: groupData, error: groupError } = await supabase
       .from('groups')
@@ -369,7 +386,8 @@ export async function getAllGroups(): Promise<GroupWithMembers[]> {
   try {
     const { data: groupData, error: groupError } = await supabase
       .from('groups')
-      .select(`
+      .select(
+        `
         *,
         group_members (
           id,
@@ -379,7 +397,8 @@ export async function getAllGroups(): Promise<GroupWithMembers[]> {
           connected_user_id,
           created_at
         )
-      `)
+      `,
+      )
       .order('created_at', { ascending: false });
 
     if (groupError) throw groupError;
@@ -389,16 +408,19 @@ export async function getAllGroups(): Promise<GroupWithMembers[]> {
       name: g.name,
       mainCurrencyCode: g.main_currency_code,
       createdAt: g.created_at,
-      members: (g.group_members || []).map((m: any) => ({
-        id: m.id,
-        groupId: m.group_id,
-        name: m.name,
-        email: m.email || undefined,
-        connectedUserId: m.connected_user_id || undefined,
-        createdAt: m.created_at,
-      })).sort((a: any, b: any) =>
-        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-      ),
+      members: (g.group_members || [])
+        .map((m: any) => ({
+          id: m.id,
+          groupId: m.group_id,
+          name: m.name,
+          email: m.email || undefined,
+          connectedUserId: m.connected_user_id || undefined,
+          createdAt: m.created_at,
+        }))
+        .sort(
+          (a: any, b: any) =>
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+        ),
     }));
 
     return groups;
@@ -440,9 +462,13 @@ export async function createExpense(
   payerMemberId: string,
   exchangeRateToMainScaled: bigint,
   totalInMainScaled: bigint,
-  shares: { memberId: string; shareAmountScaled: bigint; shareInMainScaled: bigint }[],
+  shares: {
+    memberId: string;
+    shareAmountScaled: bigint;
+    shareInMainScaled: bigint;
+  }[],
   paymentType: 'expense' | 'transfer' = 'expense',
-  splitType: 'equal' | 'percentage' | 'exact' = 'equal'
+  splitType: 'equal' | 'percentage' | 'exact' = 'equal',
 ): Promise<Expense | null> {
   try {
     const { data: expenseData, error: expenseError } = await supabase
@@ -473,7 +499,9 @@ export async function createExpense(
       share_in_main_scaled: Number(s.shareInMainScaled),
     }));
 
-    const { error: shareError } = await supabase.from('expense_shares').insert(shareRows);
+    const { error: shareError } = await supabase
+      .from('expense_shares')
+      .insert(shareRows);
 
     if (shareError) throw shareError;
 
@@ -485,11 +513,15 @@ export async function createExpense(
       currencyCode: expenseData.currency_code,
       totalAmountScaled: BigInt(expenseData.total_amount_scaled),
       payerMemberId: expenseData.payer_member_id,
-      exchangeRateToMainScaled: BigInt(expenseData.exchange_rate_to_main_scaled),
+      exchangeRateToMainScaled: BigInt(
+        expenseData.exchange_rate_to_main_scaled,
+      ),
       totalInMainScaled: BigInt(expenseData.total_in_main_scaled),
       createdAt: expenseData.created_at,
-      paymentType: (expenseData.payment_type as 'expense' | 'transfer') || 'expense',
-      splitType: (expenseData.split_type as 'equal' | 'percentage' | 'exact') || 'equal',
+      paymentType:
+        (expenseData.payment_type as 'expense' | 'transfer') || 'expense',
+      splitType:
+        (expenseData.split_type as 'equal' | 'percentage' | 'exact') || 'equal',
       shares: shares.map((s) => ({
         id: '',
         memberId: s.memberId,
@@ -507,7 +539,8 @@ export async function getGroupExpenses(groupId: string): Promise<Expense[]> {
   try {
     const { data: expenseData, error: expenseError } = await supabase
       .from('expenses')
-      .select(`
+      .select(
+        `
         *,
         expense_shares (
           id,
@@ -515,7 +548,8 @@ export async function getGroupExpenses(groupId: string): Promise<Expense[]> {
           share_amount_scaled,
           share_in_main_scaled
         )
-      `)
+      `,
+      )
       .eq('group_id', groupId)
       .order('created_at', { ascending: false });
 
@@ -573,11 +607,15 @@ export async function getExpense(expenseId: string): Promise<Expense | null> {
       currencyCode: expenseData.currency_code,
       totalAmountScaled: BigInt(expenseData.total_amount_scaled),
       payerMemberId: expenseData.payer_member_id,
-      exchangeRateToMainScaled: BigInt(expenseData.exchange_rate_to_main_scaled),
+      exchangeRateToMainScaled: BigInt(
+        expenseData.exchange_rate_to_main_scaled,
+      ),
       totalInMainScaled: BigInt(expenseData.total_in_main_scaled),
       createdAt: expenseData.created_at,
-      paymentType: (expenseData.payment_type as 'expense' | 'transfer') || 'expense',
-      splitType: (expenseData.split_type as 'equal' | 'percentage' | 'exact') || 'equal',
+      paymentType:
+        (expenseData.payment_type as 'expense' | 'transfer') || 'expense',
+      splitType:
+        (expenseData.split_type as 'equal' | 'percentage' | 'exact') || 'equal',
       shares: (shareData || []).map((s) => ({
         id: s.id,
         memberId: s.member_id,
@@ -600,8 +638,12 @@ export async function updateExpense(
   payerMemberId: string,
   exchangeRateToMainScaled: bigint,
   totalInMainScaled: bigint,
-  shares: { memberId: string; shareAmountScaled: bigint; shareInMainScaled: bigint }[],
-  splitType: 'equal' | 'percentage' | 'exact' = 'equal'
+  shares: {
+    memberId: string;
+    shareAmountScaled: bigint;
+    shareInMainScaled: bigint;
+  }[],
+  splitType: 'equal' | 'percentage' | 'exact' = 'equal',
 ): Promise<Expense | null> {
   try {
     const { data: expenseData, error: expenseError } = await supabase
@@ -636,7 +678,9 @@ export async function updateExpense(
       share_in_main_scaled: Number(s.shareInMainScaled),
     }));
 
-    const { error: shareError } = await supabase.from('expense_shares').insert(shareRows);
+    const { error: shareError } = await supabase
+      .from('expense_shares')
+      .insert(shareRows);
 
     if (shareError) throw shareError;
 
@@ -648,11 +692,15 @@ export async function updateExpense(
       currencyCode: expenseData.currency_code,
       totalAmountScaled: BigInt(expenseData.total_amount_scaled),
       payerMemberId: expenseData.payer_member_id,
-      exchangeRateToMainScaled: BigInt(expenseData.exchange_rate_to_main_scaled),
+      exchangeRateToMainScaled: BigInt(
+        expenseData.exchange_rate_to_main_scaled,
+      ),
       totalInMainScaled: BigInt(expenseData.total_in_main_scaled),
       createdAt: expenseData.created_at,
-      paymentType: (expenseData.payment_type as 'expense' | 'transfer') || 'expense',
-      splitType: (expenseData.split_type as 'equal' | 'percentage' | 'exact') || 'equal',
+      paymentType:
+        (expenseData.payment_type as 'expense' | 'transfer') || 'expense',
+      splitType:
+        (expenseData.split_type as 'equal' | 'percentage' | 'exact') || 'equal',
       shares: shares.map((s) => ({
         id: '',
         memberId: s.memberId,
@@ -693,7 +741,7 @@ export async function updateGroupMember(
   memberId: string,
   name: string,
   email?: string,
-  connectedUserId?: string
+  connectedUserId?: string,
 ): Promise<GroupMember | null> {
   try {
     const { data, error } = await supabase
@@ -746,11 +794,16 @@ export async function leaveGroup(groupId: string): Promise<boolean> {
 
     try {
       console.log('Triggering cleanup-orphaned-groups function...');
-      const { error: cleanupError } = await supabase.functions.invoke('cleanup-orphaned-groups');
+      const { error: cleanupError } = await supabase.functions.invoke(
+        'cleanup-orphaned-groups',
+      );
       if (cleanupError) {
         console.error('Cleanup function failed:', cleanupError);
         if ('context' in cleanupError) {
-          console.error('Cleanup function error context:', cleanupError.context);
+          console.error(
+            'Cleanup function error context:',
+            cleanupError.context,
+          );
         }
       } else {
         console.log('Cleanup function succeeded');
@@ -765,7 +818,6 @@ export async function leaveGroup(groupId: string): Promise<boolean> {
     return false;
   }
 }
-
 
 export async function deleteUserAccount(): Promise<boolean> {
   try {
@@ -785,11 +837,14 @@ export async function deleteUserAccount(): Promise<boolean> {
       throw new Error('No session token available');
     }
 
-    const { error: deleteError } = await supabase.functions.invoke('delete-user', {
-      headers: {
-        Authorization: `Bearer ${token}`,
+    const { error: deleteError } = await supabase.functions.invoke(
+      'delete-user',
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       },
-    });
+    );
     if (deleteError) {
       throw new Error(deleteError.message || 'Failed to delete user account');
     }
@@ -836,7 +891,10 @@ export async function reconnectGroupMembers(): Promise<number> {
   }
 }
 
-export async function sendInvitationEmail(email: string, groupName: string): Promise<boolean> {
+export async function sendInvitationEmail(
+  email: string,
+  groupName: string,
+): Promise<boolean> {
   try {
     const { error } = await supabase.functions.invoke('send-invitation', {
       body: { email, groupName },
