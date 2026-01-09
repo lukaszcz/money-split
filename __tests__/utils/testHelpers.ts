@@ -88,6 +88,7 @@ export class MockDate {
         if (args.length === 0) {
           super(fixedTime);
         } else {
+          // @ts-ignore - TypeScript has issues with rest parameters in Date constructor
           super(...args);
         }
       }

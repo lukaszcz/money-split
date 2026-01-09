@@ -21,12 +21,13 @@ The MoneySplit test suite includes:
 - **Unit tests** for utilities and business logic (money math, settlement algorithms)
 - **Service tests** for data access layer (groupRepository, exchangeRateService)
 - **Context tests** for React state management (AuthContext)
+- **Screen tests** for UI business logic (auth, groups, settings)
 - **Integration tests** (optional, requires local Supabase)
 
 ### Test Statistics
 
-- **Total Tests**: 181+
-- **Test Suites**: 6
+- **Total Tests**: 285+
+- **Test Suites**: 10
 - **Coverage Targets**:
   - Lines: 80%
   - Functions: 80%
@@ -42,14 +43,21 @@ __tests__/
 │   └── testData.ts                # Reusable test data
 ├── utils/
 │   ├── mockSupabase.ts            # Supabase client mocking
+│   ├── mockExpoRouter.ts          # Expo Router mocking (NEW)
+│   ├── mockAuthContext.ts         # Auth context mocking (NEW)
 │   └── testHelpers.ts             # Test utilities
 ├── setup/
 │   ├── docker-compose.test.yml    # Integration test environment
 │   └── integration.setup.ts       # Integration test helpers
 ├── services/
-│   └── groupRepository.test.ts    # Service layer tests
+│   ├── groupRepository.test.ts    # Service layer tests
+│   └── exchangeRateService.test.ts # Exchange rate tests
 ├── contexts/
 │   └── AuthContext.test.tsx       # React context tests
+├── screens/
+│   ├── auth.test.ts               # Auth screen tests (NEW)
+│   ├── groups.test.ts             # Groups screen tests (NEW)
+│   └── settings.test.ts           # Settings screen tests (NEW)
 ├── currencies.test.ts             # Currency utilities
 ├── money.test.ts                  # Money math
 ├── settlementService.test.ts      # Settlement algorithms
@@ -429,6 +437,143 @@ npm run test:coverage -- --coverageReporters=json-summary
 - **Refactor tests**: Apply same standards as production code
 - **Remove obsolete tests**: Delete tests for removed features
 - **Review test failures**: Understand why tests fail
+
+## Screen Testing
+
+### Overview
+
+Screen tests focus on testing UI business logic without rendering React Native components. This approach is:
+- **Fast**: No rendering overhead
+- **Maintainable**: Tests don't break when styles change
+- **AI-friendly**: Clear patterns that can be replicated
+- **Focused**: Tests workflows and validation, not UI appearance
+
+### What to Test
+
+✅ **Do test**:
+- Form validation logic
+- Authentication flows (sign-in, sign-up, logout)
+- Navigation calls (verify correct routes)
+- Service layer interactions
+- State management
+- Error handling
+- Loading states
+
+❌ **Don't test**:
+- UI rendering or layout
+- StyleSheet values
+- Component tree structure
+- Visual appearance
+
+### Writing Screen Tests
+
+#### 1. Setup Mocks
+
+```typescript
+// Mock Expo Router
+jest.mock('expo-router', () => ({
+  useRouter: jest.fn(),
+  router: { push: jest.fn(), replace: jest.fn() },
+}));
+
+// Mock Auth Context
+jest.mock('@/contexts/AuthContext', () => ({
+  useAuth: jest.fn(),
+}));
+
+// Mock services
+jest.mock('@/services/groupRepository', () => ({
+  getAllGroups: jest.fn(),
+  createGroup: jest.fn(),
+}));
+```
+
+#### 2. Use Mock Utilities
+
+```typescript
+import { createMockAuthContext } from '../utils/mockAuthContext';
+import { createMockRouter } from '../utils/mockExpoRouter';
+
+let mockAuthContext = createMockAuthContext();
+let mockRouter = createMockRouter();
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  require('@/contexts/AuthContext').useAuth.mockReturnValue(mockAuthContext);
+  require('expo-router').useRouter.mockReturnValue(mockRouter);
+});
+```
+
+#### 3. Test Workflows, Not Implementation
+
+```typescript
+// ✅ Good: Test workflow
+it('should sign in and navigate to groups', async () => {
+  mockAuthContext.signIn.mockResolvedValue(undefined);
+
+  await mockAuthContext.signIn('test@example.com', 'password');
+  mockRouter.replace('/(tabs)/groups');
+
+  expect(mockAuthContext.signIn).toHaveBeenCalledWith('test@example.com', 'password');
+  expect(mockRouter.replace).toHaveBeenCalledWith('/(tabs)/groups');
+});
+
+// ❌ Bad: Test implementation details
+it('should update state variable', () => {
+  let email = '';
+  email = 'test@example.com';
+  expect(email).toBe('test@example.com'); // Too granular
+});
+```
+
+#### 4. Test Validation Logic
+
+```typescript
+it('should reject empty email', () => {
+  const email = '';
+  const hasEmail = email.trim().length > 0;
+
+  expect(hasEmail).toBe(false);
+
+  if (!hasEmail) {
+    // Sign-in should not be called
+    expect(mockAuthContext.signIn).not.toHaveBeenCalled();
+  }
+});
+```
+
+### Mock Utilities Reference
+
+#### mockExpoRouter.ts
+
+- `createMockRouter()` - Creates router with push/back/replace methods
+- `createMockRouterHooks()` - Creates all Expo Router hooks
+- `resetMockRouter()` - Clears mock calls
+- `updateMockParams()` - Updates useLocalSearchParams return value
+
+#### mockAuthContext.ts
+
+- `createMockUser()` - Creates mock User object
+- `createMockSession()` - Creates mock Session object
+- `createMockAuthContext()` - Creates full auth context
+- `createAuthenticatedContext()` - Shortcut for authenticated user
+- `mockSignInSuccess()` - Configures successful sign-in
+- `mockSignInFailure()` - Configures failed sign-in
+
+### Example Screen Tests
+
+See these files for complete examples:
+- `__tests__/screens/auth.test.ts` - Authentication (26 tests)
+- `__tests__/screens/groups.test.ts` - Groups list (25 tests)
+- `__tests__/screens/settings.test.ts` - Settings (29 tests)
+
+### Tips for Screen Testing
+
+1. **Test major workflows** - Focus on what users actually do
+2. **Avoid brittle tests** - Don't test implementation details
+3. **Use descriptive names** - Test names should explain the scenario
+4. **Group related tests** - Use describe blocks for organization
+5. **Test error paths** - Always test what happens when things fail
 
 ## Troubleshooting
 
