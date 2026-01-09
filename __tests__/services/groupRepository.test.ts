@@ -9,6 +9,20 @@ let mockSupabase: MockSupabaseClient;
 let supabaseModule: any;
 
 describe('groupRepository', () => {
+  // Suppress expected console output during tests
+  const originalConsoleError = console.error;
+  const originalConsoleLog = console.log;
+
+  beforeAll(() => {
+    console.error = jest.fn();
+    console.log = jest.fn();
+  });
+
+  afterAll(() => {
+    console.error = originalConsoleError;
+    console.log = originalConsoleLog;
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
     mockSupabase = createMockSupabaseClient();

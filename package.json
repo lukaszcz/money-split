@@ -75,12 +75,15 @@
     "moduleNameMapper": {
       "^@/(.*)$": "<rootDir>/$1"
     },
-    "globals": {
-      "ts-jest": {
-        "tsconfig": {
-          "jsx": "react"
+    "transform": {
+      "^.+\\.tsx?$": [
+        "ts-jest",
+        {
+          "tsconfig": {
+            "jsx": "react"
+          }
         }
-      }
+      ]
     },
     "collectCoverageFrom": [
       "services/**/*.ts",
@@ -91,7 +94,7 @@
       "!**/node_modules/**",
       "!**/__tests__/**"
     ],
-    "coverageThresholds": {
+    "coverageThreshold": {
       "global": {
         "branches": 70,
         "functions": 80,
