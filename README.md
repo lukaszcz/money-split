@@ -68,11 +68,6 @@ The local database can be inspected with Supabase Studio accessible at `http://l
    npm run dev
    ```
 
-3. Build for web:
-   ```bash
-   npm run build:web
-   ```
-
 ## Usage
 
 1. **Create a group**: Add members and set the main currency

@@ -328,8 +328,6 @@ function MembersTab({ members, groupId }: { members: GroupMember[]; groupId: str
 }
 
 function SettleTab({
-  expenses,
-  currencySymbol,
   groupId,
   balances,
 }: {
