@@ -90,12 +90,14 @@ export function createMockRouterHooks(
  * });
  */
 export function resetMockRouter(hooks: MockRouterHooks): void {
+  // Get router reference before clearing hooks to avoid dirty state
+  const router = hooks.useRouter();
+
   hooks.useRouter.mockClear();
   hooks.useLocalSearchParams.mockClear();
   hooks.useFocusEffect.mockClear();
   hooks.useSegments.mockClear();
 
-  const router = hooks.useRouter();
   router.push.mockClear();
   router.back.mockClear();
   router.replace.mockClear();

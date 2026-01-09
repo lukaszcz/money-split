@@ -22,7 +22,8 @@ export interface IntegrationTestConfig {
 }
 
 export const TEST_CONFIG: IntegrationTestConfig = {
-  supabaseUrl: process.env.TEST_SUPABASE_URL || 'http://localhost:54322',
+  // Default to Kong/PostgREST API port (54321), not Postgres port (54322)
+  supabaseUrl: process.env.TEST_SUPABASE_URL || 'http://localhost:54321',
   supabaseAnonKey: process.env.TEST_SUPABASE_ANON_KEY ||
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0',
   supabaseServiceKey: process.env.TEST_SUPABASE_SERVICE_KEY ||
@@ -146,7 +147,19 @@ export class IntegrationTestHelper {
   async cleanup(): Promise<void> {
     // Delete groups and their related data
     for (const groupId of this.createdGroups) {
-      await this.client.from('expense_shares').delete().eq('expense_id', groupId);
+      // First, get all expense IDs for this group
+      const { data: expenses } = await this.client
+        .from('expenses')
+        .select('id')
+        .eq('group_id', groupId);
+
+      // Delete expense shares for those expenses
+      if (expenses && expenses.length > 0) {
+        const expenseIds = expenses.map(e => e.id);
+        await this.client.from('expense_shares').delete().in('expense_id', expenseIds);
+      }
+
+      // Now delete expenses, members, and the group
       await this.client.from('expenses').delete().eq('group_id', groupId);
       await this.client.from('group_members').delete().eq('group_id', groupId);
       await this.client.from('groups').delete().eq('id', groupId);

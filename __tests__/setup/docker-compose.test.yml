@@ -1,5 +1,14 @@
 version: '3.8'
 
+# Minimal test database setup
+# NOTE: This provides only Postgres for database testing.
+# For integration tests that use the Supabase client (supabase-js),
+# you need the full Supabase stack (Kong, PostgREST, GoTrue, etc).
+# Options:
+#   1. Use Supabase CLI: npx supabase start (provides full stack on port 54321)
+#   2. Set TEST_SUPABASE_URL to point to your Supabase project
+#   3. Extend this file with kong, auth, rest, and meta services
+
 services:
   postgres:
     image: supabase/postgres:15.6.1.117
@@ -17,19 +26,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-
-  supabase-studio:
-    image: supabase/studio:20240101-b991e0e
-    container_name: moneysplit-test-studio
-    environment:
-      SUPABASE_URL: http://kong:8000
-      STUDIO_PG_META_URL: http://meta:8080
-      SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
-      SUPABASE_SERVICE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
-    ports:
-      - "54323:3000"
-    depends_on:
-      - postgres
 
 volumes:
   postgres-test-data:

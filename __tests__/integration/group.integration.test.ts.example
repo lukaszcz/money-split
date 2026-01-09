@@ -126,14 +126,24 @@ describeIntegration('Group Integration Tests', () => {
       const { data: createdMembers, error } = await client
         .from('group_members')
         .insert(members.map(m => ({ ...m, group_id: group!.id })))
-        .select();
+        .select()
+        .order('name');
 
       // Assert
       expect(error).toBeNull();
       expect(createdMembers).toHaveLength(3);
-      expect(createdMembers![0].name).toBe('Alice');
-      expect(createdMembers![1].name).toBe('Bob');
-      expect(createdMembers![2].name).toBe('Charlie');
+      // Use order-independent assertions or verify with explicit ordering
+      const memberNames = createdMembers!.map(m => m.name).sort();
+      expect(memberNames).toEqual(['Alice', 'Bob', 'Charlie']);
+
+      // Or verify each member exists (order-independent)
+      expect(createdMembers).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ name: 'Alice' }),
+          expect.objectContaining({ name: 'Bob' }),
+          expect.objectContaining({ name: 'Charlie' }),
+        ])
+      );
     });
   });
 
