@@ -15,6 +15,7 @@ import { useRouter } from 'expo-router';
 import { X, Plus, Check, Trash2, User, Mail } from 'lucide-react-native';
 import { createGroup, getUserByEmail, sendInvitationEmail, ensureUserProfile } from '../services/groupRepository';
 import { useCurrencyOrder } from '../hooks/useCurrencyOrder';
+import { isValidEmail } from '../utils/validation';
 
 interface PendingMember {
   id: string;
@@ -60,6 +61,11 @@ export default function CreateGroupScreen() {
 
     let memberName = newMemberName.trim();
     let memberEmail = newMemberEmail.trim() || undefined;
+
+    if (memberEmail && !isValidEmail(memberEmail)) {
+      Alert.alert('Error', 'Please enter a valid email address');
+      return;
+    }
 
     if (memberEmail) {
       const existingUser = await getUserByEmail(memberEmail);
@@ -148,6 +154,7 @@ export default function CreateGroupScreen() {
               style={styles.input}
               value={groupName}
               onChangeText={setGroupName}
+              onBlur={() => setGroupName(name => name.trim())}
               placeholder="e.g., Trip to Paris"
               placeholderTextColor="#9ca3af"
             />
@@ -229,6 +236,7 @@ export default function CreateGroupScreen() {
                   style={styles.input}
                   value={newMemberName}
                   onChangeText={setNewMemberName}
+                  onBlur={() => setNewMemberName(name => name.trim())}
                   placeholder="Member name"
                   placeholderTextColor="#9ca3af"
                 />
@@ -238,6 +246,7 @@ export default function CreateGroupScreen() {
                   style={styles.input}
                   value={newMemberEmail}
                   onChangeText={setNewMemberEmail}
+                  onBlur={() => setNewMemberEmail(email => email.trim())}
                   placeholder="member@example.com"
                   placeholderTextColor="#9ca3af"
                   keyboardType="email-address"

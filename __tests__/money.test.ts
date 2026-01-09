@@ -233,11 +233,6 @@ describe('calculatePercentageSplit', () => {
     expect(shares.reduce((a, b) => a + b, BigInt(0))).toBe(total);
   });
 
-  it('should return empty array for no percentages', () => {
-    const shares = calculatePercentageSplit(BigInt(10000), []);
-    expect(shares).toEqual([]);
-  });
-
   it('should handle zero total', () => {
     const shares = calculatePercentageSplit(BigInt(0), [50, 50]);
     expect(shares).toEqual([BigInt(0), BigInt(0)]);

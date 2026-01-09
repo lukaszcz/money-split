@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/AuthContext';
 import { router } from 'expo-router';
+import { isValidEmail } from '@/utils/validation';
 
 export default function AuthScreen() {
   const [isLogin, setIsLogin] = useState(true);
@@ -23,8 +24,15 @@ export default function AuthScreen() {
   const { signIn, signUp } = useAuth();
 
   const handleSubmit = async () => {
-    if (!email || !password) {
+    const trimmedEmail = email.trim();
+
+    if (!trimmedEmail || !password) {
       setError('Please enter both email and password');
+      return;
+    }
+
+    if (!isValidEmail(trimmedEmail)) {
+      setError('Please enter a valid email address');
       return;
     }
 
@@ -33,9 +41,9 @@ export default function AuthScreen() {
 
     try {
       if (isLogin) {
-        await signIn(email, password);
+        await signIn(trimmedEmail, password);
       } else {
-        await signUp(email, password);
+        await signUp(trimmedEmail, password);
       }
       router.replace('/(tabs)/groups');
     } catch (err: any) {
@@ -71,6 +79,7 @@ export default function AuthScreen() {
             placeholderTextColor="#999"
             value={email}
             onChangeText={setEmail}
+            onBlur={() => setEmail(email1 => email1.trim())}
             autoCapitalize="none"
             keyboardType="email-address"
             autoComplete="email"

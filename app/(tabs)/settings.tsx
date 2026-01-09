@@ -143,6 +143,7 @@ export default function SettingsScreen() {
                   style={styles.nameInput}
                   value={tempName}
                   onChangeText={setTempName}
+                  onBlur={() => setTempName(name => name.trim())}
                   placeholder="Enter your name"
                   autoFocus
                 />

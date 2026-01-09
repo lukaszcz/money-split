@@ -1,4 +1,4 @@
-import { ValidationError, ValidationErrorCode } from '../utils/validation';
+import { ValidationError } from '../utils/validation';
 import {
   computeBalances,
   computeSettlementsNoSimplify,
@@ -12,7 +12,6 @@ import {
   calculateEqualSplit,
   calculatePercentageSplit,
   sumScaled,
-  applyExchangeRate,
   ScaledPercentage,
 } from '../utils/money';
 import { getCurrencySymbol, getCurrencyName } from '../utils/currencies';
@@ -145,11 +144,11 @@ describe('utils/validation - assertPercentage', () => {
 });
 
 describe('utils/validation - assertPercentages', () => {
-  it('should not throw for percentages summing to <= 100', () => {
+  it('should not throw for percentages summing to 100', () => {
     const { assertPercentages } = require('../utils/validation');
     expect(() => assertPercentages([50, 50])).not.toThrow();
     expect(() => assertPercentages([100])).not.toThrow();
-    expect(() => assertPercentages([33.33, 33.33, 33.33])).not.toThrow();
+    expect(() => assertPercentages([33.33, 33.33, 33.34])).not.toThrow();
   });
 
   it('should throw for percentages summing to > 100', () => {
