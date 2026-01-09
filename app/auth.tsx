@@ -79,7 +79,7 @@ export default function AuthScreen() {
             placeholderTextColor="#999"
             value={email}
             onChangeText={setEmail}
-            onBlur={() => setEmail(email.trim())}
+            onBlur={() => setEmail(email1 => email1.trim())}
             autoCapitalize="none"
             keyboardType="email-address"
             autoComplete="email"

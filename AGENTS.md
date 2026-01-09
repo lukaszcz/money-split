@@ -23,7 +23,7 @@ MoneySplit is a React Native/Expo mobile app for tracking shared expenses and de
 - `npm run build:web` generates the web bundle via Expo export.
 - `npm run lint` runs Expo lint rules.
 - `npm run typecheck` runs TypeScript type checking.
-- `npm test` runs Jest (no tests are currently present in the repo).
+- `npm test` runs Jest.
 
 ## Coding Style & Naming Conventions
 

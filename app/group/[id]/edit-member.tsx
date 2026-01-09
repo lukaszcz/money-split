@@ -151,7 +151,7 @@ export default function EditMemberScreen() {
               style={styles.input}
               value={name}
               onChangeText={setName}
-              onBlur={() => setName(name.trim())}
+              onBlur={() => setName(nm => nm.trim())}
               placeholder="Member name"
               placeholderTextColor="#9ca3af"
             />
@@ -163,7 +163,7 @@ export default function EditMemberScreen() {
               style={styles.input}
               value={email}
               onChangeText={setEmail}
-              onBlur={() => setEmail(email.trim())}
+              onBlur={() => setEmail(em => em.trim())}
               placeholder="member@example.com"
               placeholderTextColor="#9ca3af"
               keyboardType="email-address"

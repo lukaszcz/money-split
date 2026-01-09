@@ -154,7 +154,7 @@ export default function CreateGroupScreen() {
               style={styles.input}
               value={groupName}
               onChangeText={setGroupName}
-              onBlur={() => setGroupName(groupName.trim())}
+              onBlur={() => setGroupName(name => name.trim())}
               placeholder="e.g., Trip to Paris"
               placeholderTextColor="#9ca3af"
             />
@@ -236,7 +236,7 @@ export default function CreateGroupScreen() {
                   style={styles.input}
                   value={newMemberName}
                   onChangeText={setNewMemberName}
-                  onBlur={() => setNewMemberName(newMemberName.trim())}
+                  onBlur={() => setNewMemberName(name => name.trim())}
                   placeholder="Member name"
                   placeholderTextColor="#9ca3af"
                 />
@@ -246,7 +246,7 @@ export default function CreateGroupScreen() {
                   style={styles.input}
                   value={newMemberEmail}
                   onChangeText={setNewMemberEmail}
-                  onBlur={() => setNewMemberEmail(newMemberEmail.trim())}
+                  onBlur={() => setNewMemberEmail(email => email.trim())}
                   placeholder="member@example.com"
                   placeholderTextColor="#9ca3af"
                   keyboardType="email-address"
