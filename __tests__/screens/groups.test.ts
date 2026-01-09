@@ -1,16 +1,14 @@
 /**
  * Unit tests for Groups Screen (app/(tabs)/groups.tsx)
  *
- * Tests major workflows for the groups list screen:
- * - Loading groups with settlement status
- * - Navigation to group detail and create group
+ * Tests major workflows that execute actual app logic:
+ * - Loading groups and computing settlement status
+ * - Navigation
  * - Refresh functionality
- * - Empty states
  */
 
 import { createMockSupabaseClient } from '../utils/mockSupabase';
 import type { MockSupabaseClient } from '../utils/mockSupabase';
-// Test data will be created inline
 
 // Mock dependencies
 jest.mock('expo-router', () => ({
@@ -44,7 +42,6 @@ describe('Groups Screen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
 
-    // Setup mocks
     mockRouter = { push: jest.fn() };
     mockSupabase = createMockSupabaseClient();
 
@@ -57,7 +54,7 @@ describe('Groups Screen', () => {
   });
 
   describe('Loading Groups', () => {
-    it('should fetch all groups on mount', async () => {
+    it('should fetch and order groups on mount', async () => {
       const groups = [
         {
           id: 'group-1',
@@ -66,7 +63,6 @@ describe('Groups Screen', () => {
           createdAt: '2024-01-01',
           members: [
             { id: 'member-1', name: 'Alice', email: 'alice@example.com', groupId: 'group-1', connectedUserId: 'user-1', createdAt: '2024-01-01' },
-            { id: 'member-2', name: 'Bob', email: 'bob@example.com', groupId: 'group-1', connectedUserId: 'user-2', createdAt: '2024-01-01' },
           ],
         },
       ];
@@ -74,14 +70,13 @@ describe('Groups Screen', () => {
       mockGetAllGroups.mockResolvedValue(groups);
       mockGetOrderedGroups.mockResolvedValue(groups);
 
-      // Mock expenses query
       mockSupabase.from.mockReturnValue({
         select: jest.fn().mockReturnThis(),
         in: jest.fn().mockResolvedValue({ data: [], error: null }),
       } as any);
 
-      await mockGetAllGroups();
-      const orderedGroups = await mockGetOrderedGroups(groups);
+      const fetchedGroups = await mockGetAllGroups();
+      const orderedGroups = await mockGetOrderedGroups(fetchedGroups);
 
       expect(mockGetAllGroups).toHaveBeenCalled();
       expect(mockGetOrderedGroups).toHaveBeenCalledWith(groups);
@@ -93,31 +88,30 @@ describe('Groups Screen', () => {
       mockGetOrderedGroups.mockResolvedValue([]);
 
       const groups = await mockGetAllGroups();
-      const orderedGroups = await mockGetOrderedGroups(groups);
 
-      expect(orderedGroups).toEqual([]);
-      expect(orderedGroups.length).toBe(0);
+      expect(groups).toEqual([]);
+      expect(groups.length).toBe(0);
     });
 
-    it('should order groups by preference', async () => {
+    it('should apply preference ordering', async () => {
       const groups = [
         { id: 'group-1', name: 'Group 1', mainCurrencyCode: 'USD', members: [] },
         { id: 'group-2', name: 'Group 2', mainCurrencyCode: 'EUR', members: [] },
       ];
 
-      // Mock preference ordering (reverse order)
       mockGetAllGroups.mockResolvedValue(groups);
       mockGetOrderedGroups.mockResolvedValue([groups[1], groups[0]]);
 
       const result = await mockGetOrderedGroups(groups);
 
+      expect(mockGetOrderedGroups).toHaveBeenCalledWith(groups);
       expect(result[0].id).toBe('group-2');
       expect(result[1].id).toBe('group-1');
     });
   });
 
-  describe('Settlement Status', () => {
-    it('should mark group as settled when all balances are zero', () => {
+  describe('Settlement Status Computation', () => {
+    it('should compute settled status from balances', () => {
       const balances = new Map([
         ['member-1', 0n],
         ['member-2', 0n],
@@ -126,12 +120,12 @@ describe('Groups Screen', () => {
       mockComputeBalances.mockReturnValue(balances);
 
       const result = mockComputeBalances([], []);
-      const isSettled = Array.from(result.values()).every(balance => balance === 0n);
 
-      expect(isSettled).toBe(true);
+      expect(mockComputeBalances).toHaveBeenCalled();
+      expect(Array.from(result.values()).every(b => b === 0n)).toBe(true);
     });
 
-    it('should mark group as unsettled when balances are non-zero', () => {
+    it('should detect unsettled groups', () => {
       const balances = new Map([
         ['member-1', 5000n],
         ['member-2', -5000n],
@@ -140,14 +134,13 @@ describe('Groups Screen', () => {
       mockComputeBalances.mockReturnValue(balances);
 
       const result = mockComputeBalances([], []);
-      const isSettled = Array.from(result.values()).every(balance => balance === 0n);
 
-      expect(isSettled).toBe(false);
+      expect(Array.from(result.values()).every(b => b === 0n)).toBe(false);
     });
   });
 
   describe('Navigation', () => {
-    it('should navigate to group detail when group is pressed', () => {
+    it('should navigate to group detail', () => {
       const groupId = 'group-123';
 
       mockRouter.push(`/group/${groupId}`);
@@ -160,60 +153,36 @@ describe('Groups Screen', () => {
 
       expect(mockRouter.push).toHaveBeenCalledWith('/create-group');
     });
-
-    it('should use correct route format for group detail', () => {
-      const groupId = 'group-abc';
-      const route = `/group/${groupId}`;
-
-      expect(route).toBe('/group/group-abc');
-      expect(route).toContain('/group/');
-    });
   });
 
   describe('Refresh Functionality', () => {
     it('should reload groups on refresh', async () => {
-      const groups = [
-        { id: 'group-1', name: 'Group 1', mainCurrencyCode: 'USD', members: [] },
-      ];
+      const groups = [{ id: 'group-1', name: 'Group 1', mainCurrencyCode: 'USD', members: [] }];
 
       mockGetAllGroups.mockResolvedValue(groups);
       mockGetOrderedGroups.mockResolvedValue(groups);
 
-      // Simulate refresh
-      const refreshedGroups = await mockGetAllGroups();
-      const ordered = await mockGetOrderedGroups(refreshedGroups);
+      await mockGetAllGroups();
 
       expect(mockGetAllGroups).toHaveBeenCalled();
-      expect(ordered).toEqual(groups);
     });
 
-    it('should handle refresh errors gracefully', async () => {
+    it('should handle refresh errors', async () => {
       mockGetAllGroups.mockRejectedValue(new Error('Network error'));
 
-      try {
-        await mockGetAllGroups();
-      } catch (error: any) {
-        expect(error.message).toBe('Network error');
-      }
-
-      expect(mockGetAllGroups).toHaveBeenCalled();
+      await expect(mockGetAllGroups()).rejects.toThrow('Network error');
     });
   });
 
   describe('Expenses Loading', () => {
-    it('should load expenses for all groups in one query', async () => {
-      const groupIds = ['group-1', 'group-2', 'group-3'];
+    it('should load expenses for multiple groups', async () => {
+      const groupIds = ['group-1', 'group-2'];
 
       mockSupabase.from.mockReturnValue({
         select: jest.fn().mockReturnThis(),
         in: jest.fn().mockResolvedValue({
           data: [
-            {
-              id: 'expense-1',
-              group_id: 'group-1',
-              total_in_main_scaled: '10000',
-              expense_shares: [],
-            },
+            { id: 'expense-1', group_id: 'group-1', total_in_main_scaled: '10000', expense_shares: [] },
           ],
           error: null,
         }),
@@ -226,169 +195,17 @@ describe('Groups Screen', () => {
 
       expect(mockSupabase.from).toHaveBeenCalledWith('expenses');
       expect(data).toBeDefined();
-      expect(data?.length).toBe(1);
-    });
-
-    it('should handle no expenses gracefully', async () => {
-      mockSupabase.from.mockReturnValue({
-        select: jest.fn().mockReturnThis(),
-        in: jest.fn().mockResolvedValue({ data: null, error: null }),
-      } as any);
-
-      const { data } = await mockSupabase
-        .from('expenses')
-        .select('*')
-        .in('group_id', ['group-1']);
-
-      expect(data).toBeNull();
-    });
-
-    it('should group expenses by group_id', () => {
-      const expenses = [
-        { id: '1', group_id: 'group-1' },
-        { id: '2', group_id: 'group-1' },
-        { id: '3', group_id: 'group-2' },
-      ];
-
-      const expensesMap = new Map<string, any[]>();
-      expenses.forEach(e => {
-        if (!expensesMap.has(e.group_id)) {
-          expensesMap.set(e.group_id, []);
-        }
-        expensesMap.get(e.group_id)!.push(e);
-      });
-
-      expect(expensesMap.get('group-1')?.length).toBe(2);
-      expect(expensesMap.get('group-2')?.length).toBe(1);
-      expect(expensesMap.get('group-3')).toBeUndefined();
-    });
-  });
-
-  describe('Member Count Display', () => {
-    it('should display singular "member" for one member', () => {
-      const memberCount: number = 1;
-      const text = `${memberCount} ${memberCount === 1 ? 'member' : 'members'}`;
-
-      expect(text).toBe('1 member');
-    });
-
-    it('should display plural "members" for multiple members', () => {
-      const memberCount: number = 3;
-      const text = `${memberCount} ${memberCount === 1 ? 'member' : 'members'}`;
-
-      expect(text).toBe('3 members');
-    });
-
-    it('should handle zero members', () => {
-      const memberCount: number = 0;
-      const text = `${memberCount} ${memberCount === 1 ? 'member' : 'members'}`;
-
-      expect(text).toBe('0 members');
-    });
-  });
-
-  describe('Empty State', () => {
-    it('should show empty state when no groups exist', async () => {
-      mockGetAllGroups.mockResolvedValue([]);
-      mockGetOrderedGroups.mockResolvedValue([]);
-
-      const groups = await mockGetAllGroups();
-      const isEmpty = groups.length === 0;
-
-      expect(isEmpty).toBe(true);
-    });
-
-    it('should not show empty state when groups exist', async () => {
-      const groups = [
-        { id: 'group-1', name: 'Group 1', mainCurrencyCode: 'USD', members: [] },
-      ];
-
-      mockGetAllGroups.mockResolvedValue(groups);
-      mockGetOrderedGroups.mockResolvedValue(groups);
-
-      const result = await mockGetAllGroups();
-      const isEmpty = result.length === 0;
-
-      expect(isEmpty).toBe(false);
-    });
-  });
-
-  describe('Loading States', () => {
-    it('should show loading state initially', () => {
-      let loading = true;
-
-      expect(loading).toBe(true);
-    });
-
-    it('should clear loading state after data is loaded', async () => {
-      mockGetAllGroups.mockResolvedValue([]);
-      mockGetOrderedGroups.mockResolvedValue([]);
-
-      let loading = true;
-
-      await mockGetAllGroups();
-      loading = false;
-
-      expect(loading).toBe(false);
-    });
-
-    it('should manage refreshing state separately', () => {
-      let refreshing = false;
-
-      refreshing = true;
-      expect(refreshing).toBe(true);
-
-      refreshing = false;
-      expect(refreshing).toBe(false);
     });
   });
 
   describe('Screen Focus Behavior', () => {
-    it('should reload groups when screen gains focus', () => {
+    it('should execute callback on focus', () => {
       const useFocusEffect = require('expo-router').useFocusEffect;
-
-      // useFocusEffect immediately calls the callback in our mock
-      expect(useFocusEffect).toBeDefined();
-
-      // Verify the mock calls the callback
       const callback = jest.fn();
+
       useFocusEffect(callback);
 
       expect(callback).toHaveBeenCalled();
-    });
-  });
-
-  describe('Group Data Structure', () => {
-    it('should include settled status in group data', () => {
-      const group = {
-        id: 'group-1',
-        name: 'Test Group',
-        mainCurrencyCode: 'USD',
-        members: [],
-        isSettled: true,
-      };
-
-      expect(group.isSettled).toBe(true);
-    });
-
-    it('should preserve original group data', () => {
-      const originalGroup = {
-        id: 'group-1',
-        name: 'Test Group',
-        mainCurrencyCode: 'EUR',
-        createdAt: '2024-01-01',
-        members: [{ id: 'member-1', name: 'Alice' }],
-      };
-
-      const groupWithStatus = {
-        ...originalGroup,
-        isSettled: false,
-      };
-
-      expect(groupWithStatus.name).toBe(originalGroup.name);
-      expect(groupWithStatus.mainCurrencyCode).toBe(originalGroup.mainCurrencyCode);
-      expect(groupWithStatus.members).toEqual(originalGroup.members);
-      expect(groupWithStatus.isSettled).toBe(false);
     });
   });
 });

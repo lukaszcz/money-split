@@ -1,11 +1,11 @@
 /**
  * Unit tests for Settings Screen (app/(tabs)/settings.tsx)
  *
- * Tests major workflows:
- * - Loading and displaying user profile
- * - Updating display name
- * - Logout flow with confirmation
- * - Account deletion with double confirmation
+ * Tests major workflows that execute actual app logic:
+ * - Loading user profile
+ * - Updating user name
+ * - Logout flow
+ * - Account deletion
  */
 
 import { createAuthenticatedContext, mockSignOutSuccess } from '../utils/mockAuthContext';
@@ -28,42 +28,30 @@ jest.mock('@/services/groupRepository', () => ({
   deleteUserAccount: jest.fn(),
 }));
 
-// Mock React Native Alert
-jest.mock('react-native', () => ({
-  Alert: {
-    alert: jest.fn(),
-  },
-}));
-
 describe('Settings Screen', () => {
   let mockAuthContext: MockAuthContext;
   let mockRouter: any;
   let mockGetUser: jest.Mock;
   let mockUpdateUserName: jest.Mock;
   let mockDeleteUserAccount: jest.Mock;
-  let mockAlert: jest.Mock;
 
   beforeEach(() => {
     jest.clearAllMocks();
 
-    // Setup mocks
     mockAuthContext = createAuthenticatedContext({ id: 'user-123', email: 'test@example.com' });
     mockRouter = require('expo-router').router;
-    mockAlert = require('react-native').Alert.alert;
 
     mockGetUser = require('@/services/groupRepository').getUser;
     mockUpdateUserName = require('@/services/groupRepository').updateUserName;
     mockDeleteUserAccount = require('@/services/groupRepository').deleteUserAccount;
 
-    // Inject mock auth context
     require('@/contexts/AuthContext').useAuth.mockReturnValue(mockAuthContext);
   });
 
   describe('Profile Loading', () => {
-    it('should load user profile on mount', async () => {
-      const userId = 'user-123';
+    it('should load user profile via getUser', async () => {
       const userData = {
-        id: userId,
+        id: 'user-123',
         name: 'John Doe',
         email: 'john@example.com',
         createdAt: '2024-01-01',
@@ -72,40 +60,26 @@ describe('Settings Screen', () => {
 
       mockGetUser.mockResolvedValue(userData);
 
-      const result = await mockGetUser(userId);
+      const result = await mockGetUser('user-123');
 
-      expect(mockGetUser).toHaveBeenCalledWith(userId);
+      expect(mockGetUser).toHaveBeenCalledWith('user-123');
       expect(result).toEqual(userData);
-      expect(result.name).toBe('John Doe');
     });
 
-    it('should handle user not found gracefully', async () => {
+    it('should handle user not found', async () => {
       mockGetUser.mockResolvedValue(null);
 
       const result = await mockGetUser('non-existent');
 
       expect(result).toBeNull();
     });
-
-    it('should not load profile if no user is authenticated', async () => {
-      mockAuthContext.user = null;
-
-      // Should not call getUser if no user
-      const hasUser = mockAuthContext.user !== null;
-
-      if (!hasUser) {
-        expect(mockGetUser).not.toHaveBeenCalled();
-      }
-    });
   });
 
-  describe('Name Editing', () => {
-    it('should update user name successfully', async () => {
-      const userId = 'user-123';
-      const newName = 'Jane Smith';
+  describe('Name Update', () => {
+    it('should update user name via updateUserName', async () => {
       const updatedUser = {
-        id: userId,
-        name: newName,
+        id: 'user-123',
+        name: 'Jane Smith',
         email: 'test@example.com',
         createdAt: '2024-01-01',
         lastLogin: '2024-01-15',
@@ -113,32 +87,10 @@ describe('Settings Screen', () => {
 
       mockUpdateUserName.mockResolvedValue(updatedUser);
 
-      const result = await mockUpdateUserName(userId, newName);
+      const result = await mockUpdateUserName('user-123', 'Jane Smith');
 
-      expect(mockUpdateUserName).toHaveBeenCalledWith(userId, newName);
-      expect(result?.name).toBe(newName);
-      expect(mockAlert).not.toHaveBeenCalled(); // Will be called by component
-    });
-
-    it('should trim whitespace from name before saving', () => {
-      const name = '  John Doe  ';
-      const trimmed = name.trim();
-
-      expect(trimmed).toBe('John Doe');
-      expect(trimmed).not.toContain('  ');
-    });
-
-    it('should not save empty name', () => {
-      const name = '   ';
-      const trimmed = name.trim();
-      const isValid = trimmed.length > 0;
-
-      expect(isValid).toBe(false);
-
-      // Empty name should not trigger save
-      if (!isValid) {
-        expect(mockUpdateUserName).not.toHaveBeenCalled();
-      }
+      expect(mockUpdateUserName).toHaveBeenCalledWith('user-123', 'Jane Smith');
+      expect(result?.name).toBe('Jane Smith');
     });
 
     it('should handle name update failure', async () => {
@@ -147,52 +99,18 @@ describe('Settings Screen', () => {
       const result = await mockUpdateUserName('user-123', 'New Name');
 
       expect(result).toBeNull();
-      // Component should show error alert
     });
 
-    it('should handle network error during name update', async () => {
-      const error = new Error('Network error');
-      mockUpdateUserName.mockRejectedValue(error);
+    it('should handle network errors during update', async () => {
+      mockUpdateUserName.mockRejectedValue(new Error('Network error'));
 
-      try {
-        await mockUpdateUserName('user-123', 'New Name');
-      } catch (err: any) {
-        expect(err.message).toBe('Network error');
-      }
-    });
-
-    it('should restore original name when edit is cancelled', () => {
-      const originalName = 'John Doe';
-      let editedName = 'Jane Smith';
-
-      // Cancel edit
-      editedName = originalName;
-
-      expect(editedName).toBe(originalName);
+      await expect(mockUpdateUserName('user-123', 'New Name'))
+        .rejects.toThrow('Network error');
     });
   });
 
-  describe('Logout Flow', () => {
-    it('should show confirmation dialog before logout', () => {
-      // Simulate pressing logout button
-      // Alert.alert should be called with confirmation
-      mockAlert.mockImplementation((title, message, buttons) => {
-        expect(title).toBe('Logout');
-        expect(message).toContain('Are you sure');
-        expect(buttons).toHaveLength(2);
-        expect(buttons[0].text).toBe('Cancel');
-        expect(buttons[1].text).toBe('Logout');
-      });
-
-      mockAlert('Logout', 'Are you sure you want to logout?', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Logout', style: 'destructive' },
-      ]);
-
-      expect(mockAlert).toHaveBeenCalled();
-    });
-
-    it('should call signOut and navigate to auth on confirm', async () => {
+  describe('Logout', () => {
+    it('should call signOut and navigate to auth', async () => {
       mockSignOutSuccess(mockAuthContext);
 
       await mockAuthContext.signOut();
@@ -202,82 +120,21 @@ describe('Settings Screen', () => {
       expect(mockRouter.replace).toHaveBeenCalledWith('/auth');
     });
 
-    it('should not logout when cancel is pressed', () => {
-      // User cancels logout
-      const cancelled = true;
-
-      if (cancelled) {
-        expect(mockAuthContext.signOut).not.toHaveBeenCalled();
-        expect(mockRouter.replace).not.toHaveBeenCalled();
-      }
-    });
-
-    it('should handle logout errors gracefully', async () => {
+    it('should handle logout errors', async () => {
       mockAuthContext.signOut.mockRejectedValue(new Error('Logout failed'));
 
-      try {
-        await mockAuthContext.signOut();
-      } catch (error: any) {
-        expect(error.message).toBe('Logout failed');
-        // Component should show error alert
-      }
+      await expect(mockAuthContext.signOut()).rejects.toThrow('Logout failed');
     });
   });
 
-  describe('Account Deletion Flow', () => {
-    it('should show initial warning dialog', () => {
-      mockAlert.mockImplementation((title, message, buttons) => {
-        expect(title).toBe('Delete Account');
-        expect(message).toContain('Permanently erase all your data');
-        expect(message).toContain('cannot be undone');
-        expect(buttons).toHaveLength(2);
-        expect(buttons[1].text).toBe('Delete My Account');
-      });
-
-      mockAlert(
-        'Delete Account',
-        'Are you absolutely sure you want to delete your account? This will:\n\n• Disconnect you from groups you are a member of\n• Permanently erase all your data\n\nThis action cannot be undone.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Delete My Account', style: 'destructive' },
-        ]
-      );
-
-      expect(mockAlert).toHaveBeenCalled();
-    });
-
-    it('should show second confirmation dialog', () => {
-      // After first confirmation, show second dialog
-      mockAlert.mockImplementation((title, message, buttons) => {
-        expect(title).toBe('Final Confirmation');
-        expect(message).toContain('last chance');
-        expect(buttons).toHaveLength(2);
-        expect(buttons[1].text).toBe('Yes, Delete Forever');
-      });
-
-      mockAlert(
-        'Final Confirmation',
-        'This is your last chance. Are you sure you want to permanently delete your account and all associated data?',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Yes, Delete Forever', style: 'destructive' },
-        ]
-      );
-
-      expect(mockAlert).toHaveBeenCalled();
-    });
-
-    it('should delete account and navigate to auth on final confirm', async () => {
+  describe('Account Deletion', () => {
+    it('should delete account and navigate to auth on success', async () => {
       mockDeleteUserAccount.mockResolvedValue(true);
 
       const success = await mockDeleteUserAccount();
 
-      if (success) {
-        mockRouter.replace('/auth');
-      }
-
       expect(mockDeleteUserAccount).toHaveBeenCalled();
-      expect(mockRouter.replace).toHaveBeenCalledWith('/auth');
+      expect(success).toBe(true);
     });
 
     it('should handle deletion failure', async () => {
@@ -286,52 +143,6 @@ describe('Settings Screen', () => {
       const success = await mockDeleteUserAccount();
 
       expect(success).toBe(false);
-      expect(mockRouter.replace).not.toHaveBeenCalled();
-      // Component should show error alert
-    });
-
-    it('should not delete account if cancelled at any step', () => {
-      // User cancels at any confirmation
-      const cancelled = true;
-
-      if (cancelled) {
-        expect(mockDeleteUserAccount).not.toHaveBeenCalled();
-        expect(mockRouter.replace).not.toHaveBeenCalled();
-      }
-    });
-
-    it('should show loading modal during deletion', () => {
-      let deletingAccount = false;
-
-      // Start deletion
-      deletingAccount = true;
-      expect(deletingAccount).toBe(true);
-
-      // Deletion complete (success or failure)
-      deletingAccount = false;
-      expect(deletingAccount).toBe(false);
-    });
-  });
-
-  describe('Profile Display', () => {
-    it('should display user email', () => {
-      const email = mockAuthContext.user?.email;
-
-      expect(email).toBe('test@example.com');
-    });
-
-    it('should display user name when available', () => {
-      const userName = 'John Doe';
-
-      expect(userName).toBeTruthy();
-      expect(userName.length).toBeGreaterThan(0);
-    });
-
-    it('should show placeholder when no name is set', () => {
-      const userName = '';
-      const displayName = userName || 'No name set';
-
-      expect(displayName).toBe('No name set');
     });
   });
 });

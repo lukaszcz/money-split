@@ -26,7 +26,7 @@ The MoneySplit test suite includes:
 
 ### Test Statistics
 
-- **Total Tests**: 285+
+- **Total Tests**: 232
 - **Test Suites**: 10
 - **Coverage Targets**:
   - Lines: 80%
@@ -563,9 +563,9 @@ it('should reject empty email', () => {
 ### Example Screen Tests
 
 See these files for complete examples:
-- `__tests__/screens/auth.test.ts` - Authentication (26 tests)
-- `__tests__/screens/groups.test.ts` - Groups list (25 tests)
-- `__tests__/screens/settings.test.ts` - Settings (29 tests)
+- `__tests__/screens/auth.test.ts` - Authentication (9 tests)
+- `__tests__/screens/groups.test.ts` - Groups list (10 tests)
+- `__tests__/screens/settings.test.ts` - Settings (8 tests)
 
 ### Tips for Screen Testing
 

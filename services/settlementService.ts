@@ -1,5 +1,5 @@
 import { Expense, GroupMember } from './groupRepository';
-import { assertDefined, assertNoDuplicateIds, assertMemberReferencesExist, assertNonNegativeBigInt } from '../utils/validation';
+import { assertDefined, assertNoDuplicateIds, assertMemberReferencesExist } from '../utils/validation';
 
 export interface Settlement {
   from: GroupMember;
