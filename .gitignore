@@ -40,3 +40,8 @@ yarn-error.*
 # Supabase
 supabase/.temp/
 supabase/.branches/
+
+# Test coverage
+coverage
+*.lcov
+.nyc_output

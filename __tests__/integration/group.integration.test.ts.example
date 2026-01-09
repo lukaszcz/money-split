@@ -1,0 +1,268 @@
+/**
+ * Example Integration Test
+ *
+ * This is an example of how to write integration tests against a real Supabase instance.
+ * Rename this file to .test.ts to run it.
+ *
+ * Prerequisites:
+ * 1. Docker and Docker Compose installed
+ * 2. Start test environment: docker-compose -f __tests__/setup/docker-compose.test.yml up -d
+ * 3. Apply migrations to test database
+ * 4. Run: TEST_INTEGRATION=true npm test -- --testPathPattern="integration"
+ */
+
+import { SupabaseClient } from '@supabase/supabase-js';
+import {
+  createIntegrationTestClient,
+  IntegrationTestHelper,
+  waitForSupabase,
+  createTestUser,
+  signInTestUser,
+} from '../setup/integration.setup';
+
+// Only run if TEST_INTEGRATION environment variable is set
+const describeIntegration = process.env.TEST_INTEGRATION ? describe : describe.skip;
+
+describeIntegration('Group Integration Tests', () => {
+  let client: SupabaseClient;
+  let helper: IntegrationTestHelper;
+  let testUserEmail: string;
+  let testUserPassword: string;
+
+  beforeAll(async () => {
+    // Wait for Supabase to be ready (max 30 seconds)
+    const ready = await waitForSupabase(30, 1000);
+    if (!ready) {
+      throw new Error('Supabase not ready for integration tests');
+    }
+
+    // Create client with service key for full access
+    client = createIntegrationTestClient(true);
+
+    // Setup test user credentials
+    testUserEmail = `integration-test-${Date.now()}@example.com`;
+    testUserPassword = 'test-password-123';
+  }, 60000); // 60 second timeout for beforeAll
+
+  beforeEach(() => {
+    helper = new IntegrationTestHelper(client);
+  });
+
+  afterEach(async () => {
+    await helper.cleanup();
+  }, 30000); // 30 second timeout for cleanup
+
+  describe('Group Creation', () => {
+    it('should create a group with authenticated user as first member', async () => {
+      // Arrange: Create and authenticate test user
+      const user = await createTestUser(client, testUserEmail, testUserPassword);
+      helper.trackUser(user.userId);
+
+      const token = await signInTestUser(client, testUserEmail, testUserPassword);
+
+      // Create authenticated client
+      const authClient = createIntegrationTestClient(false);
+      authClient.auth.setSession({
+        access_token: token,
+        refresh_token: '',
+      } as any);
+
+      // Act: Create group
+      const { data: group, error: groupError } = await authClient
+        .from('groups')
+        .insert({
+          name: 'Integration Test Group',
+          main_currency_code: 'USD',
+        })
+        .select()
+        .single();
+
+      expect(groupError).toBeNull();
+      expect(group).toBeTruthy();
+      helper.trackGroup(group!.id);
+
+      // Add creator as member
+      const { data: member, error: memberError } = await authClient
+        .from('group_members')
+        .insert({
+          group_id: group!.id,
+          name: 'Test User',
+          email: testUserEmail,
+          connected_user_id: user.userId,
+        })
+        .select()
+        .single();
+
+      // Assert
+      expect(memberError).toBeNull();
+      expect(member).toBeTruthy();
+      expect(member!.group_id).toBe(group!.id);
+      expect(member!.connected_user_id).toBe(user.userId);
+    });
+
+    it('should allow adding multiple members to a group', async () => {
+      // Arrange
+      const user = await createTestUser(client, testUserEmail, testUserPassword);
+      helper.trackUser(user.userId);
+
+      const { data: group } = await client
+        .from('groups')
+        .insert({
+          name: 'Multi-Member Group',
+          main_currency_code: 'EUR',
+        })
+        .select()
+        .single();
+
+      helper.trackGroup(group!.id);
+
+      // Act: Add multiple members
+      const members = [
+        { name: 'Alice', email: 'alice@example.com', connected_user_id: user.userId },
+        { name: 'Bob', email: 'bob@example.com', connected_user_id: null },
+        { name: 'Charlie', email: 'charlie@example.com', connected_user_id: null },
+      ];
+
+      const { data: createdMembers, error } = await client
+        .from('group_members')
+        .insert(members.map(m => ({ ...m, group_id: group!.id })))
+        .select();
+
+      // Assert
+      expect(error).toBeNull();
+      expect(createdMembers).toHaveLength(3);
+      expect(createdMembers![0].name).toBe('Alice');
+      expect(createdMembers![1].name).toBe('Bob');
+      expect(createdMembers![2].name).toBe('Charlie');
+    });
+  });
+
+  describe('Expense Management', () => {
+    it('should create expense with shares that sum to total', async () => {
+      // Arrange: Create group and members
+      const user = await createTestUser(client, testUserEmail, testUserPassword);
+      helper.trackUser(user.userId);
+
+      const { data: group } = await client
+        .from('groups')
+        .insert({ name: 'Expense Test Group', main_currency_code: 'USD' })
+        .select()
+        .single();
+
+      helper.trackGroup(group!.id);
+
+      const { data: members } = await client
+        .from('group_members')
+        .insert([
+          { group_id: group!.id, name: 'Alice', connected_user_id: user.userId },
+          { group_id: group!.id, name: 'Bob', connected_user_id: null },
+        ])
+        .select();
+
+      const aliceId = members![0].id;
+      const bobId = members![1].id;
+
+      // Act: Create expense
+      const totalAmount = 120000; // $12.00
+      const { data: expense, error: expenseError } = await client
+        .from('expenses')
+        .insert({
+          group_id: group!.id,
+          description: 'Dinner',
+          date_time: new Date().toISOString(),
+          currency_code: 'USD',
+          total_amount_scaled: totalAmount,
+          payer_member_id: aliceId,
+          exchange_rate_to_main_scaled: 10000,
+          total_in_main_scaled: totalAmount,
+          payment_type: 'expense',
+          split_type: 'equal',
+        })
+        .select()
+        .single();
+
+      expect(expenseError).toBeNull();
+      expect(expense).toBeTruthy();
+
+      // Create shares
+      const shareAmount = Math.floor(totalAmount / 2);
+      const { data: shares, error: sharesError } = await client
+        .from('expense_shares')
+        .insert([
+          {
+            expense_id: expense!.id,
+            member_id: aliceId,
+            share_amount_scaled: shareAmount,
+            share_in_main_scaled: shareAmount,
+          },
+          {
+            expense_id: expense!.id,
+            member_id: bobId,
+            share_amount_scaled: shareAmount,
+            share_in_main_scaled: shareAmount,
+          },
+        ])
+        .select();
+
+      // Assert
+      expect(sharesError).toBeNull();
+      expect(shares).toHaveLength(2);
+
+      const totalShares = shares!.reduce((sum, s) => sum + s.share_amount_scaled, 0);
+      expect(totalShares).toBe(totalAmount);
+    });
+  });
+
+  describe('RLS Policies', () => {
+    it('should enforce group membership for accessing expenses', async () => {
+      // Arrange: Create two users and two groups
+      const user1Email = `user1-${Date.now()}@example.com`;
+      const user2Email = `user2-${Date.now()}@example.com`;
+
+      const user1 = await createTestUser(client, user1Email, 'password123');
+      const user2 = await createTestUser(client, user2Email, 'password123');
+      helper.trackUser(user1.userId);
+      helper.trackUser(user2.userId);
+
+      // User 1's group
+      const { data: group1 } = await client
+        .from('groups')
+        .insert({ name: 'User 1 Group', main_currency_code: 'USD' })
+        .select()
+        .single();
+      helper.trackGroup(group1!.id);
+
+      await client.from('group_members').insert({
+        group_id: group1!.id,
+        name: 'User 1',
+        connected_user_id: user1.userId,
+      });
+
+      // Create expense in User 1's group
+      const { data: expense } = await client.from('expenses').insert({
+        group_id: group1!.id,
+        description: 'Private Expense',
+        date_time: new Date().toISOString(),
+        currency_code: 'USD',
+        total_amount_scaled: 100000,
+        payer_member_id: (await client.from('group_members').select('id').eq('group_id', group1!.id).single()).data!.id,
+        exchange_rate_to_main_scaled: 10000,
+        total_in_main_scaled: 100000,
+      }).select().single();
+
+      // Act: Try to access as User 2 (not a member)
+      const token2 = await signInTestUser(client, user2Email, 'password123');
+      const user2Client = createIntegrationTestClient(false);
+      user2Client.auth.setSession({ access_token: token2, refresh_token: '' } as any);
+
+      const { data: accessAttempt, error } = await user2Client
+        .from('expenses')
+        .select()
+        .eq('id', expense!.id)
+        .maybeSingle();
+
+      // Assert: User 2 should not be able to access User 1's expense
+      expect(accessAttempt).toBeNull();
+    });
+  });
+});
