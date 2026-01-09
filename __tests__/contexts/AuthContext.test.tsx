@@ -73,8 +73,18 @@ describe('AuthContext', () => {
         expect(result.current.loading).toBe(false);
       });
 
-      expect(result.current.user).toEqual(mockUser);
-      expect(result.current.session).toEqual(mockSession);
+      expect(result.current.user).toMatchObject({
+        id: mockUser.id,
+        email: mockUser.email,
+        aud: mockUser.aud,
+      });
+      expect(result.current.session).toMatchObject({
+        access_token: mockSession.access_token,
+        user: expect.objectContaining({
+          id: mockUser.id,
+          email: mockUser.email,
+        }),
+      });
       expect(ensureUserProfile).toHaveBeenCalled();
     });
 

@@ -22,7 +22,7 @@ ts-jest[ts-jest-transformer] (WARN) Define `ts-jest` config under `globals` is d
 
 ### 🎉 Added
 
-**Test Coverage (75 new tests)**
+**Test Coverage (99 new tests)**
 - `__tests__/services/groupRepository.test.ts` - 62 tests covering data access layer
   - User management (ensureUserProfile, getUser, getUserByEmail, updateUserName)
   - Group operations (createGroup, getGroup, getAllGroups)
@@ -36,6 +36,18 @@ ts-jest[ts-jest-transformer] (WARN) Define `ts-jest` config under `globals` is d
   - Auth state change listeners
   - Error handling
   - Hook validation
+
+- `__tests__/services/exchangeRateService.test.ts` - 24 tests covering exchange rates
+  - Same currency shortcut (1:1 rates)
+  - Cache hit with fresh data (< 12 hours)
+  - Cache hit with stale data (> 12 hours triggers refetch)
+  - Cache miss (triggers API fetch)
+  - API success stores in database cache
+  - Database read/write error handling
+  - API failures return null gracefully
+  - Currency pair variations (USD/EUR, GBP/JPY, etc.)
+  - Rate scaling (decimal to bigint)
+  - Timestamp handling (current vs cached)
 
 **Test Infrastructure**
 - `__tests__/utils/mockSupabase.ts` - Mock Supabase client with type-safe builder pattern
@@ -118,27 +130,28 @@ ts-jest[ts-jest-transformer] (WARN) Define `ts-jest` config under `globals` is d
 
 **Test Statistics:**
 ```
-Test Suites: 6 passed, 6 total (100%)
-Tests:       181 passed, 181 total (100%)
-Time:        ~2.5-3.5 seconds
-Coverage:    60.76% overall
+Test Suites: 7 passed, 7 total (100%)
+Tests:       205 passed, 205 total (100%)
+Time:        ~3-4 seconds
+Coverage:    64.48% overall
 ```
 
 **Coverage Breakdown:**
 ```
+services/exchangeRateService  100%  ⭐⭐⭐⭐⭐ (NEW)
 contexts/AuthContext.tsx      100%  ⭐⭐⭐⭐⭐
 utils/money.ts                100%  ⭐⭐⭐⭐⭐
 utils/currencies.ts           100%  ⭐⭐⭐⭐⭐
 services/settlementService    85%   ⭐⭐⭐⭐
-services/groupRepository      61%   ⭐⭐⭐
 utils/validation.ts           83%   ⭐⭐⭐⭐
+services/groupRepository      61%   ⭐⭐⭐
 ```
 
 **Files Modified:**
 - `package.json` - Added test scripts, coverage config, fixed ts-jest setup
 - `.gitignore` - Added coverage directory
 
-**Files Created (10):**
+**Files Created (11):**
 - `__tests__/README.md`
 - `__tests__/IMPROVEMENTS.md`
 - `__tests__/CHANGELOG.md`
@@ -148,6 +161,7 @@ utils/validation.ts           83%   ⭐⭐⭐⭐
 - `__tests__/setup/docker-compose.test.yml`
 - `__tests__/setup/integration.setup.ts`
 - `__tests__/services/groupRepository.test.ts`
+- `__tests__/services/exchangeRateService.test.ts`
 - `__tests__/contexts/AuthContext.test.tsx`
 - `__tests__/integration/group.integration.test.ts.example`
 
@@ -229,8 +243,8 @@ utils/validation.ts           83%   ⭐⭐⭐⭐
 - Configuration warnings
 
 **After Implementation:**
-- 181 tests (+75 new tests, 71% increase)
-- 60.76% measured coverage (+100% in key areas)
+- 205 tests (+99 new tests, 93% increase)
+- 64.48% measured coverage (+100% in key areas)
 - Comprehensive service layer tests
 - Full context test coverage
 - Reusable mock infrastructure
