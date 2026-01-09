@@ -149,7 +149,6 @@ describe('Groups Screen', () => {
       const expenses: any[] = [];
 
       // Groups with no expenses are considered settled
-      const isSettled = expenses.length === 0 ? false : true;
 
       // Actually, groups with no expenses should show as settled (no debts)
       // Let's test the correct logic
