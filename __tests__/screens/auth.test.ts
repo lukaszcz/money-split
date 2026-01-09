@@ -182,10 +182,9 @@ describe('Auth Screen', () => {
       mockIsValidEmail.mockReturnValue(false);
 
       const email = 'not-an-email';
-      const password = 'password123';
 
       // Invalid email should be caught by validation
-      expect(mockIsValidEmail('not-an-email')).toBe(false);
+      expect(mockIsValidEmail(email)).toBe(false);
 
       // Sign-up should not be called with invalid email
       expect(mockAuthContext.signUp).not.toHaveBeenCalled();

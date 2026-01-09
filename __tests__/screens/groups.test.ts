@@ -144,24 +144,6 @@ describe('Groups Screen', () => {
 
       expect(isSettled).toBe(false);
     });
-
-    it('should mark group with no expenses as settled', () => {
-      const expenses: any[] = [];
-
-      // Groups with no expenses are considered settled
-
-      // Actually, groups with no expenses should show as settled (no debts)
-      // Let's test the correct logic
-      let settled = false;
-      if (expenses.length > 0) {
-        // Check balances
-        const balances = new Map([['member-1', 0n]]);
-        settled = Array.from(balances.values()).every(b => b === 0n);
-      }
-
-      // No expenses = not showing settled status
-      expect(settled).toBe(false);
-    });
   });
 
   describe('Navigation', () => {

@@ -1,5 +1,5 @@
 import { createMockSupabaseClient, createMockUser, resetAllMocks, MockSupabaseClient } from '../utils/mockSupabase';
-import { mockUsers, mockGroups, mockMembers, mockExpenses, createMockDatabaseRow } from '../fixtures/testData';
+import { mockUsers, mockGroups, mockMembers, createMockDatabaseRow } from '../fixtures/testData';
 
 jest.mock('../../lib/supabase', () => ({
   supabase: null,
@@ -648,7 +648,7 @@ describe('groupRepository', () => {
       };
 
       let callCount = 0;
-      mockSupabase.from.mockImplementation((table: string) => {
+      mockSupabase.from.mockImplementation((_table: string) => {
         callCount++;
         if (callCount === 1) return getMemberBuilder as any;
         if (callCount === 2) return updateBuilder as any;
