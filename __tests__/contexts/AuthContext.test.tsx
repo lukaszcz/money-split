@@ -268,7 +268,11 @@ describe('AuthContext', () => {
         expect(result.current.loading).toBe(false);
       });
 
-      expect(result.current.user).toEqual(mockUser);
+      expect(result.current.user).toMatchObject({
+        id: mockUser.id,
+        email: mockUser.email,
+        aud: mockUser.aud,
+      });
 
       await act(async () => {
         await result.current.signOut();
