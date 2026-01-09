@@ -294,10 +294,9 @@ describe('groupRepository', () => {
       const getUserBuilder = {
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
-        maybeSingle: jest.fn().mockImplementation((args: any) => {
-          if (args) return Promise.resolve({ data: mockDbUser, error: null });
-          return Promise.resolve({ data: mockDbBob, error: null });
-        }),
+      maybeSingle: jest.fn()
+        .mockResolvedValueOnce({ data: mockDbUser, error: null })
+        .mockResolvedValueOnce({ data: mockDbBob, error: null }),
       };
 
       const insertGroupBuilder = {
