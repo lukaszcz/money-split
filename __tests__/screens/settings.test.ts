@@ -8,7 +8,10 @@
  * - Account deletion
  */
 
-import { createAuthenticatedContext, mockSignOutSuccess } from '../utils/mockAuthContext';
+import {
+  createAuthenticatedContext,
+  mockSignOutSuccess,
+} from '../utils/mockAuthContext';
 import type { MockAuthContext } from '../utils/mockAuthContext';
 
 // Mock dependencies
@@ -38,12 +41,16 @@ describe('Settings Screen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
 
-    mockAuthContext = createAuthenticatedContext({ id: 'user-123', email: 'test@example.com' });
+    mockAuthContext = createAuthenticatedContext({
+      id: 'user-123',
+      email: 'test@example.com',
+    });
     mockRouter = require('expo-router').router;
 
     mockGetUser = require('@/services/groupRepository').getUser;
     mockUpdateUserName = require('@/services/groupRepository').updateUserName;
-    mockDeleteUserAccount = require('@/services/groupRepository').deleteUserAccount;
+    mockDeleteUserAccount =
+      require('@/services/groupRepository').deleteUserAccount;
 
     require('@/contexts/AuthContext').useAuth.mockReturnValue(mockAuthContext);
   });
@@ -104,8 +111,9 @@ describe('Settings Screen', () => {
     it('should handle network errors during update', async () => {
       mockUpdateUserName.mockRejectedValue(new Error('Network error'));
 
-      await expect(mockUpdateUserName('user-123', 'New Name'))
-        .rejects.toThrow('Network error');
+      await expect(mockUpdateUserName('user-123', 'New Name')).rejects.toThrow(
+        'Network error',
+      );
     });
   });
 

@@ -13,7 +13,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { X, Plus, Check, Trash2, User, Mail } from 'lucide-react-native';
-import { createGroup, getUserByEmail, sendInvitationEmail, ensureUserProfile } from '../services/groupRepository';
+import {
+  createGroup,
+  getUserByEmail,
+  sendInvitationEmail,
+  ensureUserProfile,
+} from '../services/groupRepository';
 import { useCurrencyOrder } from '../hooks/useCurrencyOrder';
 import { isValidEmail } from '../utils/validation';
 
@@ -34,7 +39,11 @@ export default function CreateGroupScreen() {
   const [newMemberEmail, setNewMemberEmail] = useState('');
   const [currentUserName, setCurrentUserName] = useState('');
 
-  const { currencies: orderedCurrencies, selectCurrency, loading: currenciesLoading } = useCurrencyOrder();
+  const {
+    currencies: orderedCurrencies,
+    selectCurrency,
+    loading: currenciesLoading,
+  } = useCurrencyOrder();
 
   useEffect(() => {
     loadCurrentUser();
@@ -112,7 +121,11 @@ export default function CreateGroupScreen() {
       email: m.email,
     }));
 
-    const group = await createGroup(groupName.trim(), mainCurrency, initialMembers);
+    const group = await createGroup(
+      groupName.trim(),
+      mainCurrency,
+      initialMembers,
+    );
 
     if (group) {
       for (const member of pendingMembers) {
@@ -125,14 +138,20 @@ export default function CreateGroupScreen() {
       }
       router.back();
     } else {
-      Alert.alert('Error', 'Failed to create group. Check console for details.');
+      Alert.alert(
+        'Error',
+        'Failed to create group. Check console for details.',
+      );
     }
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.closeButton}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.closeButton}
+        >
           <X color="#111827" size={24} />
         </TouchableOpacity>
         <Text style={styles.title}>Create Group</Text>
@@ -142,19 +161,21 @@ export default function CreateGroupScreen() {
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}>
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      >
         <ScrollView
           style={styles.content}
           contentContainerStyle={styles.contentContainer}
           keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={true}>
+          showsVerticalScrollIndicator={true}
+        >
           <View style={styles.section}>
             <Text style={styles.label}>Group Name *</Text>
             <TextInput
               style={styles.input}
               value={groupName}
               onChangeText={setGroupName}
-              onBlur={() => setGroupName(name => name.trim())}
+              onBlur={() => setGroupName((name) => name.trim())}
               placeholder="e.g., Trip to Paris"
               placeholderTextColor="#9ca3af"
             />
@@ -164,8 +185,11 @@ export default function CreateGroupScreen() {
             <Text style={styles.label}>Main Currency *</Text>
             <TouchableOpacity
               style={styles.currencyButton}
-              onPress={() => setShowCurrencyPicker(!showCurrencyPicker)}>
-              <Text style={styles.currencyButtonText}>{mainCurrency || 'Loading...'}</Text>
+              onPress={() => setShowCurrencyPicker(!showCurrencyPicker)}
+            >
+              <Text style={styles.currencyButtonText}>
+                {mainCurrency || 'Loading...'}
+              </Text>
             </TouchableOpacity>
 
             {showCurrencyPicker && (
@@ -178,10 +202,13 @@ export default function CreateGroupScreen() {
                       setMainCurrency(currency.code);
                       selectCurrency(currency.code);
                       setShowCurrencyPicker(false);
-                    }}>
+                    }}
+                  >
                     <Text style={styles.currencyCode}>{currency.code}</Text>
                     <Text style={styles.currencyName}>{currency.name}</Text>
-                    {mainCurrency === currency.code && <Check color="#2563eb" size={20} />}
+                    {mainCurrency === currency.code && (
+                      <Check color="#2563eb" size={20} />
+                    )}
                   </TouchableOpacity>
                 ))}
               </ScrollView>
@@ -193,7 +220,8 @@ export default function CreateGroupScreen() {
               <Text style={styles.label}>Members</Text>
               <TouchableOpacity
                 style={styles.addMemberToggle}
-                onPress={() => setShowAddMember(!showAddMember)}>
+                onPress={() => setShowAddMember(!showAddMember)}
+              >
                 <Plus color="#2563eb" size={20} />
                 <Text style={styles.addMemberToggleText}>Add</Text>
               </TouchableOpacity>
@@ -204,7 +232,9 @@ export default function CreateGroupScreen() {
                 <User color="#2563eb" size={16} />
               </View>
               <View style={styles.memberInfo}>
-                <Text style={styles.memberName}>{currentUserName || 'You'}</Text>
+                <Text style={styles.memberName}>
+                  {currentUserName || 'You'}
+                </Text>
                 <Text style={styles.memberLabel}>You (creator)</Text>
               </View>
             </View>
@@ -223,7 +253,10 @@ export default function CreateGroupScreen() {
                     </View>
                   )}
                 </View>
-                <TouchableOpacity onPress={() => removeMember(member.id)} style={styles.removeButton}>
+                <TouchableOpacity
+                  onPress={() => removeMember(member.id)}
+                  style={styles.removeButton}
+                >
                   <Trash2 color="#ef4444" size={18} />
                 </TouchableOpacity>
               </View>
@@ -236,17 +269,19 @@ export default function CreateGroupScreen() {
                   style={styles.input}
                   value={newMemberName}
                   onChangeText={setNewMemberName}
-                  onBlur={() => setNewMemberName(name => name.trim())}
+                  onBlur={() => setNewMemberName((name) => name.trim())}
                   placeholder="Member name"
                   placeholderTextColor="#9ca3af"
                 />
 
-                <Text style={[styles.formLabel, styles.formLabelSpaced]}>Email (optional)</Text>
+                <Text style={[styles.formLabel, styles.formLabelSpaced]}>
+                  Email (optional)
+                </Text>
                 <TextInput
                   style={styles.input}
                   value={newMemberEmail}
                   onChangeText={setNewMemberEmail}
-                  onBlur={() => setNewMemberEmail(email => email.trim())}
+                  onBlur={() => setNewMemberEmail((email) => email.trim())}
                   placeholder="member@example.com"
                   placeholderTextColor="#9ca3af"
                   keyboardType="email-address"
@@ -254,8 +289,8 @@ export default function CreateGroupScreen() {
                 />
 
                 <Text style={styles.formHint}>
-                  If only email is provided, the name will be taken from the user&#39;s account or derived
-                  from the email.
+                  If only email is provided, the name will be taken from the
+                  user&#39;s account or derived from the email.
                 </Text>
 
                 <View style={styles.formButtons}>
@@ -265,10 +300,14 @@ export default function CreateGroupScreen() {
                       setShowAddMember(false);
                       setNewMemberName('');
                       setNewMemberEmail('');
-                    }}>
+                    }}
+                  >
                     <Text style={styles.formCancelButtonText}>Cancel</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.formAddButton} onPress={handleAddMember}>
+                  <TouchableOpacity
+                    style={styles.formAddButton}
+                    onPress={handleAddMember}
+                  >
                     <Text style={styles.formAddButtonText}>Add Member</Text>
                   </TouchableOpacity>
                 </View>
@@ -277,7 +316,8 @@ export default function CreateGroupScreen() {
 
             {pendingMembers.length === 0 && !showAddMember && (
               <Text style={styles.noMembersText}>
-                Add members to split expenses with. You can also add members later.
+                Add members to split expenses with. You can also add members
+                later.
               </Text>
             )}
           </View>

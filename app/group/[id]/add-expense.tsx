@@ -13,7 +13,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useEffect, useCallback } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { X, Check } from 'lucide-react-native';
-import { getGroup, createExpense, GroupWithMembers } from '../../../services/groupRepository';
+import {
+  getGroup,
+  createExpense,
+  GroupWithMembers,
+} from '../../../services/groupRepository';
 import {
   toScaled,
   calculateEqualSplit,
@@ -38,7 +42,9 @@ export default function AddExpenseScreen() {
   const [currency, setCurrency] = useState('USD');
   const [payerId, setPayerId] = useState('');
   const [recipientId, setRecipientId] = useState('');
-  const [selectedParticipants, setSelectedParticipants] = useState<string[]>([]);
+  const [selectedParticipants, setSelectedParticipants] = useState<string[]>(
+    [],
+  );
   const [splitMethod, setSplitMethod] = useState<SplitMethod>('equal');
 
   const [percentages, setPercentages] = useState<Record<string, string>>({});
@@ -48,7 +54,7 @@ export default function AddExpenseScreen() {
   const [saving, setSaving] = useState(false);
 
   const { currencies: orderedCurrencies, selectCurrency } = useCurrencyOrder(
-    group?.mainCurrencyCode
+    group?.mainCurrencyCode,
   );
 
   const loadGroup = useCallback(async () => {
@@ -61,7 +67,7 @@ export default function AddExpenseScreen() {
 
       if (fetchedGroup.members.length > 0) {
         setPayerId(fetchedGroup.members[0].id);
-        const allIds = fetchedGroup.members.map(m => m.id);
+        const allIds = fetchedGroup.members.map((m) => m.id);
         setSelectedParticipants(allIds);
       }
     }
@@ -71,7 +77,10 @@ export default function AddExpenseScreen() {
     loadGroup();
   }, [loadGroup]);
 
-  const validateDecimalInput = (text: string, maxDecimals: number = 2): string => {
+  const validateDecimalInput = (
+    text: string,
+    maxDecimals: number = 2,
+  ): string => {
     const sanitized = text.replace(/[^0-9.]/g, '');
     const parts = sanitized.split('.');
     if (parts.length > 2) {
@@ -85,7 +94,9 @@ export default function AddExpenseScreen() {
 
   const toggleParticipant = (userId: string) => {
     if (selectedParticipants.includes(userId)) {
-      setSelectedParticipants(selectedParticipants.filter(id => id !== userId));
+      setSelectedParticipants(
+        selectedParticipants.filter((id) => id !== userId),
+      );
     } else {
       setSelectedParticipants([...selectedParticipants, userId]);
     }
@@ -121,8 +132,8 @@ export default function AddExpenseScreen() {
     if (splitMethod === 'equal') {
       shares = calculateEqualSplit(totalScaled, selectedParticipants.length);
     } else if (splitMethod === 'percentage') {
-      const percentValues = selectedParticipants.map(
-        userId => parseFloat(percentages[userId] || '0')
+      const percentValues = selectedParticipants.map((userId) =>
+        parseFloat(percentages[userId] || '0'),
       );
       const totalPercent = percentValues.reduce((sum, p) => sum + p, 0);
 
@@ -133,8 +144,8 @@ export default function AddExpenseScreen() {
 
       shares = calculatePercentageSplit(totalScaled, percentValues);
     } else {
-      const exactValues = selectedParticipants.map(userId =>
-        toScaled(parseFloat(exactAmounts[userId] || '0'))
+      const exactValues = selectedParticipants.map((userId) =>
+        toScaled(parseFloat(exactAmounts[userId] || '0')),
       );
       const totalExact = sumScaled(exactValues);
 
@@ -178,7 +189,10 @@ export default function AddExpenseScreen() {
       const rate = await getExchangeRate(currency, group.mainCurrencyCode);
 
       if (!rate) {
-        Alert.alert('Error', 'Could not fetch exchange rate. Please try again.');
+        Alert.alert(
+          'Error',
+          'Could not fetch exchange rate. Please try again.',
+        );
         setSaving(false);
         return;
       }
@@ -186,17 +200,20 @@ export default function AddExpenseScreen() {
       const totalScaled = toScaled(parseFloat(amount));
       const totalInMainScaled = applyExchangeRate(totalScaled, rate.rateScaled);
 
-      const payer = group.members.find(m => m.id === payerId);
-      const recipient = group.members.find(m => m.id === recipientId);
+      const payer = group.members.find((m) => m.id === payerId);
+      const recipient = group.members.find((m) => m.id === recipientId);
 
-      const transferDescription = description.trim() ||
+      const transferDescription =
+        description.trim() ||
         `Transfer from ${payer?.name} to ${recipient?.name}`;
 
-      const shareData = [{
-        memberId: recipientId,
-        shareAmountScaled: totalScaled,
-        shareInMainScaled: totalInMainScaled,
-      }];
+      const shareData = [
+        {
+          memberId: recipientId,
+          shareAmountScaled: totalScaled,
+          shareInMainScaled: totalInMainScaled,
+        },
+      ];
 
       const expense = await createExpense(
         group.id,
@@ -209,7 +226,7 @@ export default function AddExpenseScreen() {
         totalInMainScaled,
         shareData,
         'transfer',
-        'equal'
+        'equal',
       );
 
       if (expense) {
@@ -234,7 +251,10 @@ export default function AddExpenseScreen() {
       const rate = await getExchangeRate(currency, group.mainCurrencyCode);
 
       if (!rate) {
-        Alert.alert('Error', 'Could not fetch exchange rate. Please try again.');
+        Alert.alert(
+          'Error',
+          'Could not fetch exchange rate. Please try again.',
+        );
         setSaving(false);
         return;
       }
@@ -259,7 +279,7 @@ export default function AddExpenseScreen() {
         totalInMainScaled,
         shareData,
         'expense',
-        splitMethod
+        splitMethod,
       );
 
       if (expense) {
@@ -283,7 +303,9 @@ export default function AddExpenseScreen() {
     );
   }
 
-  const participants = group.members.filter(m => selectedParticipants.includes(m.id));
+  const participants = group.members.filter((m) =>
+    selectedParticipants.includes(m.id),
+  );
 
   const renderExpenseForm = () => (
     <>
@@ -303,7 +325,7 @@ export default function AddExpenseScreen() {
         <TextInput
           style={styles.input}
           value={amount}
-          onChangeText={text => setAmount(validateDecimalInput(text))}
+          onChangeText={(text) => setAmount(validateDecimalInput(text))}
           placeholder="0.00"
           placeholderTextColor="#9ca3af"
           keyboardType="decimal-pad"
@@ -314,13 +336,14 @@ export default function AddExpenseScreen() {
         <Text style={styles.label}>Currency *</Text>
         <TouchableOpacity
           style={styles.currencyButton}
-          onPress={() => setShowCurrencyPicker(!showCurrencyPicker)}>
+          onPress={() => setShowCurrencyPicker(!showCurrencyPicker)}
+        >
           <Text style={styles.currencyButtonText}>{currency}</Text>
         </TouchableOpacity>
 
         {showCurrencyPicker && (
           <ScrollView style={styles.currencyList} nestedScrollEnabled>
-            {orderedCurrencies.map(curr => (
+            {orderedCurrencies.map((curr) => (
               <TouchableOpacity
                 key={curr.code}
                 style={styles.currencyItem}
@@ -328,7 +351,8 @@ export default function AddExpenseScreen() {
                   setCurrency(curr.code);
                   selectCurrency(curr.code);
                   setShowCurrencyPicker(false);
-                }}>
+                }}
+              >
                 <Text style={styles.currencyCode}>{curr.code}</Text>
                 <Text style={styles.currencyName}>{curr.name}</Text>
                 {currency === curr.code && <Check color="#2563eb" size={20} />}
@@ -340,16 +364,21 @@ export default function AddExpenseScreen() {
 
       <View style={styles.section}>
         <Text style={styles.label}>Paid by *</Text>
-        {group.members.map(member => (
+        {group.members.map((member) => (
           <TouchableOpacity
             key={member.id}
-            style={[styles.optionItem, payerId === member.id && styles.optionItemSelected]}
-            onPress={() => setPayerId(member.id)}>
+            style={[
+              styles.optionItem,
+              payerId === member.id && styles.optionItemSelected,
+            ]}
+            onPress={() => setPayerId(member.id)}
+          >
             <Text
               style={[
                 styles.optionText,
                 payerId === member.id && styles.optionTextSelected,
-              ]}>
+              ]}
+            >
               {member.name}
             </Text>
             {payerId === member.id && <Check color="#2563eb" size={20} />}
@@ -359,22 +388,28 @@ export default function AddExpenseScreen() {
 
       <View style={styles.section}>
         <Text style={styles.label}>For whom *</Text>
-        {group.members.map(member => (
+        {group.members.map((member) => (
           <TouchableOpacity
             key={member.id}
             style={[
               styles.optionItem,
-              selectedParticipants.includes(member.id) && styles.optionItemSelected,
+              selectedParticipants.includes(member.id) &&
+                styles.optionItemSelected,
             ]}
-            onPress={() => toggleParticipant(member.id)}>
+            onPress={() => toggleParticipant(member.id)}
+          >
             <Text
               style={[
                 styles.optionText,
-                selectedParticipants.includes(member.id) && styles.optionTextSelected,
-              ]}>
+                selectedParticipants.includes(member.id) &&
+                  styles.optionTextSelected,
+              ]}
+            >
               {member.name}
             </Text>
-            {selectedParticipants.includes(member.id) && <Check color="#2563eb" size={20} />}
+            {selectedParticipants.includes(member.id) && (
+              <Check color="#2563eb" size={20} />
+            )}
           </TouchableOpacity>
         ))}
       </View>
@@ -383,13 +418,18 @@ export default function AddExpenseScreen() {
         <Text style={styles.label}>Split Method *</Text>
         <View style={styles.splitMethodRow}>
           <TouchableOpacity
-            style={[styles.methodButton, splitMethod === 'equal' && styles.methodButtonActive]}
-            onPress={() => setSplitMethod('equal')}>
+            style={[
+              styles.methodButton,
+              splitMethod === 'equal' && styles.methodButtonActive,
+            ]}
+            onPress={() => setSplitMethod('equal')}
+          >
             <Text
               style={[
                 styles.methodButtonText,
                 splitMethod === 'equal' && styles.methodButtonTextActive,
-              ]}>
+              ]}
+            >
               Equal
             </Text>
           </TouchableOpacity>
@@ -398,23 +438,30 @@ export default function AddExpenseScreen() {
               styles.methodButton,
               splitMethod === 'percentage' && styles.methodButtonActive,
             ]}
-            onPress={() => setSplitMethod('percentage')}>
+            onPress={() => setSplitMethod('percentage')}
+          >
             <Text
               style={[
                 styles.methodButtonText,
                 splitMethod === 'percentage' && styles.methodButtonTextActive,
-              ]}>
+              ]}
+            >
               Percentage
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.methodButton, splitMethod === 'exact' && styles.methodButtonActive]}
-            onPress={() => setSplitMethod('exact')}>
+            style={[
+              styles.methodButton,
+              splitMethod === 'exact' && styles.methodButtonActive,
+            ]}
+            onPress={() => setSplitMethod('exact')}
+          >
             <Text
               style={[
                 styles.methodButtonText,
                 splitMethod === 'exact' && styles.methodButtonTextActive,
-              ]}>
+              ]}
+            >
               Exact
             </Text>
           </TouchableOpacity>
@@ -426,22 +473,24 @@ export default function AddExpenseScreen() {
           <View style={styles.labelWithRemaining}>
             <Text style={styles.label}>Percentages</Text>
             <Text style={styles.remainingText}>
-              Remaining: {(() => {
+              Remaining:{' '}
+              {(() => {
                 const total = participants.reduce((sum, m) => {
                   const value = parseFloat(percentages[m.id] || '0');
                   return sum + (isNaN(value) ? 0 : value);
                 }, 0);
                 return Math.max(0, 100 - total);
-              })()}%
+              })()}
+              %
             </Text>
           </View>
-          {participants.map(member => (
+          {participants.map((member) => (
             <View key={member.id} style={styles.inputRow}>
               <Text style={styles.inputRowLabel}>{member.name}</Text>
               <TextInput
                 style={styles.inputRowField}
                 value={percentages[member.id] || ''}
-                onChangeText={text => {
+                onChangeText={(text) => {
                   const sanitized = text.replace(/[^0-9]/g, '');
                   if (sanitized === '') {
                     setPercentages({ ...percentages, [member.id]: '' });
@@ -458,7 +507,10 @@ export default function AddExpenseScreen() {
 
                   const remaining = 100 - currentTotal;
                   const finalValue = Math.min(value, remaining);
-                  setPercentages({ ...percentages, [member.id]: finalValue.toString() });
+                  setPercentages({
+                    ...percentages,
+                    [member.id]: finalValue.toString(),
+                  });
                 }}
                 placeholder="0"
                 placeholderTextColor="#9ca3af"
@@ -475,7 +527,8 @@ export default function AddExpenseScreen() {
           <View style={styles.labelWithRemaining}>
             <Text style={styles.label}>Exact Amounts</Text>
             <Text style={styles.remainingText}>
-              Remaining: {(() => {
+              Remaining:{' '}
+              {(() => {
                 const totalAmount = parseFloat(amount) || 0;
                 const allocated = participants.reduce((sum, m) => {
                   const value = parseFloat(exactAmounts[m.id] || '0');
@@ -485,16 +538,19 @@ export default function AddExpenseScreen() {
               })()}
             </Text>
           </View>
-          {participants.map(member => (
+          {participants.map((member) => (
             <View key={member.id} style={styles.inputRow}>
               <Text style={styles.inputRowLabel}>{member.name}</Text>
               <TextInput
                 style={styles.inputRowField}
                 value={exactAmounts[member.id] || ''}
-                onChangeText={text => {
+                onChangeText={(text) => {
                   const sanitized = validateDecimalInput(text);
                   if (sanitized === '' || sanitized === '.') {
-                    setExactAmounts({ ...exactAmounts, [member.id]: sanitized });
+                    setExactAmounts({
+                      ...exactAmounts,
+                      [member.id]: sanitized,
+                    });
                     return;
                   }
 
@@ -513,7 +569,10 @@ export default function AddExpenseScreen() {
                   setExactAmounts({ ...exactAmounts, [member.id]: sanitized });
 
                   if (value > remaining) {
-                    setExactAmounts({ ...exactAmounts, [member.id]: finalValue.toFixed(2) });
+                    setExactAmounts({
+                      ...exactAmounts,
+                      [member.id]: finalValue.toFixed(2),
+                    });
                   }
                 }}
                 placeholder="0.00"
@@ -534,7 +593,7 @@ export default function AddExpenseScreen() {
         <TextInput
           style={styles.input}
           value={amount}
-          onChangeText={text => setAmount(validateDecimalInput(text))}
+          onChangeText={(text) => setAmount(validateDecimalInput(text))}
           placeholder="0.00"
           placeholderTextColor="#9ca3af"
           keyboardType="decimal-pad"
@@ -545,13 +604,14 @@ export default function AddExpenseScreen() {
         <Text style={styles.label}>Currency *</Text>
         <TouchableOpacity
           style={styles.currencyButton}
-          onPress={() => setShowCurrencyPicker(!showCurrencyPicker)}>
+          onPress={() => setShowCurrencyPicker(!showCurrencyPicker)}
+        >
           <Text style={styles.currencyButtonText}>{currency}</Text>
         </TouchableOpacity>
 
         {showCurrencyPicker && (
           <ScrollView style={styles.currencyList} nestedScrollEnabled>
-            {orderedCurrencies.map(curr => (
+            {orderedCurrencies.map((curr) => (
               <TouchableOpacity
                 key={curr.code}
                 style={styles.currencyItem}
@@ -559,7 +619,8 @@ export default function AddExpenseScreen() {
                   setCurrency(curr.code);
                   selectCurrency(curr.code);
                   setShowCurrencyPicker(false);
-                }}>
+                }}
+              >
                 <Text style={styles.currencyCode}>{curr.code}</Text>
                 <Text style={styles.currencyName}>{curr.name}</Text>
                 {currency === curr.code && <Check color="#2563eb" size={20} />}
@@ -571,16 +632,21 @@ export default function AddExpenseScreen() {
 
       <View style={styles.section}>
         <Text style={styles.label}>From *</Text>
-        {group.members.map(member => (
+        {group.members.map((member) => (
           <TouchableOpacity
             key={member.id}
-            style={[styles.optionItem, payerId === member.id && styles.optionItemSelected]}
-            onPress={() => setPayerId(member.id)}>
+            style={[
+              styles.optionItem,
+              payerId === member.id && styles.optionItemSelected,
+            ]}
+            onPress={() => setPayerId(member.id)}
+          >
             <Text
               style={[
                 styles.optionText,
                 payerId === member.id && styles.optionTextSelected,
-              ]}>
+              ]}
+            >
               {member.name}
             </Text>
             {payerId === member.id && <Check color="#2563eb" size={20} />}
@@ -590,16 +656,21 @@ export default function AddExpenseScreen() {
 
       <View style={styles.section}>
         <Text style={styles.label}>To *</Text>
-        {group.members.map(member => (
+        {group.members.map((member) => (
           <TouchableOpacity
             key={member.id}
-            style={[styles.optionItem, recipientId === member.id && styles.optionItemSelected]}
-            onPress={() => setRecipientId(member.id)}>
+            style={[
+              styles.optionItem,
+              recipientId === member.id && styles.optionItemSelected,
+            ]}
+            onPress={() => setRecipientId(member.id)}
+          >
             <Text
               style={[
                 styles.optionText,
                 recipientId === member.id && styles.optionTextSelected,
-              ]}>
+              ]}
+            >
               {member.name}
             </Text>
             {recipientId === member.id && <Check color="#2563eb" size={20} />}
@@ -623,7 +694,10 @@ export default function AddExpenseScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.closeButton}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.closeButton}
+        >
           <X color="#111827" size={24} />
         </TouchableOpacity>
         <Text style={styles.title}>Add Payment</Text>
@@ -632,16 +706,34 @@ export default function AddExpenseScreen() {
 
       <View style={styles.typeTabsContainer}>
         <TouchableOpacity
-          style={[styles.typeTab, paymentType === 'expense' && styles.typeTabActive]}
-          onPress={() => setPaymentType('expense')}>
-          <Text style={[styles.typeTabText, paymentType === 'expense' && styles.typeTabTextActive]}>
+          style={[
+            styles.typeTab,
+            paymentType === 'expense' && styles.typeTabActive,
+          ]}
+          onPress={() => setPaymentType('expense')}
+        >
+          <Text
+            style={[
+              styles.typeTabText,
+              paymentType === 'expense' && styles.typeTabTextActive,
+            ]}
+          >
             Expense
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.typeTab, paymentType === 'transfer' && styles.typeTabActive]}
-          onPress={() => setPaymentType('transfer')}>
-          <Text style={[styles.typeTabText, paymentType === 'transfer' && styles.typeTabTextActive]}>
+          style={[
+            styles.typeTab,
+            paymentType === 'transfer' && styles.typeTabActive,
+          ]}
+          onPress={() => setPaymentType('transfer')}
+        >
+          <Text
+            style={[
+              styles.typeTabText,
+              paymentType === 'transfer' && styles.typeTabTextActive,
+            ]}
+          >
             Transfer
           </Text>
         </TouchableOpacity>
@@ -650,12 +742,14 @@ export default function AddExpenseScreen() {
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}>
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      >
         <ScrollView
           style={styles.content}
           contentContainerStyle={styles.contentContainer}
           keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={true}>
+          showsVerticalScrollIndicator={true}
+        >
           {paymentType === 'expense' && renderExpenseForm()}
           {paymentType === 'transfer' && renderTransferForm()}
         </ScrollView>
@@ -664,9 +758,14 @@ export default function AddExpenseScreen() {
           <TouchableOpacity
             style={[styles.saveButton, saving && styles.saveButtonDisabled]}
             onPress={handleSave}
-            disabled={saving}>
+            disabled={saving}
+          >
             <Text style={styles.saveButtonText}>
-              {saving ? 'Saving...' : paymentType === 'expense' ? 'Save Expense' : 'Save Transfer'}
+              {saving
+                ? 'Saving...'
+                : paymentType === 'expense'
+                  ? 'Save Expense'
+                  : 'Save Transfer'}
             </Text>
           </TouchableOpacity>
         </View>

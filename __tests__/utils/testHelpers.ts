@@ -6,32 +6,34 @@ import { MockSupabaseClient } from './mockSupabase';
 export async function waitForCondition(
   condition: () => boolean,
   timeout = 5000,
-  interval = 100
+  interval = 100,
 ): Promise<void> {
   const startTime = Date.now();
   while (!condition()) {
     if (Date.now() - startTime > timeout) {
       throw new Error('Timeout waiting for condition');
     }
-    await new Promise(resolve => setTimeout(resolve, interval));
+    await new Promise((resolve) => setTimeout(resolve, interval));
   }
 }
 
 /**
  * Suppress console methods during test execution
  */
-export function suppressConsole(methods: ('log' | 'error' | 'warn' | 'info')[] = ['error']) {
+export function suppressConsole(
+  methods: ('log' | 'error' | 'warn' | 'info')[] = ['error'],
+) {
   const originalMethods: Record<string, any> = {};
 
   beforeEach(() => {
-    methods.forEach(method => {
+    methods.forEach((method) => {
       originalMethods[method] = console[method];
       console[method] = jest.fn();
     });
   });
 
   afterEach(() => {
-    methods.forEach(method => {
+    methods.forEach((method) => {
       console[method] = originalMethods[method];
     });
   });
@@ -41,7 +43,7 @@ export function suppressConsole(methods: ('log' | 'error' | 'warn' | 'info')[] =
  * Create a promise that resolves after a delay
  */
 export function delay(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
@@ -56,7 +58,7 @@ export function createRejectedPromise(message: string): Promise<never> {
  */
 export async function expectAsyncError(
   fn: () => Promise<any>,
-  errorMessage?: string
+  errorMessage?: string,
 ): Promise<Error> {
   try {
     await fn();
@@ -109,7 +111,7 @@ export class MockDate {
  */
 export function verifyMockCalls(
   mocks: Record<string, jest.Mock>,
-  expectedCalls: Record<string, number>
+  expectedCalls: Record<string, number>,
 ): void {
   Object.entries(expectedCalls).forEach(([name, count]) => {
     const mock = mocks[name];
@@ -125,7 +127,7 @@ export function verifyMockCalls(
  */
 export function spyOnModule<T>(
   modulePath: string,
-  exportName: string
+  exportName: string,
 ): jest.SpyInstance<T> {
   const module = require(modulePath);
   return jest.spyOn(module, exportName);
@@ -137,16 +139,18 @@ export function spyOnModule<T>(
 export function expectArrayToContainExactly<T>(
   actual: T[],
   expected: T[],
-  compareFn?: (a: T, b: T) => boolean
+  compareFn?: (a: T, b: T) => boolean,
 ): void {
   expect(actual.length).toBe(expected.length);
 
   if (compareFn) {
-    expected.forEach(expectedItem => {
-      expect(actual.some(actualItem => compareFn(actualItem, expectedItem))).toBe(true);
+    expected.forEach((expectedItem) => {
+      expect(
+        actual.some((actualItem) => compareFn(actualItem, expectedItem)),
+      ).toBe(true);
     });
   } else {
-    expected.forEach(expectedItem => {
+    expected.forEach((expectedItem) => {
       expect(actual).toContain(expectedItem);
     });
   }
@@ -157,7 +161,7 @@ export function expectArrayToContainExactly<T>(
  */
 export function createPartialMock<T extends object>(
   original: T,
-  overrides: Partial<T>
+  overrides: Partial<T>,
 ): T {
   return {
     ...original,
@@ -168,7 +172,9 @@ export function createPartialMock<T extends object>(
 /**
  * Reset all Supabase builder mocks to default state
  */
-export function resetSupabaseBuilderMocks(mockClient: MockSupabaseClient): void {
+export function resetSupabaseBuilderMocks(
+  mockClient: MockSupabaseClient,
+): void {
   const builder = {
     select: jest.fn().mockReturnThis(),
     insert: jest.fn().mockReturnThis(),
@@ -201,7 +207,7 @@ export interface BuilderChain {
 
 export function createSupabaseBuilderChain(
   finalResult: { data: any; error: any },
-  methodOverrides?: BuilderChain
+  methodOverrides?: BuilderChain,
 ): any {
   const defaultBuilder = {
     select: jest.fn().mockReturnThis(),
@@ -258,7 +264,11 @@ export const generators = {
  * Assertion helpers for BigInt
  */
 export const bigIntMatchers = {
-  toBeCloseTo: (actual: bigint, expected: bigint, tolerance: bigint = BigInt(10)) => {
+  toBeCloseTo: (
+    actual: bigint,
+    expected: bigint,
+    tolerance: bigint = BigInt(10),
+  ) => {
     const diff = actual > expected ? actual - expected : expected - actual;
     expect(diff).toBeLessThanOrEqual(tolerance);
   },

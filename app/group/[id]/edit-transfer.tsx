@@ -21,7 +21,11 @@ import {
   GroupWithMembers,
   Expense,
 } from '../../../services/groupRepository';
-import { toScaled, applyExchangeRate, formatCurrency } from '../../../utils/money';
+import {
+  toScaled,
+  applyExchangeRate,
+  formatCurrency,
+} from '../../../utils/money';
 import { getExchangeRate } from '../../../services/exchangeRateService';
 import { useCurrencyOrder } from '../../../hooks/useCurrencyOrder';
 
@@ -42,11 +46,17 @@ export default function EditTransferScreen() {
   const [loading, setLoading] = useState(true);
 
   const { currencies: orderedCurrencies, selectCurrency } = useCurrencyOrder(
-    group?.mainCurrencyCode
+    group?.mainCurrencyCode,
   );
 
   const loadData = useCallback(async () => {
-    if (!id || typeof id !== 'string' || !expenseId || typeof expenseId !== 'string') return;
+    if (
+      !id ||
+      typeof id !== 'string' ||
+      !expenseId ||
+      typeof expenseId !== 'string'
+    )
+      return;
 
     const fetchedGroup = await getGroup(id);
     const fetchedExpense = await getExpense(expenseId);
@@ -72,7 +82,10 @@ export default function EditTransferScreen() {
     loadData();
   }, [loadData]);
 
-  const validateDecimalInput = (text: string, maxDecimals: number = 2): string => {
+  const validateDecimalInput = (
+    text: string,
+    maxDecimals: number = 2,
+  ): string => {
     const sanitized = text.replace(/[^0-9.]/g, '');
     const parts = sanitized.split('.');
     if (parts.length > 2) {
@@ -113,7 +126,10 @@ export default function EditTransferScreen() {
       const rate = await getExchangeRate(currency, group.mainCurrencyCode);
 
       if (!rate) {
-        Alert.alert('Error', 'Could not fetch exchange rate. Please try again.');
+        Alert.alert(
+          'Error',
+          'Could not fetch exchange rate. Please try again.',
+        );
         setSaving(false);
         return;
       }
@@ -121,17 +137,20 @@ export default function EditTransferScreen() {
       const totalScaled = toScaled(parseFloat(amount));
       const totalInMainScaled = applyExchangeRate(totalScaled, rate.rateScaled);
 
-      const payer = group.members.find(m => m.id === payerId);
-      const recipient = group.members.find(m => m.id === recipientId);
+      const payer = group.members.find((m) => m.id === payerId);
+      const recipient = group.members.find((m) => m.id === recipientId);
 
-      const transferDescription = description.trim() ||
+      const transferDescription =
+        description.trim() ||
         `Transfer from ${payer?.name} to ${recipient?.name}`;
 
-      const shareData = [{
-        memberId: recipientId,
-        shareAmountScaled: totalScaled,
-        shareInMainScaled: totalInMainScaled,
-      }];
+      const shareData = [
+        {
+          memberId: recipientId,
+          shareAmountScaled: totalScaled,
+          shareInMainScaled: totalInMainScaled,
+        },
+      ];
 
       const updated = await updateExpense(
         expense.id,
@@ -143,7 +162,7 @@ export default function EditTransferScreen() {
         rate.rateScaled,
         totalInMainScaled,
         shareData,
-        'equal'
+        'equal',
       );
 
       if (updated) {
@@ -179,7 +198,7 @@ export default function EditTransferScreen() {
             }
           },
         },
-      ]
+      ],
     );
   };
 
@@ -194,7 +213,10 @@ export default function EditTransferScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.closeButton}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.closeButton}
+        >
           <X color="#111827" size={24} />
         </TouchableOpacity>
         <Text style={styles.title}>Edit Transfer</Text>
@@ -206,108 +228,129 @@ export default function EditTransferScreen() {
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}>
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      >
         <ScrollView
           style={styles.content}
           contentContainerStyle={styles.contentContainer}
           keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={true}>
+          showsVerticalScrollIndicator={true}
+        >
           <View style={styles.section}>
             <Text style={styles.label}>Amount *</Text>
-          <TextInput
-            style={styles.input}
-            value={amount}
-            onChangeText={text => setAmount(validateDecimalInput(text))}
-            placeholder="0.00"
-            placeholderTextColor="#9ca3af"
-            keyboardType="decimal-pad"
-          />
-        </View>
+            <TextInput
+              style={styles.input}
+              value={amount}
+              onChangeText={(text) => setAmount(validateDecimalInput(text))}
+              placeholder="0.00"
+              placeholderTextColor="#9ca3af"
+              keyboardType="decimal-pad"
+            />
+          </View>
 
-        <View style={styles.section}>
-          <Text style={styles.label}>Currency *</Text>
-          <TouchableOpacity
-            style={styles.currencyButton}
-            onPress={() => setShowCurrencyPicker(!showCurrencyPicker)}>
-            <Text style={styles.currencyButtonText}>{currency}</Text>
-          </TouchableOpacity>
-
-          {showCurrencyPicker && (
-            <ScrollView style={styles.currencyList} nestedScrollEnabled>
-              {orderedCurrencies.map(curr => (
-                <TouchableOpacity
-                  key={curr.code}
-                  style={styles.currencyItem}
-                  onPress={() => {
-                    setCurrency(curr.code);
-                    selectCurrency(curr.code);
-                    setShowCurrencyPicker(false);
-                  }}>
-                  <Text style={styles.currencyCode}>{curr.code}</Text>
-                  <Text style={styles.currencyName}>{curr.name}</Text>
-                  {currency === curr.code && <Check color="#2563eb" size={20} />}
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          )}
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.label}>From *</Text>
-          {group.members.map(member => (
+          <View style={styles.section}>
+            <Text style={styles.label}>Currency *</Text>
             <TouchableOpacity
-              key={member.id}
-              style={[styles.optionItem, payerId === member.id && styles.optionItemSelected]}
-              onPress={() => setPayerId(member.id)}>
-              <Text
-                style={[
-                  styles.optionText,
-                  payerId === member.id && styles.optionTextSelected,
-                ]}>
-                {member.name}
-              </Text>
-              {payerId === member.id && <Check color="#2563eb" size={20} />}
+              style={styles.currencyButton}
+              onPress={() => setShowCurrencyPicker(!showCurrencyPicker)}
+            >
+              <Text style={styles.currencyButtonText}>{currency}</Text>
             </TouchableOpacity>
-          ))}
-        </View>
 
-        <View style={styles.section}>
-          <Text style={styles.label}>To *</Text>
-          {group.members.map(member => (
-            <TouchableOpacity
-              key={member.id}
-              style={[styles.optionItem, recipientId === member.id && styles.optionItemSelected]}
-              onPress={() => setRecipientId(member.id)}>
-              <Text
+            {showCurrencyPicker && (
+              <ScrollView style={styles.currencyList} nestedScrollEnabled>
+                {orderedCurrencies.map((curr) => (
+                  <TouchableOpacity
+                    key={curr.code}
+                    style={styles.currencyItem}
+                    onPress={() => {
+                      setCurrency(curr.code);
+                      selectCurrency(curr.code);
+                      setShowCurrencyPicker(false);
+                    }}
+                  >
+                    <Text style={styles.currencyCode}>{curr.code}</Text>
+                    <Text style={styles.currencyName}>{curr.name}</Text>
+                    {currency === curr.code && (
+                      <Check color="#2563eb" size={20} />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            )}
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.label}>From *</Text>
+            {group.members.map((member) => (
+              <TouchableOpacity
+                key={member.id}
                 style={[
-                  styles.optionText,
-                  recipientId === member.id && styles.optionTextSelected,
-                ]}>
-                {member.name}
-              </Text>
-              {recipientId === member.id && <Check color="#2563eb" size={20} />}
-            </TouchableOpacity>
-          ))}
-        </View>
+                  styles.optionItem,
+                  payerId === member.id && styles.optionItemSelected,
+                ]}
+                onPress={() => setPayerId(member.id)}
+              >
+                <Text
+                  style={[
+                    styles.optionText,
+                    payerId === member.id && styles.optionTextSelected,
+                  ]}
+                >
+                  {member.name}
+                </Text>
+                {payerId === member.id && <Check color="#2563eb" size={20} />}
+              </TouchableOpacity>
+            ))}
+          </View>
 
-        <View style={styles.section}>
-          <Text style={styles.label}>Description</Text>
-          <TextInput
-            style={styles.input}
-            value={description}
-            onChangeText={setDescription}
-            placeholder="Optional note"
-            placeholderTextColor="#9ca3af"
-          />
-        </View>
+          <View style={styles.section}>
+            <Text style={styles.label}>To *</Text>
+            {group.members.map((member) => (
+              <TouchableOpacity
+                key={member.id}
+                style={[
+                  styles.optionItem,
+                  recipientId === member.id && styles.optionItemSelected,
+                ]}
+                onPress={() => setRecipientId(member.id)}
+              >
+                <Text
+                  style={[
+                    styles.optionText,
+                    recipientId === member.id && styles.optionTextSelected,
+                  ]}
+                >
+                  {member.name}
+                </Text>
+                {recipientId === member.id && (
+                  <Check color="#2563eb" size={20} />
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.label}>Description</Text>
+            <TextInput
+              style={styles.input}
+              value={description}
+              onChangeText={setDescription}
+              placeholder="Optional note"
+              placeholderTextColor="#9ca3af"
+            />
+          </View>
         </ScrollView>
 
         <View style={styles.footer}>
           <TouchableOpacity
             style={[styles.saveButton, saving && styles.saveButtonDisabled]}
             onPress={handleSave}
-            disabled={saving}>
-            <Text style={styles.saveButtonText}>{saving ? 'Saving...' : 'Save Transfer'}</Text>
+            disabled={saving}
+          >
+            <Text style={styles.saveButtonText}>
+              {saving ? 'Saving...' : 'Save Transfer'}
+            </Text>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>

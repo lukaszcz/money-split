@@ -216,7 +216,12 @@ describe('calculatePercentageSplit', () => {
   it('should split by multiple percentages', () => {
     const total = BigInt(10000);
     const shares = calculatePercentageSplit(total, [25, 25, 25, 25]);
-    expect(shares).toEqual([BigInt(2500), BigInt(2500), BigInt(2500), BigInt(2500)]);
+    expect(shares).toEqual([
+      BigInt(2500),
+      BigInt(2500),
+      BigInt(2500),
+      BigInt(2500),
+    ]);
   });
 
   it('should handle uneven percentages', () => {

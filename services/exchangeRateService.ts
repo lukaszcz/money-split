@@ -13,7 +13,7 @@ export interface ExchangeRate {
 
 export async function getExchangeRate(
   baseCurrency: string,
-  quoteCurrency: string
+  quoteCurrency: string,
 ): Promise<ExchangeRate | null> {
   if (baseCurrency === quoteCurrency) {
     return {
@@ -65,19 +65,17 @@ export async function getExchangeRate(
     const fetchedAt = new Date().toISOString();
 
     try {
-      const { error } = await supabase
-        .from('exchange_rates')
-        .upsert(
-          {
-            base_currency_code: baseCurrency,
-            quote_currency_code: quoteCurrency,
-            rate_scaled: Number(rateScaled),
-            fetched_at: fetchedAt,
-          },
-          {
-            onConflict: 'base_currency_code,quote_currency_code',
-          }
-        );
+      const { error } = await supabase.from('exchange_rates').upsert(
+        {
+          base_currency_code: baseCurrency,
+          quote_currency_code: quoteCurrency,
+          rate_scaled: Number(rateScaled),
+          fetched_at: fetchedAt,
+        },
+        {
+          onConflict: 'base_currency_code,quote_currency_code',
+        },
+      );
 
       if (error) {
         console.error('Failed to cache exchange rate:', error);

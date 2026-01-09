@@ -1,5 +1,9 @@
 import { Expense, GroupMember } from './groupRepository';
-import { assertDefined, assertNoDuplicateIds, assertMemberReferencesExist } from '../utils/validation';
+import {
+  assertDefined,
+  assertNoDuplicateIds,
+  assertMemberReferencesExist,
+} from '../utils/validation';
 
 export interface Settlement {
   from: GroupMember;
@@ -9,7 +13,7 @@ export interface Settlement {
 
 export function computeBalances(
   expenses: Expense[],
-  allMembers: GroupMember[]
+  allMembers: GroupMember[],
 ): Map<string, bigint> {
   assertDefined(expenses, 'expenses');
   assertDefined(allMembers, 'allMembers');
@@ -30,7 +34,10 @@ export function computeBalances(
 
     for (const share of expense.shares) {
       const memberId = share.memberId;
-      balances.set(memberId, (balances.get(memberId) || BigInt(0)) - share.shareInMainScaled);
+      balances.set(
+        memberId,
+        (balances.get(memberId) || BigInt(0)) - share.shareInMainScaled,
+      );
     }
   }
 
@@ -39,7 +46,7 @@ export function computeBalances(
 
 export function computeSettlementsNoSimplify(
   expenses: Expense[],
-  allMembers: GroupMember[]
+  allMembers: GroupMember[],
 ): Settlement[] {
   assertDefined(expenses, 'expenses');
   assertDefined(allMembers, 'allMembers');
@@ -64,7 +71,10 @@ export function computeSettlementsNoSimplify(
 
       const debtKey = debtMap.get(memberId);
       if (debtKey) {
-        debtKey.set(payerId, (debtKey.get(payerId) || BigInt(0)) + share.shareInMainScaled);
+        debtKey.set(
+          payerId,
+          (debtKey.get(payerId) || BigInt(0)) + share.shareInMainScaled,
+        );
       }
     }
   }
@@ -125,7 +135,7 @@ export function computeSettlementsNoSimplify(
 
 export function computeSettlementsSimplified(
   expenses: Expense[],
-  allMembers: GroupMember[]
+  allMembers: GroupMember[],
 ): Settlement[] {
   assertDefined(expenses, 'expenses');
   assertDefined(allMembers, 'allMembers');
@@ -135,8 +145,16 @@ export function computeSettlementsSimplified(
   const balances = computeBalances(expenses, allMembers);
   const memberMap = new Map(allMembers.map((m) => [m.id, m]));
 
-  const debtors: { memberId: string; member: GroupMember; amountOwed: bigint }[] = [];
-  const creditors: { memberId: string; member: GroupMember; amountDue: bigint }[] = [];
+  const debtors: {
+    memberId: string;
+    member: GroupMember;
+    amountOwed: bigint;
+  }[] = [];
+  const creditors: {
+    memberId: string;
+    member: GroupMember;
+    amountDue: bigint;
+  }[] = [];
 
   for (const [memberId, balance] of balances.entries()) {
     const member = memberMap.get(memberId);
@@ -166,7 +184,9 @@ export function computeSettlementsSimplified(
     const creditor = creditors[creditorIdx];
 
     const transferAmount =
-      debtor.amountOwed <= creditor.amountDue ? debtor.amountOwed : creditor.amountDue;
+      debtor.amountOwed <= creditor.amountDue
+        ? debtor.amountOwed
+        : creditor.amountDue;
 
     settlements.push({
       from: debtor.member,
@@ -196,7 +216,7 @@ export interface SimplificationStep {
 
 function computeRawDebts(
   expenses: Expense[],
-  allMembers: GroupMember[]
+  allMembers: GroupMember[],
 ): Settlement[] {
   const debtMap = new Map<string, Map<string, bigint>>();
   const memberMap = new Map(allMembers.map((m) => [m.id, m]));
@@ -214,7 +234,10 @@ function computeRawDebts(
 
       const debtKey = debtMap.get(memberId);
       if (debtKey) {
-        debtKey.set(payerId, (debtKey.get(payerId) || BigInt(0)) + share.shareInMainScaled);
+        debtKey.set(
+          payerId,
+          (debtKey.get(payerId) || BigInt(0)) + share.shareInMainScaled,
+        );
       }
     }
   }
@@ -245,7 +268,7 @@ function computeRawDebts(
 }
 
 function cloneSettlements(settlements: Settlement[]): Settlement[] {
-  return settlements.map(s => ({
+  return settlements.map((s) => ({
     from: s.from,
     to: s.to,
     amountScaled: s.amountScaled,
@@ -258,7 +281,9 @@ interface SimplificationPair {
   type: 'merge' | 'opposite' | 'chain' | 'swap';
 }
 
-function findSimplificationPair(settlements: Settlement[]): SimplificationPair | null {
+function findSimplificationPair(
+  settlements: Settlement[],
+): SimplificationPair | null {
   for (let i = 0; i < settlements.length; i++) {
     for (let j = i + 1; j < settlements.length; j++) {
       const s1 = settlements[i];
@@ -313,7 +338,7 @@ function findSimplificationPair(settlements: Settlement[]): SimplificationPair |
 
 function getResultIndices(
   settlements: Settlement[],
-  pair: SimplificationPair
+  pair: SimplificationPair,
 ): number[] {
   const { firstIdx, secondIdx, type } = pair;
   const first = settlements[firstIdx];
@@ -344,12 +369,14 @@ function getResultIndices(
 
 function applySimplification(
   settlements: Settlement[],
-  pair: SimplificationPair
+  pair: SimplificationPair,
 ): [Settlement[], number[]] {
   const { firstIdx, secondIdx, type } = pair;
   const first = settlements[firstIdx];
   const second = settlements[secondIdx];
-  const newSettlements = settlements.filter((_, idx) => idx !== firstIdx && idx !== secondIdx);
+  const newSettlements = settlements.filter(
+    (_, idx) => idx !== firstIdx && idx !== secondIdx,
+  );
   const resultIndices = getResultIndices(settlements, pair);
 
   if (type === 'merge') {
@@ -375,9 +402,10 @@ function applySimplification(
       });
     }
   } else if (type === 'chain') {
-    const transferAmount = first.amountScaled < second.amountScaled
-      ? first.amountScaled
-      : second.amountScaled;
+    const transferAmount =
+      first.amountScaled < second.amountScaled
+        ? first.amountScaled
+        : second.amountScaled;
 
     const remainingFirst = first.amountScaled - transferAmount;
     const remainingSecond = second.amountScaled - transferAmount;
@@ -457,7 +485,7 @@ function applySimplification(
 
 export function computeSimplificationSteps(
   expenses: Expense[],
-  allMembers: GroupMember[]
+  allMembers: GroupMember[],
 ): SimplificationStep[] {
   assertDefined(expenses, 'expenses');
   assertDefined(allMembers, 'allMembers');
@@ -482,7 +510,10 @@ export function computeSimplificationSteps(
       resultIndices: [],
     });
 
-    const [newSettlements, resultIndices] = applySimplification(currentSettlements, pair);
+    const [newSettlements, resultIndices] = applySimplification(
+      currentSettlements,
+      pair,
+    );
 
     steps.push({
       settlements: cloneSettlements(newSettlements),

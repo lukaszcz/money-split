@@ -24,17 +24,23 @@ export interface IntegrationTestConfig {
 export const TEST_CONFIG: IntegrationTestConfig = {
   // Default to Kong/PostgREST API port (54321), not Postgres port (54322)
   supabaseUrl: process.env.TEST_SUPABASE_URL || 'http://localhost:54321',
-  supabaseAnonKey: process.env.TEST_SUPABASE_ANON_KEY ||
+  supabaseAnonKey:
+    process.env.TEST_SUPABASE_ANON_KEY ||
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0',
-  supabaseServiceKey: process.env.TEST_SUPABASE_SERVICE_KEY ||
+  supabaseServiceKey:
+    process.env.TEST_SUPABASE_SERVICE_KEY ||
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU',
 };
 
 /**
  * Create a Supabase client for integration testing
  */
-export function createIntegrationTestClient(useServiceKey = false): SupabaseClient {
-  const key = useServiceKey ? TEST_CONFIG.supabaseServiceKey : TEST_CONFIG.supabaseAnonKey;
+export function createIntegrationTestClient(
+  useServiceKey = false,
+): SupabaseClient {
+  const key = useServiceKey
+    ? TEST_CONFIG.supabaseServiceKey
+    : TEST_CONFIG.supabaseAnonKey;
   return createClient(TEST_CONFIG.supabaseUrl, key);
 }
 
@@ -43,11 +49,26 @@ export function createIntegrationTestClient(useServiceKey = false): SupabaseClie
  */
 export async function cleanupTestData(client: SupabaseClient): Promise<void> {
   // Delete in reverse order of foreign key dependencies
-  await client.from('expense_shares').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-  await client.from('expenses').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-  await client.from('group_members').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-  await client.from('groups').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-  await client.from('users').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+  await client
+    .from('expense_shares')
+    .delete()
+    .neq('id', '00000000-0000-0000-0000-000000000000');
+  await client
+    .from('expenses')
+    .delete()
+    .neq('id', '00000000-0000-0000-0000-000000000000');
+  await client
+    .from('group_members')
+    .delete()
+    .neq('id', '00000000-0000-0000-0000-000000000000');
+  await client
+    .from('groups')
+    .delete()
+    .neq('id', '00000000-0000-0000-0000-000000000000');
+  await client
+    .from('users')
+    .delete()
+    .neq('id', '00000000-0000-0000-0000-000000000000');
 }
 
 /**
@@ -55,7 +76,7 @@ export async function cleanupTestData(client: SupabaseClient): Promise<void> {
  */
 export async function waitForSupabase(
   maxAttempts = 30,
-  interval = 1000
+  interval = 1000,
 ): Promise<boolean> {
   const client = createIntegrationTestClient();
 
@@ -68,7 +89,7 @@ export async function waitForSupabase(
     } catch (err) {
       // Ignore connection errors
     }
-    await new Promise(resolve => setTimeout(resolve, interval));
+    await new Promise((resolve) => setTimeout(resolve, interval));
   }
 
   return false;
@@ -80,7 +101,7 @@ export async function waitForSupabase(
 export async function createTestUser(
   client: SupabaseClient,
   email: string,
-  password: string
+  password: string,
 ): Promise<{ userId: string; email: string }> {
   const { data, error } = await client.auth.signUp({
     email,
@@ -102,7 +123,7 @@ export async function createTestUser(
 export async function signInTestUser(
   client: SupabaseClient,
   email: string,
-  password: string
+  password: string,
 ): Promise<string> {
   const { data, error } = await client.auth.signInWithPassword({
     email,
@@ -155,8 +176,11 @@ export class IntegrationTestHelper {
 
       // Delete expense shares for those expenses
       if (expenses && expenses.length > 0) {
-        const expenseIds = expenses.map(e => e.id);
-        await this.client.from('expense_shares').delete().in('expense_id', expenseIds);
+        const expenseIds = expenses.map((e) => e.id);
+        await this.client
+          .from('expense_shares')
+          .delete()
+          .in('expense_id', expenseIds);
       }
 
       // Now delete expenses, members, and the group

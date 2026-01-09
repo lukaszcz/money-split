@@ -36,25 +36,25 @@ export async function recordGroupVisit(groupId: string): Promise<void> {
   const currentOrder = await getGroupPreferences();
   const newOrder = [groupId, ...currentOrder.filter((id) => id !== groupId)];
 
-  const { error } = await supabase
-    .from('user_group_preferences')
-    .upsert(
-      {
-        user_id: user.id,
-        group_order: newOrder,
-        updated_at: new Date().toISOString(),
-      },
-      {
-        onConflict: 'user_id',
-      }
-    );
+  const { error } = await supabase.from('user_group_preferences').upsert(
+    {
+      user_id: user.id,
+      group_order: newOrder,
+      updated_at: new Date().toISOString(),
+    },
+    {
+      onConflict: 'user_id',
+    },
+  );
 
   if (error) {
     console.error('Error recording group visit:', error);
   }
 }
 
-export async function cleanupGroupPreferences(validGroupIds: string[]): Promise<void> {
+export async function cleanupGroupPreferences(
+  validGroupIds: string[],
+): Promise<void> {
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -81,7 +81,9 @@ export async function cleanupGroupPreferences(validGroupIds: string[]): Promise<
   }
 }
 
-export async function getOrderedGroups(groups: GroupWithMembers[]): Promise<GroupWithMembers[]> {
+export async function getOrderedGroups(
+  groups: GroupWithMembers[],
+): Promise<GroupWithMembers[]> {
   if (groups.length === 0) {
     return [];
   }
@@ -97,7 +99,10 @@ export async function getOrderedGroups(groups: GroupWithMembers[]): Promise<Grou
 
   const newGroups = groups
     .filter((g) => !groupOrder.includes(g.id))
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
 
   if (newGroups.length > 0) {
     const newGroupIds = newGroups.map((g) => g.id);
@@ -108,18 +113,16 @@ export async function getOrderedGroups(groups: GroupWithMembers[]): Promise<Grou
     } = await supabase.auth.getUser();
 
     if (user) {
-      await supabase
-        .from('user_group_preferences')
-        .upsert(
-          {
-            user_id: user.id,
-            group_order: updatedOrder,
-            updated_at: new Date().toISOString(),
-          },
-          {
-            onConflict: 'user_id',
-          }
-        );
+      await supabase.from('user_group_preferences').upsert(
+        {
+          user_id: user.id,
+          group_order: updatedOrder,
+          updated_at: new Date().toISOString(),
+        },
+        {
+          onConflict: 'user_id',
+        },
+      );
     }
   }
 

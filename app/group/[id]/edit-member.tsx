@@ -1,4 +1,14 @@
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useEffect, useCallback } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -53,7 +63,12 @@ export default function EditMemberScreen() {
       return;
     }
 
-    if (!id || typeof id !== 'string' || !memberId || typeof memberId !== 'string') {
+    if (
+      !id ||
+      typeof id !== 'string' ||
+      !memberId ||
+      typeof memberId !== 'string'
+    ) {
       Alert.alert('Error', 'Invalid group or member');
       return;
     }
@@ -97,7 +112,12 @@ export default function EditMemberScreen() {
         return;
       }
 
-      const updatedMember = await updateGroupMember(memberId, memberName, memberEmail, connectedUserId);
+      const updatedMember = await updateGroupMember(
+        memberId,
+        memberName,
+        memberEmail,
+        connectedUserId,
+      );
 
       if (updatedMember) {
         router.back();
@@ -116,7 +136,10 @@ export default function EditMemberScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.backButton}
+          >
             <ArrowLeft color="#111827" size={24} />
           </TouchableOpacity>
           <Text style={styles.title}>Loading...</Text>
@@ -129,7 +152,10 @@ export default function EditMemberScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.backButton}
+        >
           <ArrowLeft color="#111827" size={24} />
         </TouchableOpacity>
         <Text style={styles.title}>Edit Member</Text>
@@ -139,19 +165,21 @@ export default function EditMemberScreen() {
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}>
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      >
         <ScrollView
           style={styles.content}
           contentContainerStyle={styles.contentContainer}
           keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={true}>
+          showsVerticalScrollIndicator={true}
+        >
           <View style={styles.section}>
             <Text style={styles.label}>Name</Text>
             <TextInput
               style={styles.input}
               value={name}
               onChangeText={setName}
-              onBlur={() => setName(nm => nm.trim())}
+              onBlur={() => setName((nm) => nm.trim())}
               placeholder="Member name"
               placeholderTextColor="#9ca3af"
             />
@@ -163,26 +191,33 @@ export default function EditMemberScreen() {
               style={styles.input}
               value={email}
               onChangeText={setEmail}
-              onBlur={() => setEmail(em => em.trim())}
+              onBlur={() => setEmail((em) => em.trim())}
               placeholder="member@example.com"
               placeholderTextColor="#9ca3af"
               keyboardType="email-address"
               autoCapitalize="none"
             />
             <Text style={styles.hint}>
-              Changing the email will disconnect this member and reconnect them with the new email. If
-              the new email matches an existing user, they will be connected automatically. Otherwise,
-              an invitation will be sent.
+              Changing the email will disconnect this member and reconnect them
+              with the new email. If the new email matches an existing user,
+              they will be connected automatically. Otherwise, an invitation
+              will be sent.
             </Text>
           </View>
         </ScrollView>
 
         <View style={styles.footer}>
           <TouchableOpacity
-            style={[styles.updateButton, loading && styles.updateButtonDisabled]}
+            style={[
+              styles.updateButton,
+              loading && styles.updateButtonDisabled,
+            ]}
             onPress={handleUpdateMember}
-            disabled={loading}>
-            <Text style={styles.updateButtonText}>{loading ? 'Updating...' : 'Update Member'}</Text>
+            disabled={loading}
+          >
+            <Text style={styles.updateButtonText}>
+              {loading ? 'Updating...' : 'Update Member'}
+            </Text>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>

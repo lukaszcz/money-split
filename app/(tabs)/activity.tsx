@@ -2,7 +2,12 @@ import { View, Text, FlatList, StyleSheet, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { getAllGroups, getGroupExpenses, getGroupMember, Expense } from '../../services/groupRepository';
+import {
+  getAllGroups,
+  getGroupExpenses,
+  getGroupMember,
+  Expense,
+} from '../../services/groupRepository';
 import { formatNumber } from '../../utils/money';
 
 interface ActivityItem extends Expense {
@@ -32,7 +37,9 @@ export default function ActivityScreen() {
       }
     }
 
-    allActivities.sort((a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime());
+    allActivities.sort(
+      (a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime(),
+    );
 
     setActivities(allActivities);
     setLoading(false);
@@ -42,7 +49,7 @@ export default function ActivityScreen() {
   useFocusEffect(
     useCallback(() => {
       loadActivities();
-    }, [loadActivities])
+    }, [loadActivities]),
   );
 
   const onRefresh = () => {
@@ -98,9 +105,11 @@ export default function ActivityScreen() {
         <FlatList
           data={activities}
           renderItem={renderActivityItem}
-          keyExtractor={item => item.id}
+          keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
         />
       )}
     </SafeAreaView>

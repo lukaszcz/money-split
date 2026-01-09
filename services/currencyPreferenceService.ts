@@ -8,33 +8,33 @@ const LOCALE_TO_CURRENCY: Record<string, string> = {
   'en-CA': 'CAD',
   'en-AU': 'AUD',
   'en-NZ': 'NZD',
-  'de': 'EUR',
-  'fr': 'EUR',
-  'es': 'EUR',
-  'it': 'EUR',
-  'nl': 'EUR',
+  de: 'EUR',
+  fr: 'EUR',
+  es: 'EUR',
+  it: 'EUR',
+  nl: 'EUR',
   'pt-BR': 'BRL',
-  'pt': 'EUR',
-  'ja': 'JPY',
+  pt: 'EUR',
+  ja: 'JPY',
   'zh-CN': 'CNY',
   'zh-HK': 'HKD',
   'zh-TW': 'TWD',
-  'ko': 'KRW',
-  'pl': 'PLN',
-  'ru': 'RUB',
-  'tr': 'TRY',
-  'ar': 'SAR',
-  'th': 'THB',
-  'vi': 'VND',
-  'id': 'IDR',
-  'ms': 'MYR',
-  'sv': 'SEK',
-  'no': 'NOK',
-  'da': 'DKK',
-  'fi': 'EUR',
-  'cs': 'CZK',
-  'he': 'ILS',
-  'hi': 'INR',
+  ko: 'KRW',
+  pl: 'PLN',
+  ru: 'RUB',
+  tr: 'TRY',
+  ar: 'SAR',
+  th: 'THB',
+  vi: 'VND',
+  id: 'IDR',
+  ms: 'MYR',
+  sv: 'SEK',
+  no: 'NOK',
+  da: 'DKK',
+  fi: 'EUR',
+  cs: 'CZK',
+  he: 'ILS',
+  hi: 'INR',
 };
 
 function getLocaleCurrency(): string {
@@ -65,10 +65,12 @@ function getLocaleCurrency(): string {
 }
 
 export async function getUserCurrencyOrder(): Promise<string[]> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   if (!user) {
-    return CURRENCIES.map(c => c.code);
+    return CURRENCIES.map((c) => c.code);
   }
 
   const { data, error } = await supabase
@@ -79,14 +81,14 @@ export async function getUserCurrencyOrder(): Promise<string[]> {
 
   if (error) {
     console.error('Error fetching currency preferences:', error);
-    return CURRENCIES.map(c => c.code);
+    return CURRENCIES.map((c) => c.code);
   }
 
   if (!data || !data.currency_order || data.currency_order.length === 0) {
     const localeCurrency = getLocaleCurrency();
     const initialOrder = [
       localeCurrency,
-      ...CURRENCIES.filter(c => c.code !== localeCurrency).map(c => c.code)
+      ...CURRENCIES.filter((c) => c.code !== localeCurrency).map((c) => c.code),
     ];
 
     await saveCurrencyOrder(initialOrder);
@@ -94,14 +96,18 @@ export async function getUserCurrencyOrder(): Promise<string[]> {
   }
 
   const savedCodes = data.currency_order as string[];
-  const allCodes = CURRENCIES.map(c => c.code);
-  const missingCodes = allCodes.filter(code => !savedCodes.includes(code));
+  const allCodes = CURRENCIES.map((c) => c.code);
+  const missingCodes = allCodes.filter((code) => !savedCodes.includes(code));
 
   return [...savedCodes, ...missingCodes];
 }
 
-export async function updateCurrencyOrder(selectedCurrency: string): Promise<void> {
-  const { data: { user } } = await supabase.auth.getUser();
+export async function updateCurrencyOrder(
+  selectedCurrency: string,
+): Promise<void> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   if (!user) {
     return;
@@ -109,14 +115,18 @@ export async function updateCurrencyOrder(selectedCurrency: string): Promise<voi
 
   const currentOrder = await getUserCurrencyOrder();
 
-  const filteredOrder = currentOrder.filter(code => code !== selectedCurrency);
+  const filteredOrder = currentOrder.filter(
+    (code) => code !== selectedCurrency,
+  );
   const newOrder = [selectedCurrency, ...filteredOrder];
 
   await saveCurrencyOrder(newOrder);
 }
 
 async function saveCurrencyOrder(currencyOrder: string[]): Promise<void> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   if (!user) {
     return;
@@ -141,12 +151,10 @@ async function saveCurrencyOrder(currencyOrder: string[]): Promise<void> {
       console.error('Error updating currency preferences:', error);
     }
   } else {
-    const { error } = await supabase
-      .from('user_currency_preferences')
-      .insert({
-        user_id: user.id,
-        currency_order: currencyOrder,
-      });
+    const { error } = await supabase.from('user_currency_preferences').insert({
+      user_id: user.id,
+      currency_order: currencyOrder,
+    });
 
     if (error) {
       console.error('Error inserting currency preferences:', error);
@@ -154,7 +162,9 @@ async function saveCurrencyOrder(currencyOrder: string[]): Promise<void> {
   }
 }
 
-export async function ensureGroupCurrencyInOrder(groupCurrency: string): Promise<void> {
+export async function ensureGroupCurrencyInOrder(
+  groupCurrency: string,
+): Promise<void> {
   const currentOrder = await getUserCurrencyOrder();
 
   if (currentOrder[0] !== groupCurrency) {

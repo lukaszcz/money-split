@@ -1,4 +1,11 @@
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+  Alert,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useCallback, useEffect } from 'react';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
@@ -43,7 +50,7 @@ export default function GroupDetailScreen() {
   useFocusEffect(
     useCallback(() => {
       loadData();
-    }, [loadData])
+    }, [loadData]),
   );
 
   if (loading || !group) {
@@ -93,14 +100,17 @@ export default function GroupDetailScreen() {
             }
           },
         },
-      ]
+      ],
     );
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.backButton}
+        >
           <ArrowLeft color="#111827" size={24} />
         </TouchableOpacity>
         <View style={styles.headerInfo}>
@@ -108,7 +118,10 @@ export default function GroupDetailScreen() {
           <Text style={styles.headerSubtitle}>{group.mainCurrencyCode}</Text>
         </View>
         <View style={styles.headerActions}>
-          <TouchableOpacity style={styles.deleteButton} onPress={handleLeaveGroup}>
+          <TouchableOpacity
+            style={styles.deleteButton}
+            onPress={handleLeaveGroup}
+          >
             <Trash2 color="#dc2626" size={20} />
           </TouchableOpacity>
           {(activeTab === 'payments' || activeTab === 'members') && (
@@ -122,29 +135,53 @@ export default function GroupDetailScreen() {
       <View style={styles.tabs}>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'payments' && styles.tabActive]}
-          onPress={() => setActiveTab('payments')}>
-          <Text style={[styles.tabText, activeTab === 'payments' && styles.tabTextActive]}>
+          onPress={() => setActiveTab('payments')}
+        >
+          <Text
+            style={[
+              styles.tabText,
+              activeTab === 'payments' && styles.tabTextActive,
+            ]}
+          >
             Payments
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'balances' && styles.tabActive]}
-          onPress={() => setActiveTab('balances')}>
-          <Text style={[styles.tabText, activeTab === 'balances' && styles.tabTextActive]}>
+          onPress={() => setActiveTab('balances')}
+        >
+          <Text
+            style={[
+              styles.tabText,
+              activeTab === 'balances' && styles.tabTextActive,
+            ]}
+          >
             Balances
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'members' && styles.tabActive]}
-          onPress={() => setActiveTab('members')}>
-          <Text style={[styles.tabText, activeTab === 'members' && styles.tabTextActive]}>
+          onPress={() => setActiveTab('members')}
+        >
+          <Text
+            style={[
+              styles.tabText,
+              activeTab === 'members' && styles.tabTextActive,
+            ]}
+          >
             Members
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'settle' && styles.tabActive]}
-          onPress={() => setActiveTab('settle')}>
-          <Text style={[styles.tabText, activeTab === 'settle' && styles.tabTextActive]}>
+          onPress={() => setActiveTab('settle')}
+        >
+          <Text
+            style={[
+              styles.tabText,
+              activeTab === 'settle' && styles.tabTextActive,
+            ]}
+          >
             Settle
           </Text>
         </TouchableOpacity>
@@ -155,11 +192,23 @@ export default function GroupDetailScreen() {
           <ExpensesTab expenses={expenses} group={group} reload={loadData} />
         )}
         {activeTab === 'balances' && (
-          <BalancesTab balances={balances} members={group.members} currencySymbol={currencySymbol} />
+          <BalancesTab
+            balances={balances}
+            members={group.members}
+            currencySymbol={currencySymbol}
+          />
         )}
-        {activeTab === 'members' && <MembersTab members={group.members} groupId={group.id} />}
+        {activeTab === 'members' && (
+          <MembersTab members={group.members} groupId={group.id} />
+        )}
         {activeTab === 'settle' && (
-          <SettleTab expenses={expenses} members={group.members} currencySymbol={currencySymbol} groupId={group.id} balances={balances} />
+          <SettleTab
+            expenses={expenses}
+            members={group.members}
+            currencySymbol={currencySymbol}
+            groupId={group.id}
+            balances={balances}
+          />
         )}
       </ScrollView>
     </SafeAreaView>
@@ -176,7 +225,9 @@ function ExpensesTab({
 }) {
   const router = useRouter();
   const memberMap = new Map(group.members.map((m) => [m.id, m]));
-  const [convertedAmounts, setConvertedAmounts] = useState<Map<string, bigint>>(new Map());
+  const [convertedAmounts, setConvertedAmounts] = useState<Map<string, bigint>>(
+    new Map(),
+  );
   const groupCurrencySymbol = getCurrencySymbol(group.mainCurrencyCode);
 
   useEffect(() => {
@@ -185,9 +236,15 @@ function ExpensesTab({
 
       for (const expense of expenses) {
         if (expense.currencyCode !== group.mainCurrencyCode) {
-          const rate = await getExchangeRate(expense.currencyCode, group.mainCurrencyCode);
+          const rate = await getExchangeRate(
+            expense.currencyCode,
+            group.mainCurrencyCode,
+          );
           if (rate) {
-            const converted = multiplyScaled(expense.totalAmountScaled, rate.rateScaled);
+            const converted = multiplyScaled(
+              expense.totalAmountScaled,
+              rate.rateScaled,
+            );
             conversions.set(expense.id, converted);
           }
         }
@@ -205,7 +262,9 @@ function ExpensesTab({
     return (
       <View style={styles.emptyState}>
         <Text style={styles.emptyText}>No expenses yet</Text>
-        <Text style={styles.emptySubtext}>Add your first expense to get started</Text>
+        <Text style={styles.emptySubtext}>
+          Add your first expense to get started
+        </Text>
       </View>
     );
   }
@@ -215,7 +274,8 @@ function ExpensesTab({
       {expenses.map((expense) => {
         const payer = memberMap.get(expense.payerMemberId);
         const convertedAmount = convertedAmounts.get(expense.id);
-        const showConversion = expense.currencyCode !== group.mainCurrencyCode && convertedAmount;
+        const showConversion =
+          expense.currencyCode !== group.mainCurrencyCode && convertedAmount;
         const isTransfer = expense.paymentType === 'transfer';
         const editRoute = isTransfer
           ? `/group/${group.id}/edit-transfer?expenseId=${expense.id}`
@@ -225,21 +285,28 @@ function ExpensesTab({
           <TouchableOpacity
             key={expense.id}
             style={styles.expenseCard}
-            onPress={() => router.push(editRoute as any)}>
+            onPress={() => router.push(editRoute as any)}
+          >
             <View style={styles.expenseHeader}>
-              <Text style={styles.expenseDescription}>{expense.description || 'Expense'}</Text>
+              <Text style={styles.expenseDescription}>
+                {expense.description || 'Expense'}
+              </Text>
               <View style={styles.expenseAmountContainer}>
                 <Text style={styles.expenseAmount}>
-                  {expense.currencyCode} {formatNumber(expense.totalAmountScaled)}
+                  {expense.currencyCode}{' '}
+                  {formatNumber(expense.totalAmountScaled)}
                 </Text>
                 {showConversion && (
                   <Text style={styles.expenseConverted}>
-                    ({groupCurrencySymbol}{formatNumber(convertedAmount)})
+                    ({groupCurrencySymbol}
+                    {formatNumber(convertedAmount)})
                   </Text>
                 )}
               </View>
             </View>
-            <Text style={styles.expenseDetails}>Paid by {payer?.name || 'Unknown'}</Text>
+            <Text style={styles.expenseDetails}>
+              Paid by {payer?.name || 'Unknown'}
+            </Text>
             <Text style={styles.expenseDate}>
               {new Date(expense.createdAt).toLocaleDateString()}
             </Text>
@@ -274,7 +341,8 @@ function BalancesTab({
                 styles.balanceAmount,
                 isPositive && styles.balancePositive,
                 !isPositive && !isZero && styles.balanceNegative,
-              ]}>
+              ]}
+            >
               {isPositive ? '+' : balance < BigInt(0) ? '-' : ''}
               {currencySymbol}
               {formatNumber(balance < BigInt(0) ? -balance : balance)}
@@ -286,7 +354,13 @@ function BalancesTab({
   );
 }
 
-function MembersTab({ members, groupId }: { members: GroupMember[]; groupId: string }) {
+function MembersTab({
+  members,
+  groupId,
+}: {
+  members: GroupMember[];
+  groupId: string;
+}) {
   const router = useRouter();
 
   return (
@@ -295,9 +369,17 @@ function MembersTab({ members, groupId }: { members: GroupMember[]; groupId: str
         <TouchableOpacity
           key={member.id}
           style={styles.memberCard}
-          onPress={() => router.push(`/group/${groupId}/edit-member?memberId=${member.id}` as any)}>
+          onPress={() =>
+            router.push(
+              `/group/${groupId}/edit-member?memberId=${member.id}` as any,
+            )
+          }
+        >
           <View style={styles.memberIcon}>
-            <User color={member.connectedUserId ? '#2563eb' : '#6b7280'} size={20} />
+            <User
+              color={member.connectedUserId ? '#2563eb' : '#6b7280'}
+              size={20}
+            />
           </View>
           <View style={styles.memberInfo}>
             <Text style={styles.memberName}>{member.name}</Text>
@@ -320,7 +402,9 @@ function MembersTab({ members, groupId }: { members: GroupMember[]; groupId: str
       {members.length === 0 && (
         <View style={styles.emptyState}>
           <Text style={styles.emptyText}>No members yet</Text>
-          <Text style={styles.emptySubtext}>Add members to start splitting expenses</Text>
+          <Text style={styles.emptySubtext}>
+            Add members to start splitting expenses
+          </Text>
         </View>
       )}
     </View>
@@ -339,7 +423,9 @@ function SettleTab({
 }) {
   const router = useRouter();
 
-  const hasNonZeroBalances = Array.from(balances.values()).some((balance) => balance !== 0n);
+  const hasNonZeroBalances = Array.from(balances.values()).some(
+    (balance) => balance !== 0n,
+  );
 
   if (!hasNonZeroBalances) {
     return (
@@ -356,7 +442,8 @@ function SettleTab({
         style={styles.settleButton}
         onPress={() => {
           router.push(`/group/${groupId}/settle` as any);
-        }}>
+        }}
+      >
         <Text style={styles.settleButtonText}>Compute Settlements</Text>
       </TouchableOpacity>
 
@@ -364,8 +451,9 @@ function SettleTab({
         Tap above to see who should pay whom.
       </Text>
 
-      <Text style={[styles.settleInfo, {marginTop: 12}]}>
-        You{"'"}ll have the option to simplify debts. Simplifying reduces the number of transfers, but may change who pays whom.
+      <Text style={[styles.settleInfo, { marginTop: 12 }]}>
+        You{"'"}ll have the option to simplify debts. Simplifying reduces the
+        number of transfers, but may change who pays whom.
       </Text>
     </View>
   );

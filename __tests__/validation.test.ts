@@ -39,13 +39,19 @@ describe('utils/validation - assertDefined', () => {
   it('should throw for null', () => {
     const { assertDefined } = require('../utils/validation');
     expect(() => assertDefined(null, 'testField')).toThrow(ValidationError);
-    expect(() => assertDefined(null, 'testField')).toThrowError(/cannot be null or undefined/);
+    expect(() => assertDefined(null, 'testField')).toThrowError(
+      /cannot be null or undefined/,
+    );
   });
 
   it('should throw for undefined', () => {
     const { assertDefined } = require('../utils/validation');
-    expect(() => assertDefined(undefined, 'testField')).toThrow(ValidationError);
-    expect(() => assertDefined(undefined, 'testField')).toThrowError(/cannot be null or undefined/);
+    expect(() => assertDefined(undefined, 'testField')).toThrow(
+      ValidationError,
+    );
+    expect(() => assertDefined(undefined, 'testField')).toThrowError(
+      /cannot be null or undefined/,
+    );
   });
 });
 
@@ -65,8 +71,12 @@ describe('utils/validation - assertNoDuplicateIds', () => {
       { id: 'm1', name: 'Alice' },
       { id: 'm1', name: 'Bob' },
     ];
-    expect(() => assertNoDuplicateIds(items, 'member')).toThrow(ValidationError);
-    expect(() => assertNoDuplicateIds(items, 'member')).toThrowError(/Duplicate member id: m1/);
+    expect(() => assertNoDuplicateIds(items, 'member')).toThrow(
+      ValidationError,
+    );
+    expect(() => assertNoDuplicateIds(items, 'member')).toThrowError(
+      /Duplicate member id: m1/,
+    );
   });
 });
 
@@ -80,13 +90,19 @@ describe('utils/validation - assertPositiveNumber', () => {
   it('should throw for NaN', () => {
     const { assertPositiveNumber } = require('../utils/validation');
     expect(() => assertPositiveNumber(NaN, 'test')).toThrow(ValidationError);
-    expect(() => assertPositiveNumber(NaN, 'test')).toThrowError(/must be a valid number/);
+    expect(() => assertPositiveNumber(NaN, 'test')).toThrowError(
+      /must be a valid number/,
+    );
   });
 
   it('should throw for Infinity', () => {
     const { assertPositiveNumber } = require('../utils/validation');
-    expect(() => assertPositiveNumber(Infinity, 'test')).toThrow(ValidationError);
-    expect(() => assertPositiveNumber(Infinity, 'test')).toThrowError(/must be a valid number/);
+    expect(() => assertPositiveNumber(Infinity, 'test')).toThrow(
+      ValidationError,
+    );
+    expect(() => assertPositiveNumber(Infinity, 'test')).toThrowError(
+      /must be a valid number/,
+    );
   });
 
   it('should throw for negative numbers', () => {
@@ -105,7 +121,9 @@ describe('utils/validation - assertNonNegativeNumber', () => {
   it('should throw for negative numbers', () => {
     const { assertNonNegativeNumber } = require('../utils/validation');
     expect(() => assertNonNegativeNumber(-1, 'test')).toThrow(ValidationError);
-    expect(() => assertNonNegativeNumber(-1, 'test')).toThrowError(/cannot be negative/);
+    expect(() => assertNonNegativeNumber(-1, 'test')).toThrowError(
+      /cannot be negative/,
+    );
   });
 });
 
@@ -139,7 +157,9 @@ describe('utils/validation - assertPercentage', () => {
   it('should throw for percentages > 100', () => {
     const { assertPercentage } = require('../utils/validation');
     expect(() => assertPercentage(101, 'test')).toThrow(ValidationError);
-    expect(() => assertPercentage(101, 'test')).toThrowError(/must be between 0 and 100/);
+    expect(() => assertPercentage(101, 'test')).toThrowError(
+      /must be between 0 and 100/,
+    );
   });
 });
 
@@ -167,13 +187,17 @@ describe('utils/validation - assertNonEmptyString', () => {
   it('should throw for empty string', () => {
     const { assertNonEmptyString } = require('../utils/validation');
     expect(() => assertNonEmptyString('', 'field')).toThrow(ValidationError);
-    expect(() => assertNonEmptyString('', 'field')).toThrowError(/cannot be empty/);
+    expect(() => assertNonEmptyString('', 'field')).toThrowError(
+      /cannot be empty/,
+    );
   });
 
   it('should throw for whitespace-only string', () => {
     const { assertNonEmptyString } = require('../utils/validation');
     expect(() => assertNonEmptyString('   ', 'field')).toThrow(ValidationError);
-    expect(() => assertNonEmptyString('   ', 'field')).toThrowError(/cannot be empty/);
+    expect(() => assertNonEmptyString('   ', 'field')).toThrowError(
+      /cannot be empty/,
+    );
   });
 });
 
@@ -190,74 +214,93 @@ describe('settlementService validation', () => {
   });
 
   it('should throw for undefined members in computeBalances', () => {
-    expect(() => computeBalances([], undefined as any)).toThrow(ValidationError);
+    expect(() => computeBalances([], undefined as any)).toThrow(
+      ValidationError,
+    );
   });
 
   it('should throw for duplicate member IDs in computeBalances', () => {
-    const members = [
-      createMember('m1', 'Alice'),
-      createMember('m1', 'Bob'),
-    ];
+    const members = [createMember('m1', 'Alice'), createMember('m1', 'Bob')];
     expect(() => computeBalances([], members)).toThrow(ValidationError);
   });
 
   it('should throw for expense referencing non-existent payer', () => {
     const members = [createMember('m1', 'Alice')];
-    const expenses: Expense[] = [{
-      id: 'e1',
-      groupId: 'group-1',
-      description: 'Test',
-      dateTime: new Date().toISOString(),
-      currencyCode: 'USD',
-      totalAmountScaled: BigInt(100000),
-      payerMemberId: 'm2',
-      exchangeRateToMainScaled: BigInt(10000),
-      totalInMainScaled: BigInt(100000),
-      createdAt: new Date().toISOString(),
-      shares: [],
-      paymentType: 'expense',
-      splitType: 'equal'
-    }];
+    const expenses: Expense[] = [
+      {
+        id: 'e1',
+        groupId: 'group-1',
+        description: 'Test',
+        dateTime: new Date().toISOString(),
+        currencyCode: 'USD',
+        totalAmountScaled: BigInt(100000),
+        payerMemberId: 'm2',
+        exchangeRateToMainScaled: BigInt(10000),
+        totalInMainScaled: BigInt(100000),
+        createdAt: new Date().toISOString(),
+        shares: [],
+        paymentType: 'expense',
+        splitType: 'equal',
+      },
+    ];
     expect(() => computeBalances(expenses, members)).toThrow(ValidationError);
   });
 
   it('should throw for expense share referencing non-existent member', () => {
     const members = [createMember('m1', 'Alice')];
-    const expenses: Expense[] = [{
-      id: 'e1',
-      groupId: 'group-1',
-      description: 'Test',
-      dateTime: new Date().toISOString(),
-      currencyCode: 'USD',
-      totalAmountScaled: BigInt(100000),
-      payerMemberId: 'm1',
-      exchangeRateToMainScaled: BigInt(10000),
-      totalInMainScaled: BigInt(100000),
-      createdAt: new Date().toISOString(),
-      shares: [{ id: 's1', memberId: 'm2', shareAmountScaled: BigInt(100000), shareInMainScaled: BigInt(100000) }],
-      paymentType: 'expense',
-      splitType: 'equal'
-    }];
+    const expenses: Expense[] = [
+      {
+        id: 'e1',
+        groupId: 'group-1',
+        description: 'Test',
+        dateTime: new Date().toISOString(),
+        currencyCode: 'USD',
+        totalAmountScaled: BigInt(100000),
+        payerMemberId: 'm1',
+        exchangeRateToMainScaled: BigInt(10000),
+        totalInMainScaled: BigInt(100000),
+        createdAt: new Date().toISOString(),
+        shares: [
+          {
+            id: 's1',
+            memberId: 'm2',
+            shareAmountScaled: BigInt(100000),
+            shareInMainScaled: BigInt(100000),
+          },
+        ],
+        paymentType: 'expense',
+        splitType: 'equal',
+      },
+    ];
     expect(() => computeBalances(expenses, members)).toThrow(ValidationError);
   });
 
   it('should accept valid inputs', () => {
     const members = [createMember('m1', 'Alice'), createMember('m2', 'Bob')];
-    const expenses: Expense[] = [{
-      id: 'e1',
-      groupId: 'group-1',
-      description: 'Test',
-      dateTime: new Date().toISOString(),
-      currencyCode: 'USD',
-      totalAmountScaled: BigInt(100000),
-      payerMemberId: 'm1',
-      exchangeRateToMainScaled: BigInt(10000),
-      totalInMainScaled: BigInt(100000),
-      createdAt: new Date().toISOString(),
-      shares: [{ id: 's1', memberId: 'm2', shareAmountScaled: BigInt(100000), shareInMainScaled: BigInt(100000) }],
-      paymentType: 'expense',
-      splitType: 'equal'
-    }];
+    const expenses: Expense[] = [
+      {
+        id: 'e1',
+        groupId: 'group-1',
+        description: 'Test',
+        dateTime: new Date().toISOString(),
+        currencyCode: 'USD',
+        totalAmountScaled: BigInt(100000),
+        payerMemberId: 'm1',
+        exchangeRateToMainScaled: BigInt(10000),
+        totalInMainScaled: BigInt(100000),
+        createdAt: new Date().toISOString(),
+        shares: [
+          {
+            id: 's1',
+            memberId: 'm2',
+            shareAmountScaled: BigInt(100000),
+            shareInMainScaled: BigInt(100000),
+          },
+        ],
+        paymentType: 'expense',
+        splitType: 'equal',
+      },
+    ];
 
     expect(() => computeBalances(expenses, members)).not.toThrow();
     expect(() => computeSettlementsNoSimplify(expenses, members)).not.toThrow();
@@ -288,7 +331,9 @@ describe('money validation', () => {
   });
 
   it('should throw for null divisor in divideScaled', () => {
-    expect(() => divideScaled(BigInt(100000), null as any)).toThrow(ValidationError);
+    expect(() => divideScaled(BigInt(100000), null as any)).toThrow(
+      ValidationError,
+    );
   });
 
   it('should throw for division by zero', () => {
@@ -296,11 +341,15 @@ describe('money validation', () => {
   });
 
   it('should throw for null participant count in calculateEqualSplit', () => {
-    expect(() => calculateEqualSplit(BigInt(100000), null as any)).toThrow(ValidationError);
+    expect(() => calculateEqualSplit(BigInt(100000), null as any)).toThrow(
+      ValidationError,
+    );
   });
 
   it('should throw for negative participant count in calculateEqualSplit', () => {
-    expect(() => calculateEqualSplit(BigInt(100000), -1)).toThrow(ValidationError);
+    expect(() => calculateEqualSplit(BigInt(100000), -1)).toThrow(
+      ValidationError,
+    );
   });
 
   it('should throw for invalid percentage in ScaledPercentage', () => {
@@ -309,15 +358,21 @@ describe('money validation', () => {
   });
 
   it('should throw for null in calculatePercentageSplit', () => {
-    expect(() => calculatePercentageSplit(BigInt(100000), null as any)).toThrow(ValidationError);
+    expect(() => calculatePercentageSplit(BigInt(100000), null as any)).toThrow(
+      ValidationError,
+    );
   });
 
   it('should throw for percentages summing to > 100', () => {
-    expect(() => calculatePercentageSplit(BigInt(100000), [60, 50])).toThrow(ValidationError);
+    expect(() => calculatePercentageSplit(BigInt(100000), [60, 50])).toThrow(
+      ValidationError,
+    );
   });
 
   it('should throw for invalid percentage values in calculatePercentageSplit', () => {
-    expect(() => calculatePercentageSplit(BigInt(100000), [-5, 105])).toThrow(ValidationError);
+    expect(() => calculatePercentageSplit(BigInt(100000), [-5, 105])).toThrow(
+      ValidationError,
+    );
   });
 
   it('should throw for null in sumScaled', () => {
@@ -325,12 +380,14 @@ describe('money validation', () => {
   });
 
   it('should accept valid inputs', () => {
-    expect(() => toScaled(100.50)).not.toThrow();
+    expect(() => toScaled(100.5)).not.toThrow();
     expect(() => fromScaled(BigInt(1000000))).not.toThrow();
     expect(() => divideScaled(BigInt(100000), 2)).not.toThrow();
     expect(() => calculateEqualSplit(BigInt(100000), 3)).not.toThrow();
     expect(() => new ScaledPercentage(50)).not.toThrow();
-    expect(() => calculatePercentageSplit(BigInt(100000), [50, 50])).not.toThrow();
+    expect(() =>
+      calculatePercentageSplit(BigInt(100000), [50, 50]),
+    ).not.toThrow();
     expect(() => sumScaled([BigInt(100000), BigInt(200000)])).not.toThrow();
   });
 });

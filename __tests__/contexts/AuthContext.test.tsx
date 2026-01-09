@@ -3,7 +3,12 @@
  */
 import React from 'react';
 import { renderHook, act, waitFor } from '@testing-library/react-native';
-import { createMockSupabaseClient, createMockUser, createMockSession, MockSupabaseClient } from '../utils/mockSupabase';
+import {
+  createMockSupabaseClient,
+  createMockUser,
+  createMockSession,
+  MockSupabaseClient,
+} from '../utils/mockSupabase';
 
 jest.mock('../../lib/supabase', () => ({
   supabase: null,
@@ -42,7 +47,7 @@ describe('AuthContext', () => {
   describe('initialization', () => {
     it('should initialize with loading state', () => {
       mockSupabase.auth.getSession.mockReturnValue(
-        new Promise(() => {}) // Never resolves to keep loading state
+        new Promise(() => {}), // Never resolves to keep loading state
       );
 
       const { useAuth } = require('../../contexts/AuthContext');
@@ -56,8 +61,14 @@ describe('AuthContext', () => {
     });
 
     it('should load existing session on mount', async () => {
-      const mockUser = createMockUser({ id: 'user-123', email: 'test@example.com' });
-      const mockSession = createMockSession({ id: 'user-123', email: 'test@example.com' });
+      const mockUser = createMockUser({
+        id: 'user-123',
+        email: 'test@example.com',
+      });
+      const mockSession = createMockSession({
+        id: 'user-123',
+        email: 'test@example.com',
+      });
 
       mockSupabase.auth.getSession.mockResolvedValue({
         data: { session: mockSession },
@@ -110,8 +121,14 @@ describe('AuthContext', () => {
 
   describe('signIn', () => {
     it('should sign in user with email and password', async () => {
-      const mockUser = createMockUser({ id: 'user-123', email: 'test@example.com' });
-      const mockSession = createMockSession({ id: 'user-123', email: 'test@example.com' });
+      const mockUser = createMockUser({
+        id: 'user-123',
+        email: 'test@example.com',
+      });
+      const mockSession = createMockSession({
+        id: 'user-123',
+        email: 'test@example.com',
+      });
 
       mockSupabase.auth.getSession.mockResolvedValue({
         data: { session: null },
@@ -152,7 +169,7 @@ describe('AuthContext', () => {
         password: 'password123',
       });
       expect(updateBuilder.update).toHaveBeenCalledWith(
-        expect.objectContaining({ last_login: expect.any(String) })
+        expect.objectContaining({ last_login: expect.any(String) }),
       );
     });
 
@@ -180,14 +197,17 @@ describe('AuthContext', () => {
       await expect(
         act(async () => {
           await result.current.signIn('test@example.com', 'wrongpassword');
-        })
+        }),
       ).rejects.toThrow('Invalid credentials');
     });
   });
 
   describe('signUp', () => {
     it('should sign up user with email and password', async () => {
-      const mockUser = createMockUser({ id: 'user-new', email: 'new@example.com' });
+      const mockUser = createMockUser({
+        id: 'user-new',
+        email: 'new@example.com',
+      });
 
       mockSupabase.auth.getSession.mockResolvedValue({
         data: { session: null },
@@ -242,15 +262,21 @@ describe('AuthContext', () => {
       await expect(
         act(async () => {
           await result.current.signUp('test@example.com', 'password123');
-        })
+        }),
       ).rejects.toThrow('Email already exists');
     });
   });
 
   describe('signOut', () => {
     it('should sign out user', async () => {
-      const mockUser = createMockUser({ id: 'user-123', email: 'test@example.com' });
-      const mockSession = createMockSession({ id: 'user-123', email: 'test@example.com' });
+      const mockUser = createMockUser({
+        id: 'user-123',
+        email: 'test@example.com',
+      });
+      const mockSession = createMockSession({
+        id: 'user-123',
+        email: 'test@example.com',
+      });
 
       mockSupabase.auth.getSession.mockResolvedValue({
         data: { session: mockSession },
@@ -302,15 +328,21 @@ describe('AuthContext', () => {
       await expect(
         act(async () => {
           await result.current.signOut();
-        })
+        }),
       ).rejects.toThrow('Sign out failed');
     });
   });
 
   describe('auth state change listener', () => {
     it('should update state on SIGNED_IN event', async () => {
-      const mockUser = createMockUser({ id: 'user-123', email: 'test@example.com' });
-      const mockSession = createMockSession({ id: 'user-123', email: 'test@example.com' });
+      const mockUser = createMockUser({
+        id: 'user-123',
+        email: 'test@example.com',
+      });
+      const mockSession = createMockSession({
+        id: 'user-123',
+        email: 'test@example.com',
+      });
 
       let authCallback: any;
       mockSupabase.auth.onAuthStateChange.mockImplementation((callback) => {
@@ -349,8 +381,14 @@ describe('AuthContext', () => {
     });
 
     it('should update state on SIGNED_OUT event', async () => {
-      const mockUser = createMockUser({ id: 'user-123', email: 'test@example.com' });
-      const mockSession = createMockSession({ id: 'user-123', email: 'test@example.com' });
+      const mockUser = createMockUser({
+        id: 'user-123',
+        email: 'test@example.com',
+      });
+      const mockSession = createMockSession({
+        id: 'user-123',
+        email: 'test@example.com',
+      });
 
       let authCallback: any;
       mockSupabase.auth.onAuthStateChange.mockImplementation((callback) => {

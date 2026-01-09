@@ -1,4 +1,10 @@
-import { User, GroupMember, Group, Expense, ExpenseShare } from '../../services/groupRepository';
+import {
+  User,
+  GroupMember,
+  Group,
+  Expense,
+  ExpenseShare,
+} from '../../services/groupRepository';
 
 export const mockUsers = {
   alice: {
@@ -133,7 +139,10 @@ export const mockExpenses = {
 export function createMockDatabaseRow(obj: any): any {
   const result: any = {};
   for (const key in obj) {
-    const snakeKey = key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
+    const snakeKey = key.replace(
+      /[A-Z]/g,
+      (letter) => `_${letter.toLowerCase()}`,
+    );
     const value = obj[key];
     if (typeof value === 'bigint') {
       result[snakeKey] = Number(value);

@@ -1,4 +1,11 @@
-import { assertDefined, assertPositiveNumber, assertNonZero, assertPercentage, assertPercentages, assertNonNegativeNumber } from './validation';
+import {
+  assertDefined,
+  assertPositiveNumber,
+  assertNonZero,
+  assertPercentage,
+  assertPercentages,
+  assertNonNegativeNumber,
+} from './validation';
 
 const SCALE = 10000;
 
@@ -13,7 +20,10 @@ export function fromScaled(scaled: bigint | number): number {
   return val / SCALE;
 }
 
-export function formatCurrency(scaled: bigint | number, currencySymbol: string = ''): string {
+export function formatCurrency(
+  scaled: bigint | number,
+  currencySymbol: string = '',
+): string {
   const val = typeof scaled === 'bigint' ? Number(scaled) : scaled;
   const decimal = (val / SCALE).toFixed(2);
   return currencySymbol ? `${currencySymbol}${decimal}` : decimal;
@@ -35,7 +45,10 @@ export function divideScaled(dividend: bigint, divisor: number): bigint {
   return dividend / BigInt(divisor);
 }
 
-export function calculateEqualSplit(totalScaled: bigint, participantCount: number): bigint[] {
+export function calculateEqualSplit(
+  totalScaled: bigint,
+  participantCount: number,
+): bigint[] {
   assertDefined(totalScaled, 'totalScaled');
   assertDefined(participantCount, 'participantCount');
   assertPositiveNumber(participantCount, 'participantCount');
@@ -77,13 +90,16 @@ export class ScaledPercentage {
   }
 }
 
-export function calculatePercentageSplit(totalScaled: bigint, percentages: number[]): bigint[] {
+export function calculatePercentageSplit(
+  totalScaled: bigint,
+  percentages: number[],
+): bigint[] {
   assertDefined(totalScaled, 'totalScaled');
   assertDefined(percentages, 'percentages');
   assertPercentages(percentages);
 
-  const scaledPercentages = percentages.map(p => new ScaledPercentage(p));
-  const shares = scaledPercentages.map(sp => sp.calculateShare(totalScaled));
+  const scaledPercentages = percentages.map((p) => new ScaledPercentage(p));
+  const shares = scaledPercentages.map((sp) => sp.calculateShare(totalScaled));
 
   const remainder = totalScaled - shares.reduce((a, b) => a + b, BigInt(0));
 
@@ -106,6 +122,9 @@ export function sumScaled(values: (bigint | number)[]): bigint {
   }, BigInt(0));
 }
 
-export function applyExchangeRate(valueScaled: bigint, rateScaled: bigint): bigint {
+export function applyExchangeRate(
+  valueScaled: bigint,
+  rateScaled: bigint,
+): bigint {
   return multiplyScaled(valueScaled, rateScaled);
 }

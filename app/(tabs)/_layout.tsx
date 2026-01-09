@@ -13,7 +13,8 @@ export default function TabsLayout() {
           borderTopColor: '#e5e7eb',
           borderTopWidth: 1,
         },
-      }}>
+      }}
+    >
       <Tabs.Screen
         name="groups"
         options={{
@@ -25,14 +26,18 @@ export default function TabsLayout() {
         name="activity"
         options={{
           title: 'Activity',
-          tabBarIcon: ({ color, size }) => <Activity color={color} size={size} />,
+          tabBarIcon: ({ color, size }) => (
+            <Activity color={color} size={size} />
+          ),
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
           title: 'Settings',
-          tabBarIcon: ({ color, size }) => <Settings color={color} size={size} />,
+          tabBarIcon: ({ color, size }) => (
+            <Settings color={color} size={size} />
+          ),
         }}
       />
     </Tabs>

@@ -49,8 +49,10 @@ describe('Groups Screen', () => {
     require('@/lib/supabase').supabase = mockSupabase;
 
     mockGetAllGroups = require('@/services/groupRepository').getAllGroups;
-    mockGetOrderedGroups = require('@/services/groupPreferenceService').getOrderedGroups;
-    mockComputeBalances = require('@/services/settlementService').computeBalances;
+    mockGetOrderedGroups =
+      require('@/services/groupPreferenceService').getOrderedGroups;
+    mockComputeBalances =
+      require('@/services/settlementService').computeBalances;
   });
 
   describe('Loading Groups', () => {
@@ -62,7 +64,14 @@ describe('Groups Screen', () => {
           mainCurrencyCode: 'EUR',
           createdAt: '2024-01-01',
           members: [
-            { id: 'member-1', name: 'Alice', email: 'alice@example.com', groupId: 'group-1', connectedUserId: 'user-1', createdAt: '2024-01-01' },
+            {
+              id: 'member-1',
+              name: 'Alice',
+              email: 'alice@example.com',
+              groupId: 'group-1',
+              connectedUserId: 'user-1',
+              createdAt: '2024-01-01',
+            },
           ],
         },
       ];
@@ -95,8 +104,18 @@ describe('Groups Screen', () => {
 
     it('should apply preference ordering', async () => {
       const groups = [
-        { id: 'group-1', name: 'Group 1', mainCurrencyCode: 'USD', members: [] },
-        { id: 'group-2', name: 'Group 2', mainCurrencyCode: 'EUR', members: [] },
+        {
+          id: 'group-1',
+          name: 'Group 1',
+          mainCurrencyCode: 'USD',
+          members: [],
+        },
+        {
+          id: 'group-2',
+          name: 'Group 2',
+          mainCurrencyCode: 'EUR',
+          members: [],
+        },
       ];
 
       mockGetAllGroups.mockResolvedValue(groups);
@@ -122,7 +141,7 @@ describe('Groups Screen', () => {
       const result = mockComputeBalances([], []);
 
       expect(mockComputeBalances).toHaveBeenCalled();
-      expect(Array.from(result.values()).every(b => b === 0n)).toBe(true);
+      expect(Array.from(result.values()).every((b) => b === 0n)).toBe(true);
     });
 
     it('should detect unsettled groups', () => {
@@ -135,7 +154,7 @@ describe('Groups Screen', () => {
 
       const result = mockComputeBalances([], []);
 
-      expect(Array.from(result.values()).every(b => b === 0n)).toBe(false);
+      expect(Array.from(result.values()).every((b) => b === 0n)).toBe(false);
     });
   });
 
@@ -157,7 +176,14 @@ describe('Groups Screen', () => {
 
   describe('Refresh Functionality', () => {
     it('should reload groups on refresh', async () => {
-      const groups = [{ id: 'group-1', name: 'Group 1', mainCurrencyCode: 'USD', members: [] }];
+      const groups = [
+        {
+          id: 'group-1',
+          name: 'Group 1',
+          mainCurrencyCode: 'USD',
+          members: [],
+        },
+      ];
 
       mockGetAllGroups.mockResolvedValue(groups);
       mockGetOrderedGroups.mockResolvedValue(groups);
@@ -182,7 +208,12 @@ describe('Groups Screen', () => {
         select: jest.fn().mockReturnThis(),
         in: jest.fn().mockResolvedValue({
           data: [
-            { id: 'expense-1', group_id: 'group-1', total_in_main_scaled: '10000', expense_shares: [] },
+            {
+              id: 'expense-1',
+              group_id: 'group-1',
+              total_in_main_scaled: '10000',
+              expense_shares: [],
+            },
           ],
           error: null,
         }),
