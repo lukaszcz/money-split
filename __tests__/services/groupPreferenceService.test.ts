@@ -113,6 +113,51 @@ describe('groupPreferenceService', () => {
     );
   });
 
+  it('skips recording a visit when no user is signed in', async () => {
+    mockSupabase.auth.getUser.mockResolvedValue({
+      data: { user: null },
+      error: null,
+    });
+
+    await groupPreferenceService.recordGroupVisit('group-1');
+
+    expect(mockSupabase.from).not.toHaveBeenCalled();
+  });
+
+  it('logs an error when recording a visit fails', async () => {
+    const mockUser = createMockUser({ id: 'user-123' });
+    mockSupabase.auth.getUser.mockResolvedValue({
+      data: { user: mockUser },
+      error: null,
+    });
+
+    const preferenceBuilder = {
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      maybeSingle: jest.fn().mockResolvedValue({
+        data: { group_order: ['group-2'] },
+        error: null,
+      }),
+    };
+
+    const upsertBuilder = {
+      upsert: jest.fn().mockResolvedValue({ error: new Error('Upsert failed') }),
+    };
+
+    let callCount = 0;
+    mockSupabase.from.mockImplementation(() => {
+      callCount += 1;
+      if (callCount === 1) {
+        return preferenceBuilder as any;
+      }
+      return upsertBuilder as any;
+    });
+
+    await groupPreferenceService.recordGroupVisit('group-1');
+
+    expect(console.error).toHaveBeenCalled();
+  });
+
   it('cleans up preferences when groups are removed', async () => {
     const mockUser = createMockUser({ id: 'user-123' });
     mockSupabase.auth.getUser.mockResolvedValue({
@@ -152,6 +197,40 @@ describe('groupPreferenceService', () => {
       }),
     );
     expect(updateBuilder.eq).toHaveBeenCalledWith('user_id', mockUser.id);
+  });
+
+  it('skips cleanup when no user is signed in', async () => {
+    mockSupabase.auth.getUser.mockResolvedValue({
+      data: { user: null },
+      error: null,
+    });
+
+    await groupPreferenceService.cleanupGroupPreferences(['group-1']);
+
+    expect(mockSupabase.from).not.toHaveBeenCalled();
+  });
+
+  it('does not update preferences when no cleanup is needed', async () => {
+    const mockUser = createMockUser({ id: 'user-123' });
+    mockSupabase.auth.getUser.mockResolvedValue({
+      data: { user: mockUser },
+      error: null,
+    });
+
+    const preferenceBuilder = {
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      maybeSingle: jest.fn().mockResolvedValue({
+        data: { group_order: ['group-1', 'group-2'] },
+        error: null,
+      }),
+    };
+
+    mockSupabase.from.mockReturnValue(preferenceBuilder as any);
+
+    await groupPreferenceService.cleanupGroupPreferences(['group-1', 'group-2']);
+
+    expect(mockSupabase.from).toHaveBeenCalledTimes(1);
   });
 
   it('orders new groups ahead of saved preferences', async () => {
@@ -235,6 +314,121 @@ describe('groupPreferenceService', () => {
       'group-1',
       'group-3',
     ]);
+  });
+
+  it('keeps stored order when there are no new groups', async () => {
+    const mockUser = createMockUser({ id: 'user-123' });
+    mockSupabase.auth.getUser.mockResolvedValue({
+      data: { user: mockUser },
+      error: null,
+    });
+
+    const preferenceBuilder = {
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      maybeSingle: jest.fn().mockResolvedValue({
+        data: { group_order: ['group-2', 'group-1'] },
+        error: null,
+      }),
+    };
+
+    const cleanupBuilder = {
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      maybeSingle: jest.fn().mockResolvedValue({
+        data: { group_order: ['group-2', 'group-1'] },
+        error: null,
+      }),
+    };
+
+    let callCount = 0;
+    mockSupabase.from.mockImplementation(() => {
+      callCount += 1;
+      if (callCount === 1) {
+        return preferenceBuilder as any;
+      }
+      return cleanupBuilder as any;
+    });
+
+    const groups: GroupWithMembers[] = [
+      {
+        id: 'group-1',
+        name: 'Alpha',
+        mainCurrencyCode: 'USD',
+        createdAt: '2024-01-01T00:00:00Z',
+        members: [],
+      },
+      {
+        id: 'group-2',
+        name: 'Beta',
+        mainCurrencyCode: 'USD',
+        createdAt: '2024-02-01T00:00:00Z',
+        members: [],
+      },
+    ];
+
+    const result = await groupPreferenceService.getOrderedGroups(groups);
+
+    expect(result.map((group) => group.id)).toEqual(['group-2', 'group-1']);
+    expect(mockSupabase.from).toHaveBeenCalledTimes(2);
+  });
+
+  it('skips upsert when new groups exist but user is not available', async () => {
+    const mockUser = createMockUser({ id: 'user-123' });
+    mockSupabase.auth.getUser
+      .mockResolvedValueOnce({ data: { user: mockUser }, error: null })
+      .mockResolvedValueOnce({ data: { user: mockUser }, error: null })
+      .mockResolvedValueOnce({ data: { user: mockUser }, error: null })
+      .mockResolvedValueOnce({ data: { user: null }, error: null });
+
+    const preferenceBuilder = {
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      maybeSingle: jest.fn().mockResolvedValue({
+        data: { group_order: ['group-3'] },
+        error: null,
+      }),
+    };
+
+    const cleanupBuilder = {
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      maybeSingle: jest.fn().mockResolvedValue({
+        data: { group_order: ['group-3'] },
+        error: null,
+      }),
+    };
+
+    let callCount = 0;
+    mockSupabase.from.mockImplementation(() => {
+      callCount += 1;
+      if (callCount === 1) {
+        return preferenceBuilder as any;
+      }
+      return cleanupBuilder as any;
+    });
+
+    const groups: GroupWithMembers[] = [
+      {
+        id: 'group-1',
+        name: 'Alpha',
+        mainCurrencyCode: 'USD',
+        createdAt: '2024-01-01T00:00:00Z',
+        members: [],
+      },
+      {
+        id: 'group-3',
+        name: 'Gamma',
+        mainCurrencyCode: 'USD',
+        createdAt: '2023-12-01T00:00:00Z',
+        members: [],
+      },
+    ];
+
+    const result = await groupPreferenceService.getOrderedGroups(groups);
+
+    expect(result.map((group) => group.id)).toEqual(['group-1', 'group-3']);
+    expect(mockSupabase.from).toHaveBeenCalledTimes(2);
   });
 
   it('returns an empty array when no groups are provided', async () => {

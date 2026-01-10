@@ -134,6 +134,104 @@ describe('currencyPreferenceService', () => {
     });
   });
 
+  it('falls back to language code when locale tag is not mapped', async () => {
+    const mockUser = createMockUser({ id: 'user-123' });
+    mockSupabase.auth.getUser.mockResolvedValue({
+      data: { user: mockUser },
+      error: null,
+    });
+
+    (Localization.getLocales as jest.Mock).mockReturnValue([
+      { languageTag: 'xx-YY', languageCode: 'pl', regionCode: 'PL' },
+    ]);
+
+    const preferenceBuilder = {
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
+    };
+
+    const existingBuilder = {
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
+    };
+
+    const insertBuilder = {
+      insert: jest.fn().mockResolvedValue({ error: null }),
+    };
+
+    let callCount = 0;
+    mockSupabase.from.mockImplementation(() => {
+      callCount += 1;
+      if (callCount === 1) {
+        return preferenceBuilder as any;
+      }
+      if (callCount === 2) {
+        return existingBuilder as any;
+      }
+      return insertBuilder as any;
+    });
+
+    const result = await currencyPreferenceService.getUserCurrencyOrder();
+
+    const expectedOrder = [
+      'PLN',
+      ...CURRENCIES.filter((currency) => currency.code !== 'PLN').map(
+        (currency) => currency.code,
+      ),
+    ];
+
+    expect(result).toEqual(expectedOrder);
+  });
+
+  it('falls back to USD when locale is not mapped and order is empty', async () => {
+    const mockUser = createMockUser({ id: 'user-123' });
+    mockSupabase.auth.getUser.mockResolvedValue({
+      data: { user: mockUser },
+      error: null,
+    });
+
+    (Localization.getLocales as jest.Mock).mockReturnValue([
+      { languageTag: 'xx-YY', languageCode: 'xx', regionCode: 'YY' },
+    ]);
+
+    const preferenceBuilder = {
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      maybeSingle: jest.fn().mockResolvedValue({
+        data: { currency_order: [] },
+        error: null,
+      }),
+    };
+
+    const existingBuilder = {
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
+    };
+
+    const insertBuilder = {
+      insert: jest.fn().mockResolvedValue({ error: null }),
+    };
+
+    let callCount = 0;
+    mockSupabase.from.mockImplementation(() => {
+      callCount += 1;
+      if (callCount === 1) {
+        return preferenceBuilder as any;
+      }
+      if (callCount === 2) {
+        return existingBuilder as any;
+      }
+      return insertBuilder as any;
+    });
+
+    const result = await currencyPreferenceService.getUserCurrencyOrder();
+
+    expect(result[0]).toBe('USD');
+  });
+
   it('appends missing currency codes to saved order', async () => {
     const mockUser = createMockUser({ id: 'user-123' });
     mockSupabase.auth.getUser.mockResolvedValue({
@@ -224,6 +322,53 @@ describe('currencyPreferenceService', () => {
     await currencyPreferenceService.updateCurrencyOrder('USD');
 
     expect(mockSupabase.from).not.toHaveBeenCalled();
+  });
+
+  it('logs an error when updating currency preferences fails', async () => {
+    const mockUser = createMockUser({ id: 'user-123' });
+    mockSupabase.auth.getUser.mockResolvedValue({
+      data: { user: mockUser },
+      error: null,
+    });
+
+    const preferenceBuilder = {
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      maybeSingle: jest.fn().mockResolvedValue({
+        data: { currency_order: ['USD', 'EUR'] },
+        error: null,
+      }),
+    };
+
+    const existingBuilder = {
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      maybeSingle: jest.fn().mockResolvedValue({
+        data: { id: 'pref-1' },
+        error: null,
+      }),
+    };
+
+    const updateBuilder = {
+      update: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockResolvedValue({ error: new Error('Update failed') }),
+    };
+
+    let callCount = 0;
+    mockSupabase.from.mockImplementation(() => {
+      callCount += 1;
+      if (callCount === 1) {
+        return preferenceBuilder as any;
+      }
+      if (callCount === 2) {
+        return existingBuilder as any;
+      }
+      return updateBuilder as any;
+    });
+
+    await currencyPreferenceService.updateCurrencyOrder('EUR');
+
+    expect(console.error).toHaveBeenCalled();
   });
 
   it('updates group currency when it is not already first', async () => {
