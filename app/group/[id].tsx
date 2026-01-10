@@ -69,14 +69,6 @@ export default function GroupDetailScreen() {
   const currencySymbol = getCurrencySymbol(group.mainCurrencyCode);
   const balances = computeBalances(expenses, group.members);
 
-  const handleAddPress = () => {
-    if (activeTab === 'payments') {
-      router.push(`/group/${id}/add-expense` as any);
-    } else if (activeTab === 'members') {
-      router.push(`/group/${id}/add-member` as any);
-    }
-  };
-
   const handleLeaveGroup = () => {
     Alert.alert(
       'Leave Group',
@@ -213,7 +205,6 @@ export default function GroupDetailScreen() {
 function ExpensesTab({
   expenses,
   group,
-  reload,
 }: {
   expenses: Expense[];
   group: GroupWithMembers;
