@@ -69,14 +69,6 @@ export default function GroupDetailScreen() {
   const currencySymbol = getCurrencySymbol(group.mainCurrencyCode);
   const balances = computeBalances(expenses, group.members);
 
-  const handleAddPress = () => {
-    if (activeTab === 'payments') {
-      router.push(`/group/${id}/add-expense` as any);
-    } else if (activeTab === 'members') {
-      router.push(`/group/${id}/add-member` as any);
-    }
-  };
-
   const handleLeaveGroup = () => {
     Alert.alert(
       'Leave Group',
@@ -124,11 +116,6 @@ export default function GroupDetailScreen() {
           >
             <Trash2 color="#dc2626" size={20} />
           </TouchableOpacity>
-          {(activeTab === 'payments' || activeTab === 'members') && (
-            <TouchableOpacity style={styles.addButton} onPress={handleAddPress}>
-              <Plus color="#ffffff" size={20} />
-            </TouchableOpacity>
-          )}
         </View>
       </View>
 
@@ -313,6 +300,14 @@ function ExpensesTab({
           </TouchableOpacity>
         );
       })}
+      <View style={styles.tabAddButtonContainer}>
+        <TouchableOpacity
+          style={styles.tabAddButton}
+          onPress={() => router.push(`/group/${group.id}/add-expense` as any)}
+        >
+          <Plus color="#ffffff" size={28} />
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -407,6 +402,15 @@ function MembersTab({
           </Text>
         </View>
       )}
+
+      <View style={styles.tabAddButtonContainer}>
+        <TouchableOpacity
+          style={styles.tabAddButton}
+          onPress={() => router.push(`/group/${groupId}/add-member` as any)}
+        >
+          <Plus color="#ffffff" size={28} />
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -700,5 +704,26 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     lineHeight: 20,
     textAlign: 'center',
+  },
+  tabAddButtonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 16,
+  },
+  tabAddButton: {
+    backgroundColor: '#2563eb',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
 });
