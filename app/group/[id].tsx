@@ -69,14 +69,6 @@ export default function GroupDetailScreen() {
   const currencySymbol = getCurrencySymbol(group.mainCurrencyCode);
   const balances = computeBalances(expenses, group.members);
 
-  const handleAddPress = () => {
-    if (activeTab === 'payments') {
-      router.push(`/group/${id}/add-expense` as any);
-    } else if (activeTab === 'members') {
-      router.push(`/group/${id}/add-member` as any);
-    }
-  };
-
   const handleLeaveGroup = () => {
     Alert.alert(
       'Leave Group',
@@ -124,11 +116,6 @@ export default function GroupDetailScreen() {
           >
             <Trash2 color="#dc2626" size={20} />
           </TouchableOpacity>
-          {(activeTab === 'payments' || activeTab === 'members') && (
-            <TouchableOpacity style={styles.addButton} onPress={handleAddPress}>
-              <Plus color="#ffffff" size={20} />
-            </TouchableOpacity>
-          )}
         </View>
       </View>
 
@@ -189,7 +176,7 @@ export default function GroupDetailScreen() {
 
       <ScrollView style={styles.content}>
         {activeTab === 'payments' && (
-          <ExpensesTab expenses={expenses} group={group} reload={loadData} />
+          <ExpensesTab expenses={expenses} group={group} reload={loadData} groupId={group.id} />
         )}
         {activeTab === 'balances' && (
           <BalancesTab
@@ -218,10 +205,12 @@ export default function GroupDetailScreen() {
 function ExpensesTab({
   expenses,
   group,
+  groupId,
 }: {
   expenses: Expense[];
   group: GroupWithMembers;
   reload: () => void;
+  groupId: string;
 }) {
   const router = useRouter();
   const memberMap = new Map(group.members.map((m) => [m.id, m]));
@@ -313,6 +302,14 @@ function ExpensesTab({
           </TouchableOpacity>
         );
       })}
+      <View style={styles.floatingButtonContainer}>
+        <TouchableOpacity
+          style={styles.floatingAddButton}
+          onPress={() => router.push(`/group/${groupId}/add-expense` as any)}
+        >
+          <Plus color="#ffffff" size={32} />
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -407,6 +404,15 @@ function MembersTab({
           </Text>
         </View>
       )}
+
+      <View style={styles.floatingButtonContainer}>
+        <TouchableOpacity
+          style={styles.floatingAddButton}
+          onPress={() => router.push(`/group/${groupId}/add-member` as any)}
+        >
+          <Plus color="#ffffff" size={32} />
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -499,14 +505,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#fee2e2',
-  },
-  addButton: {
-    backgroundColor: '#2563eb',
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   tabs: {
     flexDirection: 'row',
@@ -700,5 +698,25 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     lineHeight: 20,
     textAlign: 'center',
+  },
+  floatingButtonContainer: {
+    alignItems: 'flex-end',
+    marginTop: 16,
+  },
+  floatingAddButton: {
+    backgroundColor: '#2563eb',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
 });
