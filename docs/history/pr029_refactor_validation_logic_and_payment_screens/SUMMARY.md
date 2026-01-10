@@ -13,9 +13,9 @@
 - app/group/[id]/add-expense.tsx
 - app/group/[id]/edit-expense.tsx
 - app/group/[id]/edit-transfer.tsx
-- **tests**/money.test.ts
-- **tests**/validation.test.ts
-- **tests**/README.md
+- __tests__/money.test.ts
+- __tests__/validation.test.ts
+- __tests__/README.md
 - package.json
 - package-lock.json
 - docs/ARCHITECTURE.md
