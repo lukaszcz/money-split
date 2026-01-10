@@ -5,17 +5,20 @@
 ### ✅ Fixed
 
 **Configuration Warnings**
+
 - Fixed `coverageThresholds` typo → `coverageThreshold` (correct Jest property name)
 - Migrated ts-jest config from deprecated `globals` to `transform` array syntax
 - Eliminated all Jest configuration warnings
 
 **Before:**
+
 ```
 ● Validation Warning: Unknown option "coverageThresholds"
 ts-jest[ts-jest-transformer] (WARN) Define `ts-jest` config under `globals` is deprecated
 ```
 
 **After:**
+
 ```
 ✅ Zero warnings - clean test output
 ```
@@ -23,6 +26,7 @@ ts-jest[ts-jest-transformer] (WARN) Define `ts-jest` config under `globals` is d
 ### 🎉 Added
 
 **Test Coverage (99 new tests)**
+
 - `__tests__/services/groupRepository.test.ts` - 62 tests covering data access layer
   - User management (ensureUserProfile, getUser, getUserByEmail, updateUserName)
   - Group operations (createGroup, getGroup, getAllGroups)
@@ -50,6 +54,7 @@ ts-jest[ts-jest-transformer] (WARN) Define `ts-jest` config under `globals` is d
   - Timestamp handling (current vs cached)
 
 **Test Infrastructure**
+
 - `__tests__/utils/mockSupabase.ts` - Mock Supabase client with type-safe builder pattern
   - MockSupabaseClient interface
   - MockSupabaseQueryBuilder interface
@@ -75,6 +80,7 @@ ts-jest[ts-jest-transformer] (WARN) Define `ts-jest` config under `globals` is d
   - resetSupabaseBuilderMocks() - batch mock reset
 
 **Integration Test Setup**
+
 - `__tests__/setup/docker-compose.test.yml` - Local Supabase environment
   - PostgreSQL 15.6 container
   - Supabase Studio (optional)
@@ -93,6 +99,7 @@ ts-jest[ts-jest-transformer] (WARN) Define `ts-jest` config under `globals` is d
   - Multi-user scenarios
 
 **Coverage & Quality**
+
 - Coverage reporting (text, HTML, LCOV)
 - Coverage thresholds: 80% lines/functions/statements, 70% branches
 - collectCoverageFrom configuration for services, contexts, utils, hooks
@@ -100,6 +107,7 @@ ts-jest[ts-jest-transformer] (WARN) Define `ts-jest` config under `globals` is d
 - .gitignore entries for coverage artifacts
 
 **Documentation**
+
 - `__tests__/README.md` - Comprehensive testing guide (500+ lines)
   - Test structure overview
   - Running tests instructions
@@ -121,6 +129,7 @@ ts-jest[ts-jest-transformer] (WARN) Define `ts-jest` config under `globals` is d
 - `__tests__/CHANGELOG.md` - This file
 
 **NPM Scripts**
+
 - `test` - Run all tests
 - `test:watch` - Watch mode for development
 - `test:coverage` - Generate coverage report
@@ -129,6 +138,7 @@ ts-jest[ts-jest-transformer] (WARN) Define `ts-jest` config under `globals` is d
 ### 📊 Results
 
 **Test Statistics:**
+
 ```
 Test Suites: 7 passed, 7 total (100%)
 Tests:       205 passed, 205 total (100%)
@@ -137,6 +147,7 @@ Coverage:    64.48% overall
 ```
 
 **Coverage Breakdown:**
+
 ```
 services/exchangeRateService  100%  ⭐⭐⭐⭐⭐ (NEW)
 contexts/AuthContext.tsx      100%  ⭐⭐⭐⭐⭐
@@ -148,10 +159,12 @@ services/groupRepository      61%   ⭐⭐⭐
 ```
 
 **Files Modified:**
+
 - `package.json` - Added test scripts, coverage config, fixed ts-jest setup
 - `.gitignore` - Added coverage directory
 
 **Files Created (11):**
+
 - `__tests__/README.md`
 - `__tests__/IMPROVEMENTS.md`
 - `__tests__/CHANGELOG.md`
@@ -170,6 +183,7 @@ services/groupRepository      61%   ⭐⭐⭐
 **package.json - Jest Configuration:**
 
 **Before:**
+
 ```json
 {
   "jest": {
@@ -183,15 +197,13 @@ services/groupRepository      61%   ⭐⭐⭐
 ```
 
 **After:**
+
 ```json
 {
   "jest": {
     "preset": "ts-jest",
     "testEnvironment": "node",
-    "testMatch": [
-      "**/__tests__/**/*.test.ts",
-      "**/__tests__/**/*.test.tsx"
-    ],
+    "testMatch": ["**/__tests__/**/*.test.ts", "**/__tests__/**/*.test.tsx"],
     "setupFiles": ["<rootDir>/jest.setup.js"],
     "moduleNameMapper": {
       "^@/(.*)$": "<rootDir>/$1"
@@ -233,6 +245,7 @@ services/groupRepository      61%   ⭐⭐⭐
 ### 🎯 Impact
 
 **Before Implementation:**
+
 - 106 tests (money, currencies, settlements, validation only)
 - ~30% estimated coverage
 - No service layer tests
@@ -243,6 +256,7 @@ services/groupRepository      61%   ⭐⭐⭐
 - Configuration warnings
 
 **After Implementation:**
+
 - 205 tests (+99 new tests, 93% increase)
 - 64.48% measured coverage (+100% in key areas)
 - Comprehensive service layer tests
@@ -255,6 +269,7 @@ services/groupRepository      61%   ⭐⭐⭐
 ### 📚 Documentation
 
 All testing documentation is centralized in `__tests__/README.md`:
+
 - Complete testing guide
 - Quick start instructions
 - Writing tests patterns
@@ -267,7 +282,7 @@ All testing documentation is centralized in `__tests__/README.md`:
 
 ```bash
 # Run all tests
-npm test
+npm run test
 
 # Watch mode
 npm run test:watch
@@ -285,17 +300,20 @@ npm run test:ci
 ### 🔮 Future Enhancements
 
 **Priority 1 - Complete Coverage:**
+
 - Add exchangeRateService tests (0% → 80%+)
 - Add currencyPreferenceService tests (0% → 80%+)
 - Add groupPreferenceService tests (0% → 80%+)
 - Add hook tests (useCurrencyOrder, useFrameworkReady)
 
 **Priority 2 - Expand Testing:**
+
 - Component tests for key screens
 - Edge function tests (send-invitation, cleanup, delete-user)
 - E2E tests with Detox/Maestro
 
 **Priority 3 - Advanced Features:**
+
 - Visual regression tests
 - Performance benchmarks
 - Mutation testing
