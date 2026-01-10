@@ -4,7 +4,7 @@ This document describes the architecture of the MoneySplit application (React Na
 
 ## High-level structure
 
-- Mobile client: Expo Router app under `app/` with shared domain logic in `services/`, `utils/`, `hooks/`, and `contexts/`.
+- Mobile client: Expo Router app under `app/` with shared UI and domain logic in `components/`, `services/`, `utils/`, `hooks/`, and `contexts/`.
 - Backend: Supabase Postgres (tables + RLS), Supabase Auth, and Edge Functions in `supabase/functions/`.
 - External services: Exchange rate API (`https://api.exchangerate-api.com`) and Resend email API for invitations.
 
@@ -150,6 +150,7 @@ For the exact SQL definitions and helper functions, see:
   - Scaling utilities are in `utils/money.ts` (`toScaled()`, `applyExchangeRate()`, `calculateEqualSplit()`, `calculatePercentageSplit()`).
 - Display formatting is always 2 decimal places via `formatNumber()` / `formatCurrency()`.
 - Remainders are distributed deterministically to the first N participants in the split order to avoid rounding drift.
+- Share calculations for equal/percentage/exact inputs are unified in `calculateSharesForSplit()` (`utils/money.ts`).
 - Settlement logic runs entirely on the client:
   - `computeBalances()` produces per-member net balances using `expense.total_in_main_scaled`.
   - `computeSettlementsNoSimplify()` creates pairwise debts from raw shares.
@@ -252,18 +253,21 @@ The UI uses a light, card-based aesthetic with consistent spacing and neutral gr
 - Validates totals and generates `expense_shares` based on split method.
 - Fetches exchange rate with `getExchangeRate()` and stores snapshot values.
 - Persists via `createExpense()`.
+- UI rendering is shared via `components/ExpenseFormScreen.tsx`.
 
 ### Edit Expense (`app/group/[id]/edit-expense.tsx`)
 
 - Loads expense and group, pre-fills form and split method.
 - Recomputes shares on save and updates via `updateExpense()`.
 - Can delete via `deleteExpense()`.
+- UI rendering is shared via `components/ExpenseFormScreen.tsx`.
 
 ### Edit Transfer (`app/group/[id]/edit-transfer.tsx`)
 
 - Specialized edit form for transfers (single recipient).
 - Updates expense using `updateExpense()` .
 - Can delete via `deleteExpense()`.
+- UI rendering is shared via `components/ExpenseFormScreen.tsx`.
 
 ### Add Member (`app/group/[id]/add-member.tsx`)
 
@@ -305,7 +309,8 @@ The UI uses a light, card-based aesthetic with consistent spacing and neutral gr
 - Data access: `services/groupRepository.ts`, `services/exchangeRateService.ts`.
 - Preferences: `services/currencyPreferenceService.ts`, `services/groupPreferenceService.ts`, `hooks/useCurrencyOrder.ts`.
 - Money math: `utils/money.ts`, `utils/currencies.ts`.
-- Input validation logic: `utils/validation.ts`.
+- Input validation logic: `utils/validation.ts` (decimal, integer, percentage, and exact-amount input helpers).
+- Shared expense/transfer form UI: `components/ExpenseFormScreen.tsx`.
 - Settlement logic: `services/settlementService.ts`.
 - Edge functions: `supabase/functions/*`.
 - RLS and schema: `supabase/migrations/*.sql`.
