@@ -3,10 +3,10 @@ import {
   createMockUser,
   resetAllMocks,
   MockSupabaseClient,
-} from '../utils/mockSupabase';
-import { CURRENCIES } from '../../utils/currencies';
+} from '@/__tests__/utils/mockSupabase';
+import { CURRENCIES } from '@/utils/currencies';
 import * as Localization from 'expo-localization';
-import * as currencyPreferenceService from '../../services/currencyPreferenceService';
+import * as currencyPreferenceService from '@/services/currencyPreferenceService';
 
 jest.mock('@/lib/supabase', () => ({
   supabase: null,

@@ -3,11 +3,11 @@ import {
   createMockUser,
   resetAllMocks,
   MockSupabaseClient,
-} from '../utils/mockSupabase';
-import * as groupPreferenceService from '../../services/groupPreferenceService';
-import type { GroupWithMembers } from '../../services/groupRepository';
+} from '@/__tests__/utils/mockSupabase';
+import * as groupPreferenceService from '@/services/groupPreferenceService';
+import type { GroupWithMembers } from '@/services/groupRepository';
 
-jest.mock('../../lib/supabase', () => ({
+jest.mock('@/lib/supabase', () => ({
   supabase: null,
 }));
 
@@ -28,7 +28,7 @@ describe('groupPreferenceService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockSupabase = createMockSupabaseClient();
-    supabaseModule = require('../../lib/supabase');
+    supabaseModule = require('@/lib/supabase');
     supabaseModule.supabase = mockSupabase;
   });
 
