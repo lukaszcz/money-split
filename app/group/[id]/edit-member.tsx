@@ -12,13 +12,15 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useEffect, useCallback } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft } from 'lucide-react-native';
+import { ArrowLeft, Trash2 } from 'lucide-react-native';
 import {
   getGroupMember,
   updateGroupMember,
   getUserByEmail,
   sendInvitationEmail,
   getGroup,
+  canDeleteGroupMember,
+  deleteGroupMember,
 } from '../../../services/groupRepository';
 import { isValidEmail } from '../../../utils/validation';
 
@@ -30,6 +32,8 @@ export default function EditMemberScreen() {
   const [originalEmail, setOriginalEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [canDelete, setCanDelete] = useState(false);
+  const [checkingDelete, setCheckingDelete] = useState(true);
 
   const loadMember = useCallback(async () => {
     if (!memberId || typeof memberId !== 'string') {
@@ -43,6 +47,11 @@ export default function EditMemberScreen() {
       setName(member.name);
       setEmail(member.email || '');
       setOriginalEmail(member.email || '');
+      
+      // Check if member can be deleted
+      const deletable = await canDeleteGroupMember(memberId);
+      setCanDelete(deletable);
+      setCheckingDelete(false);
     } else {
       Alert.alert('Error', 'Member not found');
       router.back();
@@ -132,6 +141,47 @@ export default function EditMemberScreen() {
     }
   };
 
+  const handleDeleteMember = async () => {
+    if (!memberId || typeof memberId !== 'string') {
+      Alert.alert('Error', 'Invalid member');
+      return;
+    }
+
+    Alert.alert(
+      'Delete Member',
+      'Are you sure you want to remove this member from the group? This action cannot be undone.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            setLoading(true);
+            try {
+              const success = await deleteGroupMember(memberId);
+              if (success) {
+                router.back();
+              } else {
+                Alert.alert(
+                  'Error',
+                  'Failed to delete member. They may have expenses in the group.',
+                );
+              }
+            } catch (error) {
+              console.error('Error deleting member:', error);
+              Alert.alert('Error', 'Failed to delete member');
+            } finally {
+              setLoading(false);
+            }
+          },
+        },
+      ],
+    );
+  };
+
   if (initialLoading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -219,6 +269,27 @@ export default function EditMemberScreen() {
               {loading ? 'Updating...' : 'Update Member'}
             </Text>
           </TouchableOpacity>
+
+          {canDelete && !checkingDelete && (
+            <TouchableOpacity
+              style={[
+                styles.deleteButton,
+                loading && styles.deleteButtonDisabled,
+              ]}
+              onPress={handleDeleteMember}
+              disabled={loading}
+            >
+              <Trash2 color="#dc2626" size={20} />
+              <Text style={styles.deleteButtonText}>Remove from Group</Text>
+            </TouchableOpacity>
+          )}
+
+          {!canDelete && !checkingDelete && (
+            <Text style={styles.deleteHint}>
+              This member cannot be removed because they have expenses in the
+              group.
+            </Text>
+          )}
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -303,5 +374,32 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  deleteButton: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    padding: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#dc2626',
+    marginTop: 12,
+    gap: 8,
+  },
+  deleteButtonDisabled: {
+    opacity: 0.5,
+  },
+  deleteButtonText: {
+    color: '#dc2626',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  deleteHint: {
+    fontSize: 13,
+    color: '#6b7280',
+    marginTop: 12,
+    textAlign: 'center',
+    lineHeight: 18,
   },
 });
