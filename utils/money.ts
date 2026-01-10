@@ -160,7 +160,7 @@ export function calculateSharesForSplit({
     );
     const totalPercent = percentValues.reduce((sum, p) => sum + p, 0);
 
-    if (Math.abs(totalPercent - 100) > 0.01) {
+    if (Number.isNaN(totalPercent) || Math.abs(totalPercent - 100) > 0.01) {
       return { error: 'Percentages must sum to 100%' };
     }
 
