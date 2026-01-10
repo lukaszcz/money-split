@@ -73,7 +73,7 @@ export default function CreateGroupScreen() {
     const allMemberNames = [
       currentUserName,
       ...pendingMembers.map((m) => m.name),
-    ].filter((n) => n);
+    ].filter((name) => name && name.trim());
 
     const isDuplicate = isDuplicateMemberName(trimmedName, allMemberNames);
     setHasDuplicateName(isDuplicate);
