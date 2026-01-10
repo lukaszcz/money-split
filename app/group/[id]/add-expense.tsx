@@ -18,6 +18,7 @@ import {
   createExpense,
   GroupWithMembers,
 } from '../../../services/groupRepository';
+import { validateDecimalInput } from '../../../utils/validation';
 import {
   toScaled,
   applyExchangeRate,
@@ -74,21 +75,6 @@ export default function AddExpenseScreen() {
   useEffect(() => {
     loadGroup();
   }, [loadGroup]);
-
-  const validateDecimalInput = (
-    text: string,
-    maxDecimals: number = 2,
-  ): string => {
-    const sanitized = text.replace(/[^0-9.]/g, '');
-    const parts = sanitized.split('.');
-    if (parts.length > 2) {
-      return parts[0] + '.' + parts.slice(1).join('');
-    }
-    if (parts.length === 2) {
-      return parts[0] + '.' + parts[1].substring(0, maxDecimals);
-    }
-    return sanitized;
-  };
 
   const toggleParticipant = (userId: string) => {
     if (selectedParticipants.includes(userId)) {

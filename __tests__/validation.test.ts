@@ -201,6 +201,28 @@ describe('utils/validation - assertNonEmptyString', () => {
   });
 });
 
+describe('utils/validation - validateDecimalInput', () => {
+  it('should strip non-numeric characters', () => {
+    const { validateDecimalInput } = require('../utils/validation');
+    expect(validateDecimalInput('12a.3b')).toBe('12.3');
+  });
+
+  it('should collapse multiple decimals', () => {
+    const { validateDecimalInput } = require('../utils/validation');
+    expect(validateDecimalInput('1.2.3')).toBe('1.23');
+  });
+
+  it('should limit decimal places to two by default', () => {
+    const { validateDecimalInput } = require('../utils/validation');
+    expect(validateDecimalInput('12.3456')).toBe('12.34');
+  });
+
+  it('should respect custom max decimals', () => {
+    const { validateDecimalInput } = require('../utils/validation');
+    expect(validateDecimalInput('12.3456', 3)).toBe('12.345');
+  });
+});
+
 describe('settlementService validation', () => {
   const createMember = (id: string, name: string): GroupMember => ({
     id,

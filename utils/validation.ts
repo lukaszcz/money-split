@@ -200,6 +200,21 @@ export function assertNonEmptyString(value: string, fieldName: string): void {
   }
 }
 
+export function validateDecimalInput(
+  text: string,
+  maxDecimals: number = 2,
+): string {
+  const sanitized = text.replace(/[^0-9.]/g, '');
+  const parts = sanitized.split('.');
+  if (parts.length > 2) {
+    return parts[0] + '.' + parts.slice(1).join('');
+  }
+  if (parts.length === 2) {
+    return parts[0] + '.' + parts[1].substring(0, maxDecimals);
+  }
+  return sanitized;
+}
+
 export function isValidEmail(value: string): boolean {
   if (typeof value !== 'string') {
     return false;
