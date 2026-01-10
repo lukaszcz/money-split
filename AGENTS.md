@@ -22,7 +22,7 @@ MoneySplit is a React Native/Expo mobile app for tracking shared expenses and de
 - `npm run dev` starts the Expo development server.
 - `npm run lint` runs Expo lint rules.
 - `npm run typecheck` runs TypeScript type checking.
-- `npm test` runs Jest.
+- `npm run test` runs Jest.
 
 ## Coding Style & Naming Conventions
 
@@ -35,7 +35,7 @@ MoneySplit is a React Native/Expo mobile app for tracking shared expenses and de
 
 - Framework: Jest (configured in `package.json`).
 - Tests should follow `__tests__/name.test.ts` or co-locate with features if you introduce a test folder.
-- Run locally with `npm test`.
+- Run locally with `npm run test`.
 - Avoid brittle tests. Test user workflows, not implementation details.
 - Every major new feature should have associated unit tests.
 - Update `__tests__/README.md` whenever you update or add tests.

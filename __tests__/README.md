@@ -70,7 +70,7 @@ __tests__/
 
 ```bash
 # Run all tests
-npm test
+npm run test
 
 # Run tests in watch mode (auto-rerun on file changes)
 npm run test:watch
@@ -82,23 +82,23 @@ npm run test:coverage
 npm run test:ci
 
 # Run specific test file
-npm test -- __tests__/money.test.ts
+npm run test -- __tests__/money.test.ts
 
 # Run tests matching a pattern
-npm test -- --testNamePattern="should calculate"
+npm run test -- --testNamePattern="should calculate"
 
 # Run tests for a specific suite
-npm test -- --testPathPattern="groupRepository"
+npm run test -- --testPathPattern="groupRepository"
 ```
 
 ### Environment Variables
 
 ```bash
 # Enable verbose output
-VERBOSE=true npm test
+VERBOSE=true npm run test
 
 # Set test timeout
-TEST_TIMEOUT=10000 npm test
+TEST_TIMEOUT=10000 npm run test
 ```
 
 ## Writing Tests
@@ -128,7 +128,10 @@ Validation tests include `validateDecimalInput` coverage.
 ### Service Test Pattern with Mocks
 
 ```typescript
-import { createMockSupabaseClient, MockSupabaseClient } from '../utils/mockSupabase';
+import {
+  createMockSupabaseClient,
+  MockSupabaseClient,
+} from '../utils/mockSupabase';
 import { mockUsers } from '../fixtures/testData';
 
 // Mock the Supabase module
@@ -212,7 +215,11 @@ mockSupabase.from.mockReturnValue({
 ### Test Helpers
 
 ```typescript
-import { waitForCondition, generators, bigIntMatchers } from './utils/testHelpers';
+import {
+  waitForCondition,
+  generators,
+  bigIntMatchers,
+} from './utils/testHelpers';
 
 // Wait for async condition
 await waitForCondition(() => result.current.loading === false);
@@ -230,7 +237,12 @@ bigIntMatchers.toBePositive(balance);
 ### Test Fixtures
 
 ```typescript
-import { mockUsers, mockGroups, mockMembers, mockExpenses } from './fixtures/testData';
+import {
+  mockUsers,
+  mockGroups,
+  mockMembers,
+  mockExpenses,
+} from './fixtures/testData';
 
 // Use pre-defined test data
 const alice = mockUsers.alice;
@@ -247,27 +259,32 @@ Integration tests run against a real Supabase instance using Docker Compose.
 1. **Install Docker** and Docker Compose
 
 2. **Start test database**:
+
 ```bash
 docker-compose -f __tests__/setup/docker-compose.test.yml up -d
 ```
 
 3. **Wait for services to be healthy**:
+
 ```bash
 docker-compose -f __tests__/setup/docker-compose.test.yml ps
 ```
 
 4. **Run migrations** (if needed):
+
 ```bash
 # Apply migrations to test database
 supabase db reset --db-url postgresql://postgres:postgres@localhost:54322/postgres
 ```
 
 5. **Run integration tests**:
+
 ```bash
-TEST_INTEGRATION=true npm test -- --testPathPattern="integration"
+TEST_INTEGRATION=true npm run test -- --testPathPattern="integration"
 ```
 
 6. **Cleanup**:
+
 ```bash
 docker-compose -f __tests__/setup/docker-compose.test.yml down -v
 ```
@@ -278,7 +295,7 @@ docker-compose -f __tests__/setup/docker-compose.test.yml down -v
 import {
   createIntegrationTestClient,
   IntegrationTestHelper,
-  waitForSupabase
+  waitForSupabase,
 } from '../setup/integration.setup';
 
 describe('Group Integration Tests', () => {
@@ -339,12 +356,14 @@ Tests will fail if coverage drops below these thresholds.
 ### What's Covered
 
 Coverage includes:
+
 - `services/**/*.ts`
 - `contexts/**/*.tsx`
 - `utils/**/*.ts`
 - `hooks/**/*.ts`
 
 Coverage excludes:
+
 - Type definitions (`*.d.ts`)
 - Test files (`__tests__/**`)
 - Node modules
@@ -384,7 +403,7 @@ jobs:
 npm run test:ci
 
 # Run with specific worker count
-npm test -- --maxWorkers=2
+npm run test -- --maxWorkers=2
 
 # Run with coverage badge generation
 npm run test:coverage -- --coverageReporters=json-summary
@@ -445,15 +464,17 @@ npm run test:coverage -- --coverageReporters=json-summary
 
 ### Overview
 
-Screen tests focus on testing UI business logic without rendering React Native components. This approach is:
-- **Fast**: No rendering overhead
-- **Maintainable**: Tests don't break when styles change
-- **AI-friendly**: Clear patterns that can be replicated
-- **Focused**: Tests workflows and validation, not UI appearance
+Screen tests render React Native screens with `@testing-library/react-native` and assert on user-visible behavior. This approach is:
+
+- **Fast**: Render-only tests stay quick enough for unit feedback
+- **Maintainable**: Assertions target text, labels, and flows instead of layout
+- **Workflow-driven**: Exercises real user actions (input, submit, navigate)
+- **Accessible**: Encourages labeling icon-only buttons for testability and users
 
 ### What to Test
 
 ✅ **Do test**:
+
 - Form validation logic
 - Authentication flows (sign-in, sign-up, logout)
 - Navigation calls (verify correct routes)
@@ -463,7 +484,8 @@ Screen tests focus on testing UI business logic without rendering React Native c
 - Loading states
 
 ❌ **Don't test**:
-- UI rendering or layout
+
+- Layout or pixel values
 - StyleSheet values
 - Component tree structure
 - Visual appearance
@@ -507,41 +529,49 @@ beforeEach(() => {
 });
 ```
 
-#### 3. Test Workflows, Not Implementation
+#### 3. Render the Screen and Drive User Actions
 
 ```typescript
-// ✅ Good: Test workflow
-it('should sign in and navigate to groups', async () => {
-  mockAuthContext.signIn.mockResolvedValue(undefined);
+import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import AuthScreen from '../../app/auth';
 
-  await mockAuthContext.signIn('test@example.com', 'password');
-  mockRouter.replace('/(tabs)/groups');
+it('signs in and navigates', async () => {
+  const { getByPlaceholderText, getByText } = render(<AuthScreen />);
 
-  expect(mockAuthContext.signIn).toHaveBeenCalledWith('test@example.com', 'password');
+  fireEvent.changeText(getByPlaceholderText('Email'), 'test@example.com');
+  fireEvent.changeText(getByPlaceholderText('Password'), 'password123');
+  fireEvent.press(getByText('Sign In'));
+
+  await waitFor(() => {
+    expect(mockAuthContext.signIn).toHaveBeenCalledWith(
+      'test@example.com',
+      'password123',
+    );
+  });
   expect(mockRouter.replace).toHaveBeenCalledWith('/(tabs)/groups');
-});
-
-// ❌ Bad: Test implementation details
-it('should update state variable', () => {
-  let email = '';
-  email = 'test@example.com';
-  expect(email).toBe('test@example.com'); // Too granular
 });
 ```
 
-#### 4. Test Validation Logic
+#### 4. Prefer Accessibility Labels for Icon-only Buttons
 
 ```typescript
-it('should reject empty email', () => {
-  const email = '';
-  const hasEmail = email.trim().length > 0;
+// In screen component
+<TouchableOpacity accessibilityLabel=\"Edit display name\" onPress={onEdit} />
 
-  expect(hasEmail).toBe(false);
+// In test
+fireEvent.press(getByLabelText('Edit display name'));
+```
 
-  if (!hasEmail) {
-    // Sign-in should not be called
-    expect(mockAuthContext.signIn).not.toHaveBeenCalled();
-  }
+#### 5. Test Validation Through UI, Not State
+
+```typescript
+it('shows a validation error for missing credentials', () => {
+  const { getByText } = render(<AuthScreen />);
+
+  fireEvent.press(getByText('Sign In'));
+
+  expect(getByText('Please enter both email and password')).toBeTruthy();
+  expect(mockAuthContext.signIn).not.toHaveBeenCalled();
 });
 ```
 
@@ -566,9 +596,10 @@ it('should reject empty email', () => {
 ### Example Screen Tests
 
 See these files for complete examples:
-- `__tests__/screens/auth.test.ts` - Authentication (9 tests)
-- `__tests__/screens/groups.test.ts` - Groups list (10 tests)
-- `__tests__/screens/settings.test.ts` - Settings (8 tests)
+
+- `__tests__/screens/auth.test.tsx` - Authentication flows
+- `__tests__/screens/groups.test.tsx` - Groups list and navigation
+- `__tests__/screens/settings.test.tsx` - Profile, logout, delete flows
 
 ### Tips for Screen Testing
 
@@ -583,6 +614,7 @@ See these files for complete examples:
 ### Tests failing with "Cannot find module"
 
 Check that:
+
 - Module path is correct
 - Module is exported properly
 - Jest `moduleNameMapper` is configured for path aliases
@@ -617,7 +649,7 @@ Check that:
 When adding new features:
 
 1. Write tests first (TDD) or alongside implementation
-2. Ensure tests pass: `npm test`
+2. Ensure tests pass: `npm run test`
 3. Check coverage: `npm run test:coverage`
 4. Update this README if adding new patterns or utilities
 5. Keep coverage above thresholds

@@ -7,12 +7,14 @@ This document summarizes the improvements made to the MoneySplit test infrastruc
 ### 1. ✅ Coverage Reporting & Thresholds
 
 **Added:**
+
 - Comprehensive coverage configuration in `package.json`
 - Coverage thresholds: 80% lines/functions/statements, 70% branches
 - Multiple report formats: text, HTML, lcov
 - Coverage directory: `coverage/`
 
 **New Commands:**
+
 ```bash
 npm run test:coverage   # Run tests with coverage report
 npm run test:ci         # CI-optimized test run with coverage
@@ -20,6 +22,7 @@ npm run test:watch      # Watch mode for development
 ```
 
 **Coverage Output:**
+
 - HTML report: `coverage/lcov-report/index.html`
 - LCOV file: `coverage/lcov.info` (for CI integration)
 - Console summary after each coverage run
@@ -29,6 +32,7 @@ npm run test:watch      # Watch mode for development
 **Created:** `__tests__/utils/testHelpers.ts`
 
 **Features:**
+
 - `waitForCondition()` - Wait for async conditions
 - `suppressConsole()` - Hide console output during tests
 - `expectAsyncError()` - Assert async errors
@@ -40,8 +44,13 @@ npm run test:watch      # Watch mode for development
 - `resetSupabaseBuilderMocks()` - Reset mocks to default state
 
 **Example Usage:**
+
 ```typescript
-import { generators, bigIntMatchers, waitForCondition } from './utils/testHelpers';
+import {
+  generators,
+  bigIntMatchers,
+  waitForCondition,
+} from './utils/testHelpers';
 
 // Generate unique test data
 const userId = generators.id('user');
@@ -59,10 +68,12 @@ await waitForCondition(() => state.loading === false);
 ### 3. ✅ Integration Test Environment
 
 **Created:**
+
 - `__tests__/setup/docker-compose.test.yml` - Local Supabase for integration tests
 - `__tests__/setup/integration.setup.ts` - Integration test utilities
 
 **Features:**
+
 - Docker Compose configuration for local Supabase instance
 - `createIntegrationTestClient()` - Create test Supabase client
 - `waitForSupabase()` - Wait for Supabase to be ready
@@ -71,12 +82,13 @@ await waitForCondition(() => state.loading === false);
 - `cleanupTestData()` - Cleanup test database
 
 **Setup:**
+
 ```bash
 # Start test database
 docker-compose -f __tests__/setup/docker-compose.test.yml up -d
 
 # Run integration tests
-TEST_INTEGRATION=true npm test -- --testPathPattern="integration"
+TEST_INTEGRATION=true npm run test -- --testPathPattern="integration"
 
 # Cleanup
 docker-compose -f __tests__/setup/docker-compose.test.yml down -v
@@ -87,6 +99,7 @@ docker-compose -f __tests__/setup/docker-compose.test.yml down -v
 **Created:** `__tests__/README.md`
 
 **Includes:**
+
 - Complete testing guide
 - Test structure overview
 - Running tests instructions
@@ -100,18 +113,21 @@ docker-compose -f __tests__/setup/docker-compose.test.yml down -v
 ### 5. ✅ Enhanced Test Infrastructure
 
 **Package.json Updates:**
+
 - Added test scripts (watch, coverage, ci)
 - Configured coverage collection
 - Set coverage thresholds
 - Added coverage reporters
 
 **Git Configuration:**
+
 - Added `coverage/` to `.gitignore`
 - Added `*.lcov` to `.gitignore`
 
 ## Current Test Statistics
 
 ### Test Suites: 7 ✅
+
 1. `money.test.ts` - Money math utilities
 2. `currencies.test.ts` - Currency definitions
 3. `settlementService.test.ts` - Settlement algorithms
@@ -121,6 +137,7 @@ docker-compose -f __tests__/setup/docker-compose.test.yml down -v
 7. `exchangeRateService.test.ts` - Exchange rate caching and API (NEW)
 
 ### Tests: 205 ✅
+
 - All passing
 - ~3 seconds execution time
 - New tests added: 99 (13 AuthContext + 62 groupRepository + 24 exchangeRateService)
@@ -151,6 +168,7 @@ All files                       |   64.48 |    49.85 |      60 |   66.58 |
 ```
 
 **Achievements:**
+
 - ✅ AuthContext: 100% coverage
 - ✅ Utils (money, currencies): 100% coverage
 - ✅ Exchange rate service: 100% coverage (NEW)
@@ -158,6 +176,7 @@ All files                       |   64.48 |    49.85 |      60 |   66.58 |
 - ✅ Group repository: 60%+ coverage
 
 **Opportunities for Improvement:**
+
 - ⚠️ Preference services (0% → needs tests)
 - ⚠️ Custom hooks (0% → needs tests)
 
@@ -195,7 +214,7 @@ __tests__/
 
 ```bash
 # All tests
-npm test
+npm run test
 
 # With coverage
 npm run test:coverage
@@ -223,7 +242,7 @@ open coverage/lcov-report/index.html
 2. Import utilities: `import { createMockSupabaseClient } from '../utils/mockSupabase'`
 3. Use fixtures: `import { mockUsers } from '../fixtures/testData'`
 4. Follow patterns in existing tests
-5. Run: `npm test -- [your-test-file]`
+5. Run: `npm run test -- [your-test-file]`
 
 ### Integration Tests (Optional)
 
@@ -232,7 +251,7 @@ open coverage/lcov-report/index.html
 docker-compose -f __tests__/setup/docker-compose.test.yml up -d
 
 # Run integration tests
-TEST_INTEGRATION=true npm test -- --testPathPattern="integration"
+TEST_INTEGRATION=true npm run test -- --testPathPattern="integration"
 
 # Stop Supabase
 docker-compose -f __tests__/setup/docker-compose.test.yml down -v
@@ -241,6 +260,7 @@ docker-compose -f __tests__/setup/docker-compose.test.yml down -v
 ## Next Steps / Future Improvements
 
 ### Priority 1 (High Impact)
+
 1. **Exchange Rate Service Tests** - Critical for financial accuracy
    - Test cache logic (12-hour expiration)
    - Test API integration and fallback
@@ -256,6 +276,7 @@ docker-compose -f __tests__/setup/docker-compose.test.yml down -v
    - `useFrameworkReady` hook
 
 ### Priority 2 (Medium Impact)
+
 4. **Component Tests** - UI reliability
    - Key screens (AddExpense, SettleUp, Groups list)
    - Form validation
@@ -267,6 +288,7 @@ docker-compose -f __tests__/setup/docker-compose.test.yml down -v
    - `delete-user` function
 
 ### Priority 3 (Nice to Have)
+
 6. **E2E Tests** - Full user flows
    - Detox or Maestro for mobile
    - Complete user journeys
@@ -284,6 +306,7 @@ docker-compose -f __tests__/setup/docker-compose.test.yml down -v
 ## Benefits Realized
 
 ### Developer Experience
+
 - ✅ Fast feedback loop with watch mode
 - ✅ Clear test organization and structure
 - ✅ Reusable utilities reduce boilerplate
@@ -291,6 +314,7 @@ docker-compose -f __tests__/setup/docker-compose.test.yml down -v
 - ✅ Easy to add new tests
 
 ### Code Quality
+
 - ✅ 60%+ overall coverage (from ~30%)
 - ✅ 100% coverage on critical utilities
 - ✅ Confidence in refactoring
@@ -298,6 +322,7 @@ docker-compose -f __tests__/setup/docker-compose.test.yml down -v
 - ✅ Living documentation
 
 ### CI/CD Ready
+
 - ✅ Coverage thresholds enforce quality
 - ✅ Optimized CI test run
 - ✅ LCOV format for integrations
@@ -305,6 +330,7 @@ docker-compose -f __tests__/setup/docker-compose.test.yml down -v
 - ✅ Consistent test environment
 
 ### Team Collaboration
+
 - ✅ Clear testing patterns
 - ✅ Mock utilities everyone can use
 - ✅ Test fixtures for consistency
@@ -314,14 +340,17 @@ docker-compose -f __tests__/setup/docker-compose.test.yml down -v
 ## Maintenance
 
 ### Regular Tasks
-- Run tests before commits: `npm test`
+
+- Run tests before commits: `npm run test`
 - Check coverage weekly: `npm run test:coverage`
 - Update fixtures when schema changes
 - Add tests for new features
 - Review and refactor old tests
 
 ### Coverage Thresholds
+
 Current thresholds will fail builds if coverage drops below:
+
 - Lines: 80%
 - Functions: 80%
 - Statements: 80%
