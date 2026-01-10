@@ -21,13 +21,14 @@ The MoneySplit test suite includes:
 - **Unit tests** for utilities and business logic (money math, settlement algorithms)
 - **Service tests** for data access layer (groupRepository, exchangeRateService)
 - **Context tests** for React state management (AuthContext)
+- **Hook tests** for client hooks (currency order, framework ready)
 - **Screen tests** for UI business logic (auth, groups, settings)
 - **Integration tests** (optional, requires local Supabase)
 
 ### Test Statistics
 
-- **Total Tests**: 232
-- **Test Suites**: 10
+- **Total Tests**: 319
+- **Test Suites**: 14
 - **Coverage Targets**:
   - Lines: 80%
   - Functions: 80%
@@ -51,13 +52,18 @@ __tests__/
 │   └── integration.setup.ts       # Integration test helpers
 ├── services/
 │   ├── groupRepository.test.ts    # Service layer tests
-│   └── exchangeRateService.test.ts # Exchange rate tests
+│   ├── exchangeRateService.test.ts # Exchange rate tests
+│   ├── currencyPreferenceService.test.ts # Currency preference service
+│   └── groupPreferenceService.test.ts # Group preference service
 ├── contexts/
 │   └── AuthContext.test.tsx       # React context tests
+├── hooks/
+│   ├── useCurrencyOrder.test.ts   # Currency ordering hook
+│   └── useFrameworkReady.test.ts  # Framework ready hook
 ├── screens/
-│   ├── auth.test.ts               # Auth screen tests (NEW)
-│   ├── groups.test.ts             # Groups screen tests (NEW)
-│   └── settings.test.ts           # Settings screen tests (NEW)
+│   ├── auth.test.tsx              # Auth screen tests (NEW)
+│   ├── groups.test.tsx            # Groups screen tests (NEW)
+│   └── settings.test.tsx          # Settings screen tests (NEW)
 ├── currencies.test.ts             # Currency utilities
 ├── money.test.ts                  # Money math
 ├── settlementService.test.ts      # Settlement algorithms
