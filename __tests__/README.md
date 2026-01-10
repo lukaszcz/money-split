@@ -27,8 +27,8 @@ The MoneySplit test suite includes:
 
 ### Test Statistics
 
-- **Total Tests**: 240
-- **Test Suites**: 12
+- **Total Tests**: 254
+- **Test Suites**: 14
 - **Coverage Targets**:
   - Lines: 80%
   - Functions: 80%
@@ -52,7 +52,9 @@ __tests__/
 │   └── integration.setup.ts       # Integration test helpers
 ├── services/
 │   ├── groupRepository.test.ts    # Service layer tests
-│   └── exchangeRateService.test.ts # Exchange rate tests
+│   ├── exchangeRateService.test.ts # Exchange rate tests
+│   ├── currencyPreferenceService.test.ts # Currency preference service
+│   └── groupPreferenceService.test.ts # Group preference service
 ├── contexts/
 │   └── AuthContext.test.tsx       # React context tests
 ├── hooks/
