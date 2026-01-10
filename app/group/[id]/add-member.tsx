@@ -20,7 +20,7 @@ import {
   getGroup,
   getGroupMembers,
 } from '../../../services/groupRepository';
-import { isValidEmail } from '../../../utils/validation';
+import { isValidEmail, isDuplicateMemberName } from '../../../utils/validation';
 
 export default function AddMemberScreen() {
   const { id } = useLocalSearchParams();
@@ -42,16 +42,7 @@ export default function AddMemberScreen() {
   }, [loadExistingMembers]);
 
   const checkForDuplicateName = (nameToCheck: string) => {
-    const trimmedName = nameToCheck.trim();
-    if (!trimmedName) {
-      setHasDuplicateName(false);
-      return false;
-    }
-
-    const isDuplicate = existingMemberNames.some(
-      (existingName) =>
-        existingName.toLowerCase() === trimmedName.toLowerCase(),
-    );
+    const isDuplicate = isDuplicateMemberName(nameToCheck, existingMemberNames);
     setHasDuplicateName(isDuplicate);
     return isDuplicate;
   };

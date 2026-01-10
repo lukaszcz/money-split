@@ -21,7 +21,7 @@ import {
   getGroup,
   getGroupMembers,
 } from '../../../services/groupRepository';
-import { isValidEmail } from '../../../utils/validation';
+import { isValidEmail, isDuplicateMemberName } from '../../../utils/validation';
 
 export default function EditMemberScreen() {
   const { id, memberId } = useLocalSearchParams();
@@ -67,16 +67,7 @@ export default function EditMemberScreen() {
   }, [memberId, id, router]);
 
   const checkForDuplicateName = (nameToCheck: string) => {
-    const trimmedName = nameToCheck.trim();
-    if (!trimmedName) {
-      setHasDuplicateName(false);
-      return false;
-    }
-
-    const isDuplicate = otherMemberNames.some(
-      (existingName) =>
-        existingName.toLowerCase() === trimmedName.toLowerCase(),
-    );
+    const isDuplicate = isDuplicateMemberName(nameToCheck, otherMemberNames);
     setHasDuplicateName(isDuplicate);
     return isDuplicate;
   };

@@ -287,3 +287,25 @@ export function isValidEmail(value: string): boolean {
   }
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
 }
+
+/**
+ * Checks if a member name is a duplicate of any existing member names.
+ * Comparison is case-insensitive.
+ * @param nameToCheck The name to check for duplicates
+ * @param existingNames Array of existing member names to compare against
+ * @returns true if the name is a duplicate, false otherwise
+ */
+export function isDuplicateMemberName(
+  nameToCheck: string,
+  existingNames: string[],
+): boolean {
+  const trimmedName = nameToCheck.trim();
+  if (!trimmedName) {
+    return false;
+  }
+
+  return existingNames.some(
+    (existingName) =>
+      existingName.toLowerCase() === trimmedName.toLowerCase(),
+  );
+}

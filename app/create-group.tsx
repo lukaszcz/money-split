@@ -20,7 +20,7 @@ import {
   ensureUserProfile,
 } from '../services/groupRepository';
 import { useCurrencyOrder } from '../hooks/useCurrencyOrder';
-import { isValidEmail } from '../utils/validation';
+import { isValidEmail, isDuplicateMemberName } from '../utils/validation';
 
 interface PendingMember {
   id: string;
@@ -75,9 +75,7 @@ export default function CreateGroupScreen() {
       ...pendingMembers.map((m) => m.name),
     ].filter((n) => n);
 
-    const isDuplicate = allMemberNames.some(
-      (existingName) => existingName.toLowerCase() === trimmedName.toLowerCase(),
-    );
+    const isDuplicate = isDuplicateMemberName(trimmedName, allMemberNames);
     setHasDuplicateName(isDuplicate);
     return isDuplicate;
   };
