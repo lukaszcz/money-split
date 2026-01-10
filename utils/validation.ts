@@ -241,7 +241,7 @@ export function validatePercentageInput(
     return sum + (isNaN(val) ? 0 : val);
   }, 0);
 
-  const remaining = 100 - currentTotal;
+  const remaining = Math.max(0, 100 - currentTotal);
   const finalValue = Math.min(value, remaining);
   return finalValue.toString();
 }
@@ -269,12 +269,12 @@ export function validateExactAmountInput(
     return sum + (isNaN(val) ? 0 : val);
   }, 0);
 
-  const remaining = totalAmount - currentTotal;
-  const capped = Math.min(value, Math.max(0, remaining));
+  const remaining = Math.max(0, totalAmount - currentTotal);
   if (value > remaining) {
-    return capped.toFixed(2);
+    return remaining.toFixed(2);
+  } else {
+    return sanitized;
   }
-  return sanitized;
 }
 
 export function isValidEmail(value: string): boolean {

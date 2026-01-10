@@ -100,7 +100,7 @@ export default function ExpenseFormScreen(props: ExpenseFormScreenProps) {
       ? 'Save Expense'
       : 'Save Transfer'
     : isEditExpense
-      ? 'Update Expense'
+      ? 'Save Expense'
       : 'Save Transfer';
 
   const expenseProps =
