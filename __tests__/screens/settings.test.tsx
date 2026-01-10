@@ -38,7 +38,8 @@ describe('Settings Screen', () => {
     mockRouter = require('expo-router').router;
 
     mockGetUser = require('../../services/groupRepository').getUser;
-    mockUpdateUserName = require('../../services/groupRepository').updateUserName;
+    mockUpdateUserName =
+      require('../../services/groupRepository').updateUserName;
     mockDeleteUserAccount =
       require('../../services/groupRepository').deleteUserAccount;
 
@@ -97,7 +98,10 @@ describe('Settings Screen', () => {
       expect(mockUpdateUserName).toHaveBeenCalledWith('user-123', 'New Name');
     });
 
-    expect(alertSpy).toHaveBeenCalledWith('Success', 'Name updated successfully');
+    expect(alertSpy).toHaveBeenCalledWith(
+      'Success',
+      'Name updated successfully',
+    );
     expect(getByText('New Name')).toBeTruthy();
   });
 
