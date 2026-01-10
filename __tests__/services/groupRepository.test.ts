@@ -244,6 +244,297 @@ describe('groupRepository', () => {
     });
   });
 
+  describe('getUserByEmail', () => {
+    it('should return user when found', async () => {
+      const { getUserByEmail } = require('../../services/groupRepository');
+
+      const mockDbUser = createMockDatabaseRow(mockUsers.bob);
+      mockSupabase.from.mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        maybeSingle: jest.fn().mockResolvedValue({
+          data: mockDbUser,
+          error: null,
+        }),
+      } as any);
+
+      const result = await getUserByEmail('bob@example.com');
+
+      expect(result).toEqual(mockUsers.bob);
+    });
+
+    it('should return null on error', async () => {
+      const { getUserByEmail } = require('../../services/groupRepository');
+
+      mockSupabase.from.mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        maybeSingle: jest.fn().mockResolvedValue({
+          data: null,
+          error: new Error('Lookup failed'),
+        }),
+      } as any);
+
+      const result = await getUserByEmail('bob@example.com');
+
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('updateUserName', () => {
+    it('should update user name', async () => {
+      const { updateUserName } = require('../../services/groupRepository');
+
+      const mockDbUser = createMockDatabaseRow({
+        ...mockUsers.alice,
+        name: 'Updated Name',
+      });
+
+      mockSupabase.from.mockReturnValue({
+        update: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        select: jest.fn().mockReturnThis(),
+        single: jest.fn().mockResolvedValue({
+          data: mockDbUser,
+          error: null,
+        }),
+      } as any);
+
+      const result = await updateUserName('user-alice', 'Updated Name');
+
+      expect(result).toEqual({
+        ...mockUsers.alice,
+        name: 'Updated Name',
+      });
+    });
+
+    it('should return null on update error', async () => {
+      const { updateUserName } = require('../../services/groupRepository');
+
+      mockSupabase.from.mockReturnValue({
+        update: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        select: jest.fn().mockReturnThis(),
+        single: jest.fn().mockResolvedValue({
+          data: null,
+          error: new Error('Update failed'),
+        }),
+      } as any);
+
+      const result = await updateUserName('user-alice', 'Updated Name');
+
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('createGroupMember', () => {
+    it('should create a group member', async () => {
+      const { createGroupMember } = require('../../services/groupRepository');
+
+      const mockDbMember = createMockDatabaseRow(mockMembers.aliceInTrip);
+      mockSupabase.from.mockReturnValue({
+        insert: jest.fn().mockReturnThis(),
+        select: jest.fn().mockReturnThis(),
+        single: jest.fn().mockResolvedValue({
+          data: mockDbMember,
+          error: null,
+        }),
+      } as any);
+
+      const result = await createGroupMember(
+        'group-trip',
+        'Alice',
+        'alice@example.com',
+        'user-alice',
+      );
+
+      expect(result).toEqual(mockMembers.aliceInTrip);
+    });
+
+    it('should return null when creation fails', async () => {
+      const { createGroupMember } = require('../../services/groupRepository');
+
+      mockSupabase.from.mockReturnValue({
+        insert: jest.fn().mockReturnThis(),
+        select: jest.fn().mockReturnThis(),
+        single: jest.fn().mockResolvedValue({
+          data: null,
+          error: new Error('Insert failed'),
+        }),
+      } as any);
+
+      const result = await createGroupMember('group-trip', 'Alice');
+
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('getGroupMembers', () => {
+    it('should map group members', async () => {
+      const { getGroupMembers } = require('../../services/groupRepository');
+
+      const mockDbMembers = [
+        createMockDatabaseRow(mockMembers.aliceInTrip),
+        createMockDatabaseRow(mockMembers.unconnectedInTrip),
+      ];
+
+      mockSupabase.from.mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        order: jest.fn().mockResolvedValue({ data: mockDbMembers, error: null }),
+      } as any);
+
+      const result = await getGroupMembers('group-trip');
+
+      expect(result).toEqual([
+        mockMembers.aliceInTrip,
+        mockMembers.unconnectedInTrip,
+      ]);
+    });
+
+    it('should return empty array on error', async () => {
+      const { getGroupMembers } = require('../../services/groupRepository');
+
+      mockSupabase.from.mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        order: jest.fn().mockResolvedValue({
+          data: null,
+          error: new Error('Fetch failed'),
+        }),
+      } as any);
+
+      const result = await getGroupMembers('group-trip');
+
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('getGroupMember', () => {
+    it('should return group member when found', async () => {
+      const { getGroupMember } = require('../../services/groupRepository');
+
+      const mockDbMember = createMockDatabaseRow(mockMembers.bobInTrip);
+      mockSupabase.from.mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        maybeSingle: jest.fn().mockResolvedValue({
+          data: mockDbMember,
+          error: null,
+        }),
+      } as any);
+
+      const result = await getGroupMember('member-bob-trip');
+
+      expect(result).toEqual(mockMembers.bobInTrip);
+    });
+
+    it('should return null when member not found', async () => {
+      const { getGroupMember } = require('../../services/groupRepository');
+
+      mockSupabase.from.mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
+      } as any);
+
+      const result = await getGroupMember('missing-member');
+
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('getCurrentUserMemberInGroup', () => {
+    it('should return null when no authenticated user', async () => {
+      const {
+        getCurrentUserMemberInGroup,
+      } = require('../../services/groupRepository');
+
+      mockSupabase.auth.getUser.mockResolvedValue({
+        data: { user: null },
+        error: null,
+      });
+
+      const result = await getCurrentUserMemberInGroup('group-trip');
+
+      expect(result).toBeNull();
+    });
+
+    it('should return member connected to current user', async () => {
+      const {
+        getCurrentUserMemberInGroup,
+      } = require('../../services/groupRepository');
+      const mockUser = createMockUser({ id: 'user-alice' });
+
+      mockSupabase.auth.getUser.mockResolvedValue({
+        data: { user: mockUser },
+        error: null,
+      });
+
+      const mockDbMember = createMockDatabaseRow(mockMembers.aliceInTrip);
+      mockSupabase.from.mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        maybeSingle: jest.fn().mockResolvedValue({
+          data: mockDbMember,
+          error: null,
+        }),
+      } as any);
+
+      const result = await getCurrentUserMemberInGroup('group-trip');
+
+      expect(result).toEqual(mockMembers.aliceInTrip);
+    });
+  });
+
+  describe('connectUserToGroupMembers', () => {
+    it('should return number of connected members', async () => {
+      const {
+        connectUserToGroupMembers,
+      } = require('../../services/groupRepository');
+
+      mockSupabase.from.mockReturnValue({
+        update: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        is: jest.fn().mockReturnThis(),
+        select: jest.fn().mockResolvedValue({
+          data: [createMockDatabaseRow(mockMembers.unconnectedInTrip)],
+          error: null,
+        }),
+      } as any);
+
+      const result = await connectUserToGroupMembers(
+        'user-alice',
+        'dave@example.com',
+      );
+
+      expect(result).toBe(1);
+    });
+
+    it('should return 0 on error', async () => {
+      const {
+        connectUserToGroupMembers,
+      } = require('../../services/groupRepository');
+
+      mockSupabase.from.mockReturnValue({
+        update: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        is: jest.fn().mockReturnThis(),
+        select: jest.fn().mockResolvedValue({
+          data: null,
+          error: new Error('Update failed'),
+        }),
+      } as any);
+
+      const result = await connectUserToGroupMembers(
+        'user-alice',
+        'dave@example.com',
+      );
+
+      expect(result).toBe(0);
+    });
+  });
+
   describe('createGroup', () => {
     it('should create group with creator as first member', async () => {
       const { createGroup } = require('../../services/groupRepository');
@@ -425,6 +716,62 @@ describe('groupRepository', () => {
     });
   });
 
+  describe('getAllGroups', () => {
+    it('should map groups and sort members by creation time', async () => {
+      const { getAllGroups } = require('../../services/groupRepository');
+
+      const olderMember = {
+        ...mockMembers.aliceInTrip,
+        createdAt: '2024-01-01T00:00:00Z',
+      };
+      const newerMember = {
+        ...mockMembers.bobInTrip,
+        createdAt: '2024-02-01T00:00:00Z',
+      };
+
+      const mockDbGroup = {
+        ...createMockDatabaseRow(mockGroups.trip),
+        group_members: [
+          createMockDatabaseRow(newerMember),
+          createMockDatabaseRow(olderMember),
+        ],
+      };
+
+      mockSupabase.from.mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        order: jest.fn().mockResolvedValue({
+          data: [mockDbGroup],
+          error: null,
+        }),
+      } as any);
+
+      const result = await getAllGroups();
+
+      expect(result).toEqual([
+        {
+          ...mockGroups.trip,
+          members: [olderMember, newerMember],
+        },
+      ]);
+    });
+
+    it('should return empty array on error', async () => {
+      const { getAllGroups } = require('../../services/groupRepository');
+
+      mockSupabase.from.mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        order: jest.fn().mockResolvedValue({
+          data: null,
+          error: new Error('Fetch failed'),
+        }),
+      } as any);
+
+      const result = await getAllGroups();
+
+      expect(result).toEqual([]);
+    });
+  });
+
   describe('createExpense', () => {
     it('should create expense with shares', async () => {
       const { createExpense } = require('../../services/groupRepository');
@@ -578,6 +925,180 @@ describe('groupRepository', () => {
     });
   });
 
+  describe('getGroupExpenses', () => {
+    it('should map expenses with shares', async () => {
+      const { getGroupExpenses } = require('../../services/groupRepository');
+
+      const mockDbExpense = {
+        id: 'expense-1',
+        group_id: 'group-trip',
+        description: null,
+        date_time: '2024-01-15T19:00:00Z',
+        currency_code: 'USD',
+        total_amount_scaled: 120000,
+        payer_member_id: 'member-alice-trip',
+        exchange_rate_to_main_scaled: 10000,
+        total_in_main_scaled: 120000,
+        created_at: '2024-01-15T20:00:00Z',
+        payment_type: null,
+        split_type: null,
+        expense_shares: [
+          {
+            id: 'share-1',
+            member_id: 'member-alice-trip',
+            share_amount_scaled: 60000,
+            share_in_main_scaled: 60000,
+          },
+        ],
+      };
+
+      mockSupabase.from.mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        order: jest.fn().mockResolvedValue({
+          data: [mockDbExpense],
+          error: null,
+        }),
+      } as any);
+
+      const result = await getGroupExpenses('group-trip');
+
+      expect(result).toEqual([
+        {
+          id: 'expense-1',
+          groupId: 'group-trip',
+          description: undefined,
+          dateTime: '2024-01-15T19:00:00Z',
+          currencyCode: 'USD',
+          totalAmountScaled: BigInt(120000),
+          payerMemberId: 'member-alice-trip',
+          exchangeRateToMainScaled: BigInt(10000),
+          totalInMainScaled: BigInt(120000),
+          createdAt: '2024-01-15T20:00:00Z',
+          paymentType: 'expense',
+          splitType: 'equal',
+          shares: [
+            {
+              id: 'share-1',
+              memberId: 'member-alice-trip',
+              shareAmountScaled: BigInt(60000),
+              shareInMainScaled: BigInt(60000),
+            },
+          ],
+        },
+      ]);
+    });
+
+    it('should return empty array on error', async () => {
+      const { getGroupExpenses } = require('../../services/groupRepository');
+
+      mockSupabase.from.mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        order: jest.fn().mockResolvedValue({
+          data: null,
+          error: new Error('Fetch failed'),
+        }),
+      } as any);
+
+      const result = await getGroupExpenses('group-trip');
+
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('getExpense', () => {
+    it('should return expense with shares', async () => {
+      const { getExpense } = require('../../services/groupRepository');
+
+      const mockExpense = {
+        id: 'expense-1',
+        group_id: 'group-trip',
+        description: 'Dinner',
+        date_time: '2024-01-15T19:00:00Z',
+        currency_code: 'USD',
+        total_amount_scaled: 120000,
+        payer_member_id: 'member-alice-trip',
+        exchange_rate_to_main_scaled: 10000,
+        total_in_main_scaled: 120000,
+        created_at: '2024-01-15T20:00:00Z',
+        payment_type: 'expense',
+        split_type: 'equal',
+      };
+
+      const expenseBuilder = {
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        maybeSingle: jest.fn().mockResolvedValue({
+          data: mockExpense,
+          error: null,
+        }),
+      };
+
+      const sharesBuilder = {
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockResolvedValue({
+          data: [
+            {
+              id: 'share-1',
+              member_id: 'member-alice-trip',
+              share_amount_scaled: 120000,
+              share_in_main_scaled: 120000,
+            },
+          ],
+          error: null,
+        }),
+      };
+
+      let callCount = 0;
+      mockSupabase.from.mockImplementation((table: string) => {
+        callCount++;
+        if (table === 'expenses') return expenseBuilder as any;
+        if (table === 'expense_shares') return sharesBuilder as any;
+        return {} as any;
+      });
+
+      const result = await getExpense('expense-1');
+
+      expect(result).toEqual({
+        id: 'expense-1',
+        groupId: 'group-trip',
+        description: 'Dinner',
+        dateTime: '2024-01-15T19:00:00Z',
+        currencyCode: 'USD',
+        totalAmountScaled: BigInt(120000),
+        payerMemberId: 'member-alice-trip',
+        exchangeRateToMainScaled: BigInt(10000),
+        totalInMainScaled: BigInt(120000),
+        createdAt: '2024-01-15T20:00:00Z',
+        paymentType: 'expense',
+        splitType: 'equal',
+        shares: [
+          {
+            id: 'share-1',
+            memberId: 'member-alice-trip',
+            shareAmountScaled: BigInt(120000),
+            shareInMainScaled: BigInt(120000),
+          },
+        ],
+      });
+    });
+
+    it('should return null when expense not found', async () => {
+      const { getExpense } = require('../../services/groupRepository');
+
+      mockSupabase.from.mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
+      } as any);
+
+      const result = await getExpense('missing-expense');
+
+      expect(result).toBeNull();
+    });
+  });
+
   describe('updateExpense', () => {
     it('should update expense and replace shares', async () => {
       const { updateExpense } = require('../../services/groupRepository');
@@ -690,6 +1211,55 @@ describe('groupRepository', () => {
       const result = await deleteExpense('expense-1');
 
       expect(result).toBe(false);
+    });
+  });
+
+  describe('updateGroupMember', () => {
+    it('should update a group member', async () => {
+      const { updateGroupMember } = require('../../services/groupRepository');
+
+      const updatedMember = {
+        ...mockMembers.unconnectedInTrip,
+        name: 'Updated Name',
+        connectedUserId: 'user-alice',
+      };
+
+      mockSupabase.from.mockReturnValue({
+        update: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        select: jest.fn().mockReturnThis(),
+        single: jest.fn().mockResolvedValue({
+          data: createMockDatabaseRow(updatedMember),
+          error: null,
+        }),
+      } as any);
+
+      const result = await updateGroupMember(
+        'member-unconnected-trip',
+        'Updated Name',
+        'dave@example.com',
+        'user-alice',
+      );
+
+      expect(result).toEqual(updatedMember);
+    });
+
+    it('should return null on update error', async () => {
+      const { updateGroupMember } = require('../../services/groupRepository');
+
+      mockSupabase.from.mockReturnValue({
+        update: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        select: jest.fn().mockReturnThis(),
+        single: jest.fn().mockResolvedValue({
+          data: null,
+          error: new Error('Update failed'),
+        }),
+      } as any);
+
+      const result = await updateGroupMember('member-1', 'Name');
+
+      expect(result).toBeNull();
     });
   });
 
