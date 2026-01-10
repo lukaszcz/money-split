@@ -445,11 +445,11 @@ npm run test:coverage -- --coverageReporters=json-summary
 
 ### Overview
 
-Screen tests focus on testing UI business logic without rendering React Native components. This approach is:
-- **Fast**: No rendering overhead
-- **Maintainable**: Tests don't break when styles change
-- **AI-friendly**: Clear patterns that can be replicated
-- **Focused**: Tests workflows and validation, not UI appearance
+Screen tests render React Native screens with `@testing-library/react-native` and assert on user-visible behavior. This approach is:
+- **Fast**: Render-only tests stay quick enough for unit feedback
+- **Maintainable**: Assertions target text, labels, and flows instead of layout
+- **Workflow-driven**: Exercises real user actions (input, submit, navigate)
+- **Accessible**: Encourages labeling icon-only buttons for testability and users
 
 ### What to Test
 
@@ -463,7 +463,7 @@ Screen tests focus on testing UI business logic without rendering React Native c
 - Loading states
 
 ❌ **Don't test**:
-- UI rendering or layout
+- Layout or pixel values
 - StyleSheet values
 - Component tree structure
 - Visual appearance
@@ -507,41 +507,49 @@ beforeEach(() => {
 });
 ```
 
-#### 3. Test Workflows, Not Implementation
+#### 3. Render the Screen and Drive User Actions
 
 ```typescript
-// ✅ Good: Test workflow
-it('should sign in and navigate to groups', async () => {
-  mockAuthContext.signIn.mockResolvedValue(undefined);
+import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import AuthScreen from '../../app/auth';
 
-  await mockAuthContext.signIn('test@example.com', 'password');
-  mockRouter.replace('/(tabs)/groups');
+it('signs in and navigates', async () => {
+  const { getByPlaceholderText, getByText } = render(<AuthScreen />);
 
-  expect(mockAuthContext.signIn).toHaveBeenCalledWith('test@example.com', 'password');
+  fireEvent.changeText(getByPlaceholderText('Email'), 'test@example.com');
+  fireEvent.changeText(getByPlaceholderText('Password'), 'password123');
+  fireEvent.press(getByText('Sign In'));
+
+  await waitFor(() => {
+    expect(mockAuthContext.signIn).toHaveBeenCalledWith(
+      'test@example.com',
+      'password123',
+    );
+  });
   expect(mockRouter.replace).toHaveBeenCalledWith('/(tabs)/groups');
-});
-
-// ❌ Bad: Test implementation details
-it('should update state variable', () => {
-  let email = '';
-  email = 'test@example.com';
-  expect(email).toBe('test@example.com'); // Too granular
 });
 ```
 
-#### 4. Test Validation Logic
+#### 4. Prefer Accessibility Labels for Icon-only Buttons
 
 ```typescript
-it('should reject empty email', () => {
-  const email = '';
-  const hasEmail = email.trim().length > 0;
+// In screen component
+<TouchableOpacity accessibilityLabel=\"Edit display name\" onPress={onEdit} />
 
-  expect(hasEmail).toBe(false);
+// In test
+fireEvent.press(getByLabelText('Edit display name'));
+```
 
-  if (!hasEmail) {
-    // Sign-in should not be called
-    expect(mockAuthContext.signIn).not.toHaveBeenCalled();
-  }
+#### 5. Test Validation Through UI, Not State
+
+```typescript
+it('shows a validation error for missing credentials', () => {
+  const { getByText } = render(<AuthScreen />);
+
+  fireEvent.press(getByText('Sign In'));
+
+  expect(getByText('Please enter both email and password')).toBeTruthy();
+  expect(mockAuthContext.signIn).not.toHaveBeenCalled();
 });
 ```
 
@@ -566,9 +574,9 @@ it('should reject empty email', () => {
 ### Example Screen Tests
 
 See these files for complete examples:
-- `__tests__/screens/auth.test.ts` - Authentication (9 tests)
-- `__tests__/screens/groups.test.ts` - Groups list (10 tests)
-- `__tests__/screens/settings.test.ts` - Settings (8 tests)
+- `__tests__/screens/auth.test.tsx` - Authentication flows
+- `__tests__/screens/groups.test.tsx` - Groups list and navigation
+- `__tests__/screens/settings.test.tsx` - Profile, logout, delete flows
 
 ### Tips for Screen Testing
 

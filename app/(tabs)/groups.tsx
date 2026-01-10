@@ -7,7 +7,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useState, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Plus } from 'lucide-react-native';
 import { getAllGroups, GroupWithMembers } from '../../services/groupRepository';
@@ -112,6 +112,8 @@ export default function GroupsScreen() {
   const renderGroupItem = ({ item }: { item: GroupWithSettledStatus }) => (
     <TouchableOpacity
       style={[styles.groupCard, item.isSettled && styles.groupCardSettled]}
+      accessibilityRole="button"
+      accessibilityLabel={`Open group ${item.name}`}
       onPress={() => router.push(`/group/${item.id}` as any)}
     >
       <View style={styles.groupHeader}>
@@ -139,6 +141,8 @@ export default function GroupsScreen() {
         <Text style={styles.title}>Groups</Text>
         <TouchableOpacity
           style={styles.addButton}
+          accessibilityRole="button"
+          accessibilityLabel="Create group"
           onPress={() => router.push('/create-group' as any)}
         >
           <Plus color="#ffffff" size={24} />

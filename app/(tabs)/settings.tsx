@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { LogOut, User, Edit2, Check, X, Trash2 } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { router } from 'expo-router';
@@ -167,12 +167,16 @@ export default function SettingsScreen() {
                   <View style={styles.nameEditButtons}>
                     <TouchableOpacity
                       style={styles.nameEditButton}
+                      accessibilityRole="button"
+                      accessibilityLabel="Save display name"
                       onPress={handleSaveName}
                     >
                       <Check color="#059669" size={20} />
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={styles.nameEditButton}
+                      accessibilityRole="button"
+                      accessibilityLabel="Cancel display name edit"
                       onPress={handleCancelEdit}
                     >
                       <X color="#6b7280" size={20} />
@@ -184,7 +188,11 @@ export default function SettingsScreen() {
                   <Text style={styles.nameText}>
                     {userName || 'No name set'}
                   </Text>
-                  <TouchableOpacity onPress={() => setEditingName(true)}>
+                  <TouchableOpacity
+                    accessibilityRole="button"
+                    accessibilityLabel="Edit display name"
+                    onPress={() => setEditingName(true)}
+                  >
                     <Edit2 color="#2563eb" size={18} />
                   </TouchableOpacity>
                 </View>
@@ -193,6 +201,8 @@ export default function SettingsScreen() {
 
             <TouchableOpacity
               style={styles.logoutButton}
+              accessibilityRole="button"
+              accessibilityLabel="Logout"
               onPress={handleLogout}
             >
               <LogOut color="#ef4444" size={20} />
@@ -211,6 +221,8 @@ export default function SettingsScreen() {
 
             <TouchableOpacity
               style={styles.deleteAccountButton}
+              accessibilityRole="button"
+              accessibilityLabel="Delete account"
               onPress={handleDeleteAccount}
             >
               <Trash2 color="#ffffff" size={20} />

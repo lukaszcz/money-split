@@ -115,6 +115,10 @@ export default function AuthScreen() {
 
             <TouchableOpacity
               style={styles.switchButton}
+              accessibilityRole="button"
+              accessibilityLabel={
+                isLogin ? 'Switch to sign up' : 'Switch to sign in'
+              }
               onPress={() => {
                 setIsLogin(!isLogin);
                 setError('');
