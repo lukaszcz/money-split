@@ -23,16 +23,13 @@ import {
 } from '../../../services/groupRepository';
 import {
   toScaled,
-  calculateEqualSplit,
-  calculatePercentageSplit,
-  sumScaled,
   applyExchangeRate,
+  calculateSharesForSplit,
   formatCurrency,
+  type SplitMethod,
 } from '../../../utils/money';
 import { getExchangeRate } from '../../../services/exchangeRateService';
 import { useCurrencyOrder } from '../../../hooks/useCurrencyOrder';
-
-type SplitMethod = 'equal' | 'percentage' | 'exact';
 
 export default function EditExpenseScreen() {
   const { id, expenseId } = useLocalSearchParams();
@@ -181,39 +178,20 @@ export default function EditExpenseScreen() {
       return;
     }
 
-    const totalScaled = toScaled(parseFloat(amount));
+    const shareResult = calculateSharesForSplit({
+      splitMethod,
+      amountScaled: toScaled(parseFloat(amount)),
+      participantIds: selectedParticipants,
+      percentages,
+      exactAmounts,
+    });
 
-    let shares: bigint[];
-
-    if (splitMethod === 'equal') {
-      shares = calculateEqualSplit(totalScaled, selectedParticipants.length);
-    } else if (splitMethod === 'percentage') {
-      const percentValues = selectedParticipants.map((userId) =>
-        parseFloat(percentages[userId] || '0'),
-      );
-      const totalPercent = percentValues.reduce((sum, p) => sum + p, 0);
-
-      if (Math.abs(totalPercent - 100) > 0.01) {
-        Alert.alert('Error', 'Percentages must sum to 100%');
-        return;
-      }
-
-      shares = calculatePercentageSplit(totalScaled, percentValues);
-    } else {
-      const exactValues = selectedParticipants.map((userId) =>
-        toScaled(parseFloat(exactAmounts[userId] || '0')),
-      );
-      const totalExact = sumScaled(exactValues);
-
-      if (totalExact !== totalScaled) {
-        Alert.alert('Error', 'Exact amounts must sum to the total amount');
-        return;
-      }
-
-      shares = exactValues;
+    if ('error' in shareResult) {
+      Alert.alert('Error', shareResult.error);
+      return;
     }
 
-    await saveExpense(shares);
+    await saveExpense(shareResult.shares);
   };
 
   const saveExpense = async (shares: bigint[]) => {

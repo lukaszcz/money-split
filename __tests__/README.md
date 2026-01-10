@@ -122,6 +122,8 @@ describe('money utilities', () => {
 });
 ```
 
+Money utility tests also cover share calculations via `calculateSharesForSplit`.
+
 ### Service Test Pattern with Mocks
 
 ```typescript
