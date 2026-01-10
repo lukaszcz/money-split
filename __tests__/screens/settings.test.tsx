@@ -127,7 +127,9 @@ describe('Settings Screen', () => {
       (button) => button?.text === 'Logout',
     );
 
-    await logoutAction?.onPress?.();
+    await act(async () => {
+      await logoutAction?.onPress?.();
+    });
 
     await waitFor(() => {
       expect(mockAuthContext.signOut).toHaveBeenCalled();
