@@ -61,7 +61,9 @@ describe('useCurrencyOrder', () => {
 
     expect(ensureGroupCurrencyInOrder).toHaveBeenCalledWith('GBP');
     expect(getUserCurrencyOrder).toHaveBeenCalled();
-    expect(result.current.currencies).toEqual(getCurrenciesByCodes(['EUR', 'USD']));
+    expect(result.current.currencies).toEqual(
+      getCurrenciesByCodes(['EUR', 'USD']),
+    );
   });
 
   it('updates the order when selecting a currency', async () => {

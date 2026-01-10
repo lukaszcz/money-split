@@ -460,7 +460,9 @@ describe('groupRepository', () => {
       mockSupabase.from.mockReturnValue({
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
-        order: jest.fn().mockResolvedValue({ data: mockDbMembers, error: null }),
+        order: jest
+          .fn()
+          .mockResolvedValue({ data: mockDbMembers, error: null }),
       } as any);
 
       const result = await getGroupMembers('group-trip');

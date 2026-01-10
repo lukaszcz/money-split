@@ -141,7 +141,9 @@ describe('groupPreferenceService', () => {
     };
 
     const upsertBuilder = {
-      upsert: jest.fn().mockResolvedValue({ error: new Error('Upsert failed') }),
+      upsert: jest
+        .fn()
+        .mockResolvedValue({ error: new Error('Upsert failed') }),
     };
 
     let callCount = 0;
@@ -188,7 +190,10 @@ describe('groupPreferenceService', () => {
       return updateBuilder as any;
     });
 
-    await groupPreferenceService.cleanupGroupPreferences(['group-1', 'group-3']);
+    await groupPreferenceService.cleanupGroupPreferences([
+      'group-1',
+      'group-3',
+    ]);
 
     expect(updateBuilder.update).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -228,7 +233,10 @@ describe('groupPreferenceService', () => {
 
     mockSupabase.from.mockReturnValue(preferenceBuilder as any);
 
-    await groupPreferenceService.cleanupGroupPreferences(['group-1', 'group-2']);
+    await groupPreferenceService.cleanupGroupPreferences([
+      'group-1',
+      'group-2',
+    ]);
 
     expect(mockSupabase.from).toHaveBeenCalledTimes(1);
   });

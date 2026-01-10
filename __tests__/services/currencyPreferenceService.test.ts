@@ -278,7 +278,9 @@ describe('currencyPreferenceService', () => {
     const existingBuilder = {
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
-      maybeSingle: jest.fn().mockResolvedValue({ data: { id: 'pref-1' }, error: null }),
+      maybeSingle: jest
+        .fn()
+        .mockResolvedValue({ data: { id: 'pref-1' }, error: null }),
     };
 
     const updateBuilder = {
@@ -301,8 +303,16 @@ describe('currencyPreferenceService', () => {
     await currencyPreferenceService.updateCurrencyOrder('GBP');
 
     const allCodes = getCurrencyCodes();
-    const currentOrder = ['EUR', 'USD', 'GBP', ...allCodes.filter((code) => !['EUR', 'USD', 'GBP'].includes(code))];
-    const expectedOrder = ['GBP', ...currentOrder.filter((code) => code !== 'GBP')];
+    const currentOrder = [
+      'EUR',
+      'USD',
+      'GBP',
+      ...allCodes.filter((code) => !['EUR', 'USD', 'GBP'].includes(code)),
+    ];
+    const expectedOrder = [
+      'GBP',
+      ...currentOrder.filter((code) => code !== 'GBP'),
+    ];
 
     expect(updateBuilder.update).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -390,7 +400,9 @@ describe('currencyPreferenceService', () => {
     const existingBuilder = {
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
-      maybeSingle: jest.fn().mockResolvedValue({ data: { id: 'pref-1' }, error: null }),
+      maybeSingle: jest
+        .fn()
+        .mockResolvedValue({ data: { id: 'pref-1' }, error: null }),
     };
 
     const updateBuilder = {
