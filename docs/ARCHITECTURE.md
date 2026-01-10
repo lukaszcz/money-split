@@ -11,6 +11,7 @@ This document describes the architecture of the MoneySplit application (React Na
 ## Runtime split: device vs server
 
 ### Runs on the device
+
 - Navigation, screens, and UI logic (`app/*.tsx`).
 - Authentication state handling (`contexts/AuthContext.tsx`).
 - Client-side money math and settlement logic (`utils/money.ts`, `services/settlementService.ts`).
@@ -19,6 +20,7 @@ This document describes the architecture of the MoneySplit application (React Na
 - Preference ordering and UX state (group order, currency order) (`services/groupPreferenceService.ts`, `services/currencyPreferenceService.ts`, `hooks/useCurrencyOrder.ts`).
 
 ### Runs on the server (Supabase)
+
 - Auth: user identity and sessions (Supabase Auth).
 - Database: persistence, constraints, and RLS (migrations in `supabase/migrations/*.sql`).
 - Row-level security policies enforce membership-based access.
@@ -49,18 +51,21 @@ This document describes the architecture of the MoneySplit application (React Na
 The canonical schema is defined by the SQL migrations under `supabase/migrations/`. TypeScript typings are in `lib/database.types.ts`. The schema below reflects the migrations as of the latest timestamps.
 
 ### users
+
 - Table: `public.users`
 - Columns: `id`, `name`, `email`, `created_at`, `last_login`.
 - Description: Profile records for authenticated users, mirrored from Supabase Auth.
 - Used by `ensureUserProfile()` and profile updates (`services/groupRepository.ts`).
 
 ### groups
+
 - Description: Expense-sharing groups with a primary currency for totals.
 - Table: `public.groups`
 - Columns: `id`, `name`, `main_currency_code`, `created_at`.
 - Group creation uses `createGroup()` in `services/groupRepository.ts`.
 
 ### group_members
+
 - Description: Membership roster for each group, including invited members not yet linked to a user.
 - Table: `public.group_members`
 - Columns: `id`, `group_id`, `name`, `email`, `connected_user_id`, `created_at`.
@@ -68,6 +73,7 @@ The canonical schema is defined by the SQL migrations under `supabase/migrations
 - Connection and reconnection logic is handled in `ensureUserProfile()` and `reconnectGroupMembers()` (`services/groupRepository.ts`).
 
 ### expenses
+
 - Description: Expense or transfer records for a group, stored in original and main currency.
 - Table: `public.expenses`
 - Columns: `id`, `group_id`, `description`, `date_time`, `currency_code`, `total_amount_scaled`, `payer_member_id`, `exchange_rate_to_main_scaled`, `total_in_main_scaled`, `payment_type`, `split_type`, `created_at`.
@@ -75,24 +81,28 @@ The canonical schema is defined by the SQL migrations under `supabase/migrations
 - `split_type` preserves `equal` / `percentage` / `exact` (`supabase/migrations/20251225183146_add_split_type_to_expenses.sql`).
 
 ### expense_shares
+
 - Description: Per-member allocation of each expense in both original and main currency.
 - Table: `public.expense_shares`
 - Columns: `id`, `expense_id`, `member_id`, `share_amount_scaled`, `share_in_main_scaled`.
 - Shares are created when an expense is created or updated (`createExpense()` / `updateExpense()` in `services/groupRepository.ts`).
 
 ### exchange_rates
+
 - Description: Cached FX rates used to convert expenses to a group's main currency.
 - Table: `public.exchange_rates`
 - Columns: `id`, `base_currency_code`, `quote_currency_code`, `rate_scaled`, `fetched_at`.
 - Cached rates are read/written in `services/exchangeRateService.ts`.
 
 ### user_currency_preferences
+
 - Description: Per-user ordering of currencies for display and selection.
 - Table: `public.user_currency_preferences`
 - Columns: `id`, `user_id`, `currency_order`, `created_at`, `updated_at`.
 - Stored as a JSON array and managed in `services/currencyPreferenceService.ts`.
 
 ### user_group_preferences
+
 - Description: Per-user ordering of groups for the tabs list and recency sorting.
 - Table: `public.user_group_preferences`
 - Columns: `user_id`, `group_order`, `updated_at`.
@@ -128,6 +138,7 @@ The RLS policies have evolved through multiple migrations. The most recent polic
   - User can read/insert/update their own preferences.
 
 For the exact SQL definitions and helper functions, see:
+
 - `supabase/migrations/20251225090146_remove_unused_indexes_and_fix_function.sql`
 - `supabase/migrations/20251225132228_remove_group_ownership_implement_soft_delete.sql`
 - `supabase/migrations/20251225181452_fix_group_members_insert_allow_self.sql`
@@ -146,6 +157,7 @@ For the exact SQL definitions and helper functions, see:
   - `computeSimplificationSteps()` powers the “Explain Debts” animation (step-by-step simplification).
 
 Relevant files:
+
 - `utils/money.ts`
 - `services/settlementService.ts`
 - `app/group/[id]/settle.tsx`
@@ -161,16 +173,19 @@ Relevant files:
 ## Edge functions
 
 ### send-invitation
+
 - File: `supabase/functions/send-invitation/index.ts`.
 - Triggered from `sendInvitationEmail()` in `services/groupRepository.ts`.
 - Uses Resend API with HTML template to deliver invite emails.
 
 ### cleanup-orphaned-groups
+
 - File: `supabase/functions/cleanup-orphaned-groups/index.ts`.
 - Triggered after a user leaves a group (`leaveGroup()` in `services/groupRepository.ts`).
 - Deletes groups with no connected members by scanning `group_members`.
 
 ### delete-user
+
 - File: `supabase/functions/delete-user/index.ts`.
 - Triggered from `deleteUserAccount()` in `services/groupRepository.ts`.
 - Disconnects the user from all `group_members`, deletes the public `users` row, runs cleanup, then deletes the auth user.
@@ -178,42 +193,50 @@ Relevant files:
 ## UI design and screen-by-screen behavior
 
 The UI uses a light, card-based aesthetic with consistent spacing and neutral grays, accent blue (`#2563eb`), and iconography via `lucide-react-native`. Common patterns include:
+
 - White card surfaces over a light gray background (`#f9fafb`).
 - Rounded corners and soft borders (`borderColor: #e5e7eb`).
 - Icon affordances for actions (add, edit, delete, settle).
 
 ### Auth (`app/auth.tsx`)
+
 - Email/password sign-in and sign-up.
 - On success, navigates to `/(tabs)/groups`.
 - Uses `useAuth()` methods from `contexts/AuthContext.tsx`.
 
 ### Tabs layout (`app/(tabs)/_layout.tsx`)
+
 - Bottom tab navigation on the main screen: Groups, Activity, Settings.
 
 ### Groups list (`app/(tabs)/groups.tsx`)
+
 - Loads all groups (`getAllGroups()` in `services/groupRepository.ts`).
 - Orders by last visit via `getOrderedGroups()` (`services/groupPreferenceService.ts`).
 - Computes “settled” status by loading expenses and calling `computeBalances()`.
 - Allows the user to add new groups via `app/create-group.tsx`.
 
 ### Activity (`app/(tabs)/activity.tsx`)
+
 - Fetches each group the user is a member of.
 - For each fetched group, fetches its expenses.
 - Displays recent expenses across all fetched groups, newest first.
 - Resolves payer names via `getGroupMember()`.
 
 ### Settings (`app/(tabs)/settings.tsx`)
+
 - Displays profile (email, display name) and allows rename via `updateUserName()`.
 - Logout via `useAuth().signOut()`.
 - Account deletion triggers edge function `delete-user` (`deleteUserAccount()` in `services/groupRepository.ts`).
 
 ### Create Group (`app/create-group.tsx`)
+
 - Collects group name, main currency, and member list.
 - Uses currency ordering via `useCurrencyOrder()`.
 - Creates group + members via `createGroup()`.
 - Sends invitations via `sendInvitationEmail()` for non-existing users.
 
 ### Group detail (`app/group/[id].tsx`)
+
 - Loads group, members, and expenses (`getGroup()`, `getGroupExpenses()`).
 - Tabs:
   - Payments: list of expenses and transfers with conversion previews.
@@ -223,6 +246,7 @@ The UI uses a light, card-based aesthetic with consistent spacing and neutral gr
 - Leaving a group uses `leaveGroup()` and triggers cleanup function.
 
 ### Add Expense / Transfer (`app/group/[id]/add-expense.tsx`)
+
 - Two modes: “Expense” (split among participants) and “Transfer” (one payer, one recipient).
 - Split methods: equal, percentage, exact amounts.
 - Validates totals and generates `expense_shares` based on split method.
@@ -230,31 +254,37 @@ The UI uses a light, card-based aesthetic with consistent spacing and neutral gr
 - Persists via `createExpense()`.
 
 ### Edit Expense (`app/group/[id]/edit-expense.tsx`)
+
 - Loads expense and group, pre-fills form and split method.
 - Recomputes shares on save and updates via `updateExpense()`.
 - Can delete via `deleteExpense()`.
 
 ### Edit Transfer (`app/group/[id]/edit-transfer.tsx`)
+
 - Specialized edit form for transfers (single recipient).
 - Updates expense using `updateExpense()` .
 - Can delete via `deleteExpense()`.
 
 ### Add Member (`app/group/[id]/add-member.tsx`)
+
 - Adds a new member record via `createGroupMember()`.
 - If email is provided:
   - Connects to existing user if present.
   - Sends invitation email otherwise.
 
 ### Edit Member (`app/group/[id]/edit-member.tsx`)
+
 - Updates member name/email and optionally re-sends invitation.
 - Uses `updateGroupMember()`.
 
 ### Settle Up (`app/group/[id]/settle.tsx`)
+
 - Displays settlements with simplify toggle.
 - “Transfer” button records a settlement as a transfer expense via `createExpense()`.
 - “Explain Debts” visualizes simplification steps (`computeSimplificationSteps()`).
 
 ### Not Found (`app/+not-found.tsx`)
+
 - Basic fallback route.
 
 ## General workflow (end-to-end)
@@ -275,6 +305,7 @@ The UI uses a light, card-based aesthetic with consistent spacing and neutral gr
 - Data access: `services/groupRepository.ts`, `services/exchangeRateService.ts`.
 - Preferences: `services/currencyPreferenceService.ts`, `services/groupPreferenceService.ts`, `hooks/useCurrencyOrder.ts`.
 - Money math: `utils/money.ts`, `utils/currencies.ts`.
+- Input validation logic: `utils/validation.ts`.
 - Settlement logic: `services/settlementService.ts`.
 - Edge functions: `supabase/functions/*`.
 - RLS and schema: `supabase/migrations/*.sql`.
