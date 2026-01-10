@@ -21,7 +21,11 @@ import {
   GroupWithMembers,
   Expense,
 } from '../../../services/groupRepository';
-import { validateDecimalInput } from '../../../utils/validation';
+import {
+  validateDecimalInput,
+  validateExactAmountInput,
+  validatePercentageInput,
+} from '../../../utils/validation';
 import {
   toScaled,
   applyExchangeRate,
@@ -464,25 +468,16 @@ export default function EditExpenseScreen() {
                     style={styles.inputRowField}
                     value={percentages[member.id] || ''}
                     onChangeText={(text) => {
-                      const sanitized = text.replace(/[^0-9]/g, '');
-                      if (sanitized === '') {
-                        setPercentages({ ...percentages, [member.id]: '' });
-                        return;
-                      }
-                      const value = parseInt(sanitized, 10);
-                      if (isNaN(value)) return;
-
-                      const currentTotal = participants.reduce((sum, m) => {
-                        if (m.id === member.id) return sum;
-                        const val = parseFloat(percentages[m.id] || '0');
-                        return sum + (isNaN(val) ? 0 : val);
-                      }, 0);
-
-                      const remaining = 100 - currentTotal;
-                      const finalValue = Math.min(value, remaining);
+                      const finalValue = validatePercentageInput(
+                        text,
+                        member.id,
+                        participants.map((m) => m.id),
+                        percentages,
+                      );
+                      if (finalValue === null) return;
                       setPercentages({
                         ...percentages,
-                        [member.id]: finalValue.toString(),
+                        [member.id]: finalValue,
                       });
                     }}
                     placeholder="0"
@@ -518,41 +513,18 @@ export default function EditExpenseScreen() {
                     style={styles.inputRowField}
                     value={exactAmounts[member.id] || ''}
                     onChangeText={(text) => {
-                      const sanitized = validateDecimalInput(text);
-                      if (sanitized === '' || sanitized === '.') {
-                        setExactAmounts({
-                          ...exactAmounts,
-                          [member.id]: sanitized,
-                        });
-                        return;
-                      }
-
-                      const value = parseFloat(sanitized);
-                      if (isNaN(value)) return;
-
-                      const totalAmount = parseFloat(amount) || 0;
-                      const currentTotal = participants.reduce((sum, m) => {
-                        if (m.id === member.id) return sum;
-                        const val = parseFloat(exactAmounts[m.id] || '0');
-                        return sum + (isNaN(val) ? 0 : val);
-                      }, 0);
-
-                      const remaining = totalAmount - currentTotal;
-                      const finalValue = Math.min(
-                        value,
-                        Math.max(0, remaining),
+                      const nextValue = validateExactAmountInput(
+                        text,
+                        member.id,
+                        participants.map((m) => m.id),
+                        exactAmounts,
+                        parseFloat(amount) || 0,
                       );
+                      if (nextValue === null) return;
                       setExactAmounts({
                         ...exactAmounts,
-                        [member.id]: sanitized,
+                        [member.id]: nextValue,
                       });
-
-                      if (value > remaining) {
-                        setExactAmounts({
-                          ...exactAmounts,
-                          [member.id]: finalValue.toFixed(2),
-                        });
-                      }
                     }}
                     placeholder="0.00"
                     placeholderTextColor="#9ca3af"

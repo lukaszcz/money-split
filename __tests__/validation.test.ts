@@ -223,6 +223,71 @@ describe('utils/validation - validateDecimalInput', () => {
   });
 });
 
+describe('utils/validation - validateIntegerInput', () => {
+  it('should strip non-digit characters', () => {
+    const { validateIntegerInput } = require('../utils/validation');
+    expect(validateIntegerInput('1a2b3')).toBe('123');
+  });
+
+  it('should return empty string when no digits exist', () => {
+    const { validateIntegerInput } = require('../utils/validation');
+    expect(validateIntegerInput('abc')).toBe('');
+  });
+});
+
+describe('utils/validation - validatePercentageInput', () => {
+  const participants = ['a', 'b', 'c'];
+
+  it('should return empty string when cleared', () => {
+    const { validatePercentageInput } = require('../utils/validation');
+    expect(
+      validatePercentageInput('', 'a', participants, { b: '50', c: '50' }),
+    ).toBe('');
+  });
+
+  it('should clamp to remaining percentage', () => {
+    const { validatePercentageInput } = require('../utils/validation');
+    expect(
+      validatePercentageInput('50', 'a', participants, { b: '60', c: '10' }),
+    ).toBe('30');
+  });
+
+  it('should preserve value within remaining', () => {
+    const { validatePercentageInput } = require('../utils/validation');
+    expect(
+      validatePercentageInput('25', 'a', participants, { b: '60', c: '10' }),
+    ).toBe('25');
+  });
+});
+
+describe('utils/validation - validateExactAmountInput', () => {
+  const participants = ['a', 'b', 'c'];
+
+  it('should allow empty and dot values', () => {
+    const { validateExactAmountInput } = require('../utils/validation');
+    expect(
+      validateExactAmountInput('', 'a', participants, {}, 10),
+    ).toBe('');
+    expect(
+      validateExactAmountInput('.', 'a', participants, {}, 10),
+    ).toBe('.');
+  });
+
+  it('should clamp to remaining amount', () => {
+    const { validateExactAmountInput } = require('../utils/validation');
+    expect(
+      validateExactAmountInput('5', 'a', participants, { b: '4', c: '4' }, 10),
+    ).toBe('2.00');
+  });
+
+  it('should return sanitized value when within remaining', () => {
+    const { validateExactAmountInput } = require('../utils/validation');
+    expect(
+      validateExactAmountInput('3.456', 'a', participants, { b: '4' }, 10),
+    ).toBe('3.45');
+  });
+});
+
 describe('settlementService validation', () => {
   const createMember = (id: string, name: string): GroupMember => ({
     id,
