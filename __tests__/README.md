@@ -122,6 +122,9 @@ describe('money utilities', () => {
 });
 ```
 
+Money utility tests also cover share calculations via `calculateSharesForSplit`.
+Validation tests include `validateDecimalInput` coverage.
+
 ### Service Test Pattern with Mocks
 
 ```typescript

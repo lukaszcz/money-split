@@ -10,6 +10,7 @@ import {
   calculatePercentageSplit,
   sumScaled,
   applyExchangeRate,
+  calculateSharesForSplit,
 } from '../utils/money';
 
 describe('toScaled', () => {
@@ -303,5 +304,66 @@ describe('applyExchangeRate', () => {
     const value = toScaled(100);
     const rate = toScaled(1);
     expect(applyExchangeRate(value, rate)).toBe(BigInt(1000000));
+  });
+});
+
+describe('calculateSharesForSplit', () => {
+  const participants = ['a', 'b', 'c'];
+
+  it('should calculate equal shares', () => {
+    const result = calculateSharesForSplit({
+      splitMethod: 'equal',
+      amountScaled: toScaled(10),
+      participantIds: participants,
+    });
+    expect(result).toEqual({
+      shares: [BigInt(33334), BigInt(33333), BigInt(33333)],
+    });
+  });
+
+  it('should calculate percentage shares', () => {
+    const result = calculateSharesForSplit({
+      splitMethod: 'percentage',
+      amountScaled: toScaled(20),
+      participantIds: participants,
+      percentages: { a: '50', b: '25', c: '25' },
+    });
+    expect(result).toEqual({
+      shares: [BigInt(100000), BigInt(50000), BigInt(50000)],
+    });
+  });
+
+  it('should return error when percentages do not sum to 100', () => {
+    const result = calculateSharesForSplit({
+      splitMethod: 'percentage',
+      amountScaled: toScaled(20),
+      participantIds: participants,
+      percentages: { a: '60', b: '20', c: '10' },
+    });
+    expect(result).toEqual({ error: 'Percentages must sum to 100%' });
+  });
+
+  it('should calculate exact shares', () => {
+    const result = calculateSharesForSplit({
+      splitMethod: 'exact',
+      amountScaled: toScaled(12),
+      participantIds: participants,
+      exactAmounts: { a: '5', b: '4', c: '3' },
+    });
+    expect(result).toEqual({
+      shares: [BigInt(50000), BigInt(40000), BigInt(30000)],
+    });
+  });
+
+  it('should return error when exact amounts do not sum to total', () => {
+    const result = calculateSharesForSplit({
+      splitMethod: 'exact',
+      amountScaled: toScaled(12),
+      participantIds: participants,
+      exactAmounts: { a: '5', b: '4', c: '2' },
+    });
+    expect(result).toEqual({
+      error: 'Exact amounts must sum to the total amount',
+    });
   });
 });

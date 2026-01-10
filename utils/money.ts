@@ -9,6 +9,8 @@ import {
 
 const SCALE = 10000;
 
+export type SplitMethod = 'equal' | 'percentage' | 'exact';
+
 export function toScaled(amount: number): bigint {
   assertNonNegativeNumber(amount, 'amount');
   return BigInt(Math.round(amount * SCALE));
@@ -127,4 +129,55 @@ export function applyExchangeRate(
   rateScaled: bigint,
 ): bigint {
   return multiplyScaled(valueScaled, rateScaled);
+}
+
+type ShareCalculationInput = {
+  splitMethod: SplitMethod;
+  amountScaled: bigint;
+  participantIds: string[];
+  percentages?: Record<string, string>;
+  exactAmounts?: Record<string, string>;
+};
+
+type ShareCalculationResult = { shares: bigint[] } | { error: string };
+
+export function calculateSharesForSplit({
+  splitMethod,
+  amountScaled,
+  participantIds,
+  percentages = {},
+  exactAmounts = {},
+}: ShareCalculationInput): ShareCalculationResult {
+  const totalScaled = amountScaled;
+
+  if (splitMethod === 'equal') {
+    return {
+      shares: calculateEqualSplit(totalScaled, participantIds.length),
+    };
+  } else if (splitMethod === 'percentage') {
+    const percentValues = participantIds.map((userId) =>
+      parseFloat(percentages[userId] || '0'),
+    );
+    const totalPercent = percentValues.reduce((sum, p) => sum + p, 0);
+
+    if (Number.isNaN(totalPercent) || Math.abs(totalPercent - 100) > 0.01) {
+      return { error: 'Percentages must sum to 100%' };
+    }
+
+    return {
+      shares: calculatePercentageSplit(totalScaled, percentValues),
+    };
+  } else {
+    // splitMethod === 'exact'
+    const exactValues = participantIds.map((userId) =>
+      toScaled(parseFloat(exactAmounts[userId] || '0')),
+    );
+    const totalExact = sumScaled(exactValues);
+
+    if (totalExact !== totalScaled) {
+      return { error: 'Exact amounts must sum to the total amount' };
+    }
+
+    return { shares: exactValues };
+  }
 }

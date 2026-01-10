@@ -200,6 +200,83 @@ export function assertNonEmptyString(value: string, fieldName: string): void {
   }
 }
 
+export function validateDecimalInput(
+  text: string,
+  maxDecimals: number = 2,
+): string {
+  const sanitized = text.replace(/[^0-9.]/g, '');
+  const parts = sanitized.split('.');
+  if (parts.length > 2) {
+    return parts[0] + '.' + parts.slice(1).join('').substring(0, maxDecimals);
+  }
+  if (parts.length === 2) {
+    return parts[0] + '.' + parts[1].substring(0, maxDecimals);
+  }
+  return sanitized;
+}
+
+export function validateIntegerInput(text: string): string {
+  return text.replace(/[^0-9]/g, '');
+}
+
+export function validatePercentageInput(
+  text: string,
+  memberId: string,
+  participantIds: string[],
+  percentages: Record<string, string>,
+): string | null {
+  const sanitized = validateIntegerInput(text);
+  if (sanitized === '') {
+    return '';
+  }
+
+  const value = parseInt(sanitized, 10);
+  if (isNaN(value)) {
+    return null;
+  }
+
+  const currentTotal = participantIds.reduce((sum, id) => {
+    if (id === memberId) return sum;
+    const val = parseFloat(percentages[id] || '0');
+    return sum + (isNaN(val) ? 0 : val);
+  }, 0);
+
+  const remaining = Math.max(0, 100 - currentTotal);
+  const finalValue = Math.min(value, remaining);
+  return finalValue.toString();
+}
+
+export function validateExactAmountInput(
+  text: string,
+  memberId: string,
+  participantIds: string[],
+  exactAmounts: Record<string, string>,
+  totalAmount: number,
+): string | null {
+  const sanitized = validateDecimalInput(text);
+  if (sanitized === '' || sanitized === '.') {
+    return sanitized;
+  }
+
+  const value = parseFloat(sanitized);
+  if (isNaN(value)) {
+    return null;
+  }
+
+  const currentTotal = participantIds.reduce((sum, id) => {
+    if (id === memberId) return sum;
+    const val = parseFloat(exactAmounts[id] || '0');
+    return sum + (isNaN(val) ? 0 : val);
+  }, 0);
+
+  const remaining = Math.max(0, totalAmount - currentTotal);
+  if (value > remaining) {
+    return remaining.toFixed(2);
+  } else {
+    return sanitized;
+  }
+}
+
 export function isValidEmail(value: string): boolean {
   if (typeof value !== 'string') {
     return false;
