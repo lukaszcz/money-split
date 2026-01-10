@@ -427,9 +427,20 @@ describe('currencyPreferenceService', () => {
 
     await currencyPreferenceService.ensureGroupCurrencyInOrder('EUR');
 
+    const allCodes = getCurrencyCodes();
+    const currentOrder = [
+      'USD',
+      'EUR',
+      ...allCodes.filter((code) => !['USD', 'EUR'].includes(code)),
+    ];
+    const expectedOrder = [
+      'EUR',
+      ...currentOrder.filter((code) => code !== 'EUR'),
+    ];
+
     expect(updateBuilder.update).toHaveBeenCalledWith(
       expect.objectContaining({
-        currency_order: expect.arrayContaining(['EUR']),
+        currency_order: expectedOrder,
         updated_at: expect.any(String),
       }),
     );
