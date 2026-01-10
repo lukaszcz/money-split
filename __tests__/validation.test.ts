@@ -265,12 +265,8 @@ describe('utils/validation - validateExactAmountInput', () => {
 
   it('should allow empty and dot values', () => {
     const { validateExactAmountInput } = require('../utils/validation');
-    expect(
-      validateExactAmountInput('', 'a', participants, {}, 10),
-    ).toBe('');
-    expect(
-      validateExactAmountInput('.', 'a', participants, {}, 10),
-    ).toBe('.');
+    expect(validateExactAmountInput('', 'a', participants, {}, 10)).toBe('');
+    expect(validateExactAmountInput('.', 'a', participants, {}, 10)).toBe('.');
   });
 
   it('should clamp to remaining amount', () => {

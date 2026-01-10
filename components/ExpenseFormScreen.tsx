@@ -87,7 +87,8 @@ export default function ExpenseFormScreen(props: ExpenseFormScreenProps) {
   const isEditExpense = props.mode === 'edit-expense';
   const isEditTransfer = props.mode === 'edit-transfer';
   const isExpenseForm = isEditExpense || (isAdd && paymentType === 'expense');
-  const isTransferForm = isEditTransfer || (isAdd && paymentType === 'transfer');
+  const isTransferForm =
+    isEditTransfer || (isAdd && paymentType === 'transfer');
 
   const title = isAdd
     ? 'Add Payment'
@@ -296,7 +297,8 @@ export default function ExpenseFormScreen(props: ExpenseFormScreenProps) {
             <TouchableOpacity
               style={[
                 styles.methodButton,
-                expenseProps.splitMethod === 'exact' && styles.methodButtonActive,
+                expenseProps.splitMethod === 'exact' &&
+                  styles.methodButtonActive,
               ]}
               onPress={() => expenseProps.setSplitMethod('exact')}
             >
@@ -505,7 +507,10 @@ export default function ExpenseFormScreen(props: ExpenseFormScreenProps) {
         </TouchableOpacity>
         <Text style={styles.title}>{title}</Text>
         {'onDelete' in props ? (
-          <TouchableOpacity onPress={props.onDelete} style={styles.deleteButton}>
+          <TouchableOpacity
+            onPress={props.onDelete}
+            style={styles.deleteButton}
+          >
             <Trash2 color="#dc2626" size={20} />
           </TouchableOpacity>
         ) : (
@@ -567,7 +572,10 @@ export default function ExpenseFormScreen(props: ExpenseFormScreenProps) {
 
         <View style={styles.footer}>
           <TouchableOpacity
-            style={[styles.saveButton, props.saving && styles.saveButtonDisabled]}
+            style={[
+              styles.saveButton,
+              props.saving && styles.saveButtonDisabled,
+            ]}
             onPress={handleSave}
             disabled={props.saving}
           >
