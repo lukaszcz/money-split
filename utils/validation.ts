@@ -207,7 +207,7 @@ export function validateDecimalInput(
   const sanitized = text.replace(/[^0-9.]/g, '');
   const parts = sanitized.split('.');
   if (parts.length > 2) {
-    return parts[0] + '.' + parts.slice(1).join('');
+    return parts[0] + '.' + parts.slice(1).join('').substring(0, maxDecimals);
   }
   if (parts.length === 2) {
     return parts[0] + '.' + parts[1].substring(0, maxDecimals);
