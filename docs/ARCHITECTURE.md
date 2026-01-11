@@ -126,7 +126,7 @@ The RLS policies have evolved through multiple migrations. The most recent polic
   - Select: members can view members of their groups; users can also view unconnected members with matching email (needed for reconnection).
   - Insert: user can add themselves (`connected_user_id = auth.uid()`) or existing members can add others.
   - Update: members can update member details within groups they belong to; updates are also used for connect/disconnect flows.
-  - Delete: disconnected members can be deleted (used by cleanup logic).
+  - Delete: any group member can delete another member if that member has no non-zero expense shares (prevents deletion of members involved in expenses).
 
 - `expenses` and `expense_shares`
   - All CRUD access is scoped to group membership (member of the group that owns the expense).
@@ -143,6 +143,7 @@ For the exact SQL definitions and helper functions, see:
 - `supabase/migrations/20251225132228_remove_group_ownership_implement_soft_delete.sql`
 - `supabase/migrations/20251225181452_fix_group_members_insert_allow_self.sql`
 - `supabase/migrations/20251225180300_fix_groups_insert_select_policy.sql`
+- `supabase/migrations/20260110000000_enable_remove_member_with_no_shares.sql`
 
 ## Money math and settlement algorithms
 
@@ -280,6 +281,9 @@ The UI uses a light, card-based aesthetic with consistent spacing and neutral gr
 
 - Updates member name/email and optionally re-sends invitation.
 - Uses `updateGroupMember()`.
+- Shows a delete button if the member can be removed (has no non-zero expense shares).
+- Uses `canDeleteGroupMember()` to check if deletion is allowed.
+- Uses `deleteGroupMember()` to remove the member from the group.
 
 ### Settle Up (`app/group/[id]/settle.tsx`)
 
