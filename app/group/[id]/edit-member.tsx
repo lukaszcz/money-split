@@ -19,8 +19,10 @@ import {
   getUserByEmail,
   sendInvitationEmail,
   getGroup,
+  KnownUser,
 } from '../../../services/groupRepository';
 import { isValidEmail } from '../../../utils/validation';
+import { KnownUserSuggestionInput } from '../../../components/KnownUserSuggestionInput';
 
 export default function EditMemberScreen() {
   const { id, memberId } = useLocalSearchParams();
@@ -132,6 +134,11 @@ export default function EditMemberScreen() {
     }
   };
 
+  const handleSelectKnownUser = (user: KnownUser) => {
+    setName(user.name);
+    setEmail(user.email || '');
+  };
+
   if (initialLoading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -173,37 +180,13 @@ export default function EditMemberScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={true}
         >
-          <View style={styles.section}>
-            <Text style={styles.label}>Name</Text>
-            <TextInput
-              style={styles.input}
-              value={name}
-              onChangeText={setName}
-              onBlur={() => setName((nm) => nm.trim())}
-              placeholder="Member name"
-              placeholderTextColor="#9ca3af"
-            />
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.label}>Email</Text>
-            <TextInput
-              style={styles.input}
-              value={email}
-              onChangeText={setEmail}
-              onBlur={() => setEmail((em) => em.trim())}
-              placeholder="member@example.com"
-              placeholderTextColor="#9ca3af"
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-            <Text style={styles.hint}>
-              Changing the email will disconnect this member and reconnect them
-              with the new email. If the new email matches an existing user,
-              they will be connected automatically. Otherwise, an invitation
-              will be sent.
-            </Text>
-          </View>
+          <KnownUserSuggestionInput
+            nameValue={name}
+            onNameChange={setName}
+            emailValue={email}
+            onEmailChange={setEmail}
+            onSelectUser={handleSelectKnownUser}
+          />
         </ScrollView>
 
         <View style={styles.footer}>
