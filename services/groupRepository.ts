@@ -786,7 +786,7 @@ export async function canDeleteGroupMember(
     if (error) throw error;
     
     // Member can be deleted if they have no non-zero shares
-    return !data || data.length === 0;
+    return data.length === 0;
   } catch (error) {
     console.error('Failed to check if member can be deleted:', error);
     return false;

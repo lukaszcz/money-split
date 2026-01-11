@@ -167,7 +167,7 @@ export default function EditMemberScreen() {
               } else {
                 Alert.alert(
                   'Error',
-                  'Failed to delete member. They may have expenses in the group.',
+                  'Failed to delete member. Please try again.',
                 );
               }
             } catch (error) {
@@ -286,8 +286,8 @@ export default function EditMemberScreen() {
 
           {!canDelete && !checkingDelete && (
             <Text style={styles.deleteHint}>
-              This member cannot be removed because they have expenses in the
-              group.
+              This member cannot be removed. Members with expense shares cannot
+              be deleted.
             </Text>
           )}
         </View>
