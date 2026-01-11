@@ -304,10 +304,11 @@ export function isDuplicateMemberName(
     return false;
   }
 
-  return existingNames.some((existingName) => {
-    if (!existingName) {
-      return false;
-    }
-    return existingName.toLowerCase() === trimmedName.toLowerCase();
-  });
+  // Filter out empty names upfront for efficiency
+  const validNames = existingNames.filter((name) => name?.trim());
+
+  return validNames.some(
+    (existingName) =>
+      existingName.toLowerCase() === trimmedName.toLowerCase(),
+  );
 }
