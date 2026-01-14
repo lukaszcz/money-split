@@ -63,6 +63,9 @@ describe('GroupDetail Screen - Overflow Menu', () => {
   let mockRecordGroupVisit: jest.Mock;
   let mockSupabase: MockSupabaseClient;
   let alertSpy: jest.SpyInstance;
+  let useRefSpy: jest.SpyInstance;
+
+  const originalUseRef = React.useRef;
 
   const mockGroup = {
     id: 'group-1',
@@ -121,10 +124,23 @@ describe('GroupDetail Screen - Overflow Menu', () => {
 
     // Mock Alert
     alertSpy = jest.spyOn(Alert, 'alert');
+
+    useRefSpy = jest.spyOn(React, 'useRef').mockImplementation((value) => {
+      if (value === null) {
+        return {
+          current: {
+            measureInWindow: (callback: any) => callback(0, 0, 120, 40),
+          },
+        };
+      }
+
+      return originalUseRef(value);
+    });
   });
 
   afterEach(() => {
     alertSpy.mockRestore();
+    useRefSpy.mockRestore();
   });
 
   it('renders the more button with accessibility label', async () => {
@@ -161,8 +177,8 @@ describe('GroupDetail Screen - Overflow Menu', () => {
     expect(moreButton).toBeTruthy();
   });
 
-  it('shows leave group confirmation when Alert is triggered', async () => {
-    const { getByLabelText } = render(<GroupDetailScreen />);
+  it('shows leave group confirmation when menu item is pressed', async () => {
+    const { getByLabelText, getByText } = render(<GroupDetailScreen />);
 
     await act(async () => {
       await Promise.resolve();
@@ -172,13 +188,31 @@ describe('GroupDetail Screen - Overflow Menu', () => {
       expect(getByLabelText('Group actions')).toBeTruthy();
     });
 
-    // We can't easily test the menu opening due to measureInWindow limitations
-    // Instead, let's verify the Alert dialog for leave group can be shown
-    // by directly calling the handleLeaveGroup logic through the screen
+    fireEvent.press(getByLabelText('Group actions'));
 
-    // In a real app, the leave group Alert would be triggered by menu interaction
-    // For testing, we verify the Alert configuration exists
-    // This is tested more directly in the next tests
+    await waitFor(() => {
+      expect(getByText('Leave group')).toBeTruthy();
+    });
+
+    fireEvent.press(getByText('Leave group'));
+
+    await waitFor(() => {
+      expect(getByText('Leave group')).toBeTruthy();
+    });
+
+    fireEvent.press(getByText('Leave group'));
+
+    expect(alertSpy).toHaveBeenCalledWith(
+      'Leave Group',
+      'Are you sure you want to leave this group? If you are the last member, the group will be deleted.',
+      expect.arrayContaining([
+        expect.objectContaining({ text: 'Cancel', style: 'cancel' }),
+        expect.objectContaining({
+          text: 'Leave',
+          style: 'destructive',
+        }),
+      ]),
+    );
   });
 
   it('successfully leaves group and navigates back', async () => {
@@ -194,47 +228,22 @@ describe('GroupDetail Screen - Overflow Menu', () => {
       expect(getByLabelText('Group actions')).toBeTruthy();
     });
 
-    // Simulate the leave group flow by manually triggering what would happen
-    // when user clicks Leave group in the menu
-    // The actual flow is: More button -> Menu opens -> Leave group -> Alert -> Confirm
-
-    // Trigger handleLeaveGroup by simulating Alert
-    await act(async () => {
-      // This would normally be called from menu item press
-      Alert.alert(
-        'Leave Group',
-        'Are you sure you want to leave this group? If you are the last member, the group will be deleted.',
-        [
-          {
-            text: 'Cancel',
-            style: 'cancel',
-          },
-          {
-            text: 'Leave',
-            style: 'destructive',
-            onPress: async () => {
-              const success = await mockLeaveGroup('group-1');
-              if (success) {
-                mockRouter.back();
-              }
-            },
-          },
-        ],
-      );
-    });
+    fireEvent.press(getByLabelText('Group actions'));
 
     // Verify Alert was called
-    expect(alertSpy).toHaveBeenCalledWith(
-      'Leave Group',
-      'Are you sure you want to leave this group? If you are the last member, the group will be deleted.',
-      expect.arrayContaining([
-        expect.objectContaining({ text: 'Cancel', style: 'cancel' }),
-        expect.objectContaining({
-          text: 'Leave',
-          style: 'destructive',
-        }),
-      ]),
-    );
+    await waitFor(() => {
+      expect(alertSpy).toHaveBeenCalledWith(
+        'Leave Group',
+        'Are you sure you want to leave this group? If you are the last member, the group will be deleted.',
+        expect.arrayContaining([
+          expect.objectContaining({ text: 'Cancel', style: 'cancel' }),
+          expect.objectContaining({
+            text: 'Leave',
+            style: 'destructive',
+          }),
+        ]),
+      );
+    });
 
     // Get the Leave button callback
     const alertCall = alertSpy.mock.calls[0];
@@ -256,40 +265,19 @@ describe('GroupDetail Screen - Overflow Menu', () => {
   it('shows error alert when leave group fails', async () => {
     mockLeaveGroup.mockResolvedValue(false);
 
-    render(<GroupDetailScreen />);
+    const { getByLabelText, getByText } = render(<GroupDetailScreen />);
 
     await act(async () => {
       await Promise.resolve();
     });
 
-    // Simulate the leave group flow
-    await act(async () => {
-      Alert.alert(
-        'Leave Group',
-        'Are you sure you want to leave this group? If you are the last member, the group will be deleted.',
-        [
-          {
-            text: 'Cancel',
-            style: 'cancel',
-          },
-          {
-            text: 'Leave',
-            style: 'destructive',
-            onPress: async () => {
-              const success = await mockLeaveGroup('group-1');
-              if (success) {
-                mockRouter.back();
-              } else {
-                Alert.alert(
-                  'Error',
-                  'Failed to leave group. Please try again.',
-                );
-              }
-            },
-          },
-        ],
-      );
+    fireEvent.press(getByLabelText('Group actions'));
+
+    await waitFor(() => {
+      expect(getByText('Leave group')).toBeTruthy();
     });
+
+    fireEvent.press(getByText('Leave group'));
 
     // Get the Leave button callback
     const alertCall = alertSpy.mock.calls[0];
@@ -317,32 +305,19 @@ describe('GroupDetail Screen - Overflow Menu', () => {
   });
 
   it('does not leave group when cancel is pressed', async () => {
-    render(<GroupDetailScreen />);
+    const { getByLabelText, getByText } = render(<GroupDetailScreen />);
 
     await act(async () => {
       await Promise.resolve();
     });
 
-    // Simulate the Alert
-    await act(async () => {
-      Alert.alert(
-        'Leave Group',
-        'Are you sure you want to leave this group? If you are the last member, the group will be deleted.',
-        [
-          {
-            text: 'Cancel',
-            style: 'cancel',
-          },
-          {
-            text: 'Leave',
-            style: 'destructive',
-            onPress: async () => {
-              await mockLeaveGroup('group-1');
-            },
-          },
-        ],
-      );
+    fireEvent.press(getByLabelText('Group actions'));
+
+    await waitFor(() => {
+      expect(getByText('Leave group')).toBeTruthy();
     });
+
+    fireEvent.press(getByText('Leave group'));
 
     // User presses Cancel - the onPress callback should not be called
     // Verify leaveGroup was NOT called
