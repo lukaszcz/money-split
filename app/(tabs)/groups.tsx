@@ -135,10 +135,37 @@ export default function GroupsScreen() {
     </TouchableOpacity>
   );
 
+  const listEmptyComponent = (
+    <View style={styles.emptyState}>
+      <Text style={styles.emptyText}>
+        {loading ? 'Loading groups...' : 'No groups yet'}
+      </Text>
+      {!loading && (
+        <Text style={styles.emptySubtext}>
+          Create your first group to get started
+        </Text>
+      )}
+    </View>
+  );
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <Text style={styles.title}>Groups</Text>
+      </View>
+
+      <FlatList
+        data={groups}
+        renderItem={renderGroupItem}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.list}
+        ListEmptyComponent={listEmptyComponent}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      />
+
+      <View style={styles.floatingAddButton}>
         <TouchableOpacity
           style={styles.addButton}
           accessibilityRole="button"
@@ -148,29 +175,6 @@ export default function GroupsScreen() {
           <Plus color="#ffffff" size={24} />
         </TouchableOpacity>
       </View>
-
-      {loading ? (
-        <View style={styles.centered}>
-          <Text>Loading groups...</Text>
-        </View>
-      ) : groups.length === 0 ? (
-        <View style={styles.centered}>
-          <Text style={styles.emptyText}>No groups yet</Text>
-          <Text style={styles.emptySubtext}>
-            Create your first group to get started
-          </Text>
-        </View>
-      ) : (
-        <FlatList
-          data={groups}
-          renderItem={renderGroupItem}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.list}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-        />
-      )}
     </SafeAreaView>
   );
 }
@@ -204,6 +208,18 @@ const styles = StyleSheet.create({
   },
   list: {
     padding: 16,
+    paddingBottom: 120,
+  },
+  floatingAddButton: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 24,
+    alignItems: 'center',
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingTop: 60,
   },
   groupCard: {
     backgroundColor: '#ffffff',
@@ -252,11 +268,6 @@ const styles = StyleSheet.create({
   },
   membersSettled: {
     color: '#9ca3af',
-  },
-  centered: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   emptyText: {
     fontSize: 18,

@@ -68,6 +68,16 @@ export default function GroupDetailScreen() {
 
   const currencySymbol = getCurrencySymbol(group.mainCurrencyCode);
   const balances = computeBalances(expenses, group.members);
+  const showAddButton = activeTab === 'payments' || activeTab === 'members';
+
+  const handleAddPress = () => {
+    if (activeTab === 'payments') {
+      router.push(`/group/${group.id}/add-expense` as any);
+      return;
+    }
+
+    router.push(`/group/${group.id}/add-member` as any);
+  };
 
   const handleLeaveGroup = () => {
     Alert.alert(
@@ -174,7 +184,13 @@ export default function GroupDetailScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.content}>
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={[
+          styles.scrollContent,
+          showAddButton && styles.scrollContentWithFloatingButton,
+        ]}
+      >
         {activeTab === 'payments' && (
           <ExpensesTab expenses={expenses} group={group} reload={loadData} />
         )}
@@ -198,6 +214,12 @@ export default function GroupDetailScreen() {
           />
         )}
       </ScrollView>
+
+      {showAddButton && (
+        <View style={styles.floatingAddButton}>
+          <TabAddButton onPress={handleAddPress} />
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -262,13 +284,6 @@ function ExpensesTab({
             Add your first expense to get started
           </Text>
         </View>
-        <View style={styles.addButtonRow}>
-          <TabAddButton
-            onPress={() =>
-              router.push(`/group/${group.id}/add-expense` as any)
-            }
-          />
-        </View>
       </View>
     );
   }
@@ -317,11 +332,6 @@ function ExpensesTab({
           </TouchableOpacity>
         );
       })}
-      <View style={styles.addButtonRow}>
-        <TabAddButton
-          onPress={() => router.push(`/group/${group.id}/add-expense` as any)}
-        />
-      </View>
     </View>
   );
 }
@@ -416,12 +426,6 @@ function MembersTab({
           </Text>
         </View>
       )}
-
-      <View style={styles.addButtonRow}>
-        <TabAddButton
-          onPress={() => router.push(`/group/${groupId}/add-member` as any)}
-        />
-      </View>
     </View>
   );
 }
@@ -517,15 +521,18 @@ const styles = StyleSheet.create({
   },
   addButton: {
     backgroundColor: '#2563eb',
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  addButtonRow: {
-    alignItems: 'flex-end',
-    marginTop: 8,
+  floatingAddButton: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 24,
+    alignItems: 'center',
   },
   tabs: {
     flexDirection: 'row',
@@ -553,6 +560,12 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 32,
+  },
+  scrollContentWithFloatingButton: {
+    paddingBottom: 120,
   },
   tabContent: {
     padding: 16,
