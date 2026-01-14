@@ -46,12 +46,16 @@ jest.mock('react-native', () => {
     TextInput: createMockComponent('TextInput'),
     ScrollView: createMockComponent('ScrollView'),
     TouchableOpacity: createMockComponent('TouchableOpacity'),
+    Pressable: createMockComponent('Pressable'),
     KeyboardAvoidingView: createMockComponent('KeyboardAvoidingView'),
     Image: createMockComponent('Image'),
     Switch: createMockComponent('Switch'),
     ActivityIndicator: createMockComponent('ActivityIndicator'),
     Modal: createMockComponent('Modal'),
     RefreshControl: createMockComponent('RefreshControl'),
+    Dimensions: {
+      get: jest.fn(() => ({ width: 375, height: 667 })),
+    },
     FlatList,
     StyleSheet: {
       create: (styles) => styles,

@@ -28,7 +28,7 @@ The MoneySplit test suite includes:
 
 ### Test Statistics
 
-- **Total Tests**: 337
+- **Total Tests**: 340
 - **Test Suites**: 16
 - **Coverage Targets**:
   - Lines: 80%
@@ -45,10 +45,10 @@ __tests__/
 │   └── testData.ts                # Reusable test data
 ├── utils/
 │   ├── mockSupabase.ts            # Supabase client mocking
-│   ├── mockExpoRouter.ts          # Expo Router mocking (NEW)
-│   ├── mockAuthContext.ts         # Auth context mocking (NEW)
+│   ├── mockExpoRouter.ts          # Expo Router mocking
+│   ├── mockAuthContext.ts         # Auth context mocking
 │   ├── testHelpers.ts             # Test utilities
-│   └── ui.test.ts                 # UI utilities tests (NEW)
+│   └── ui.test.ts                 # UI utilities tests
 ├── setup/
 │   ├── docker-compose.test.yml    # Integration test environment
 │   └── integration.setup.ts       # Integration test helpers
@@ -65,9 +65,10 @@ __tests__/
 ├── components/
 │   └── BottomActionBar.test.tsx   # BottomActionBar component tests
 ├── screens/
-│   ├── auth.test.tsx              # Auth screen tests (NEW)
-│   ├── groups.test.tsx            # Groups screen tests (NEW)
-│   └── settings.test.tsx          # Settings screen tests (NEW)
+│   ├── auth.test.tsx              # Auth screen tests
+│   ├── groups.test.tsx            # Groups screen tests
+│   ├── groupDetail.test.tsx       # Group detail screen tests
+│   └── settings.test.tsx          # Settings screen tests
 ├── currencies.test.ts             # Currency utilities
 ├── money.test.ts                  # Money math
 ├── settlementService.test.ts      # Settlement algorithms
@@ -164,9 +165,9 @@ describe('getMenuPosition', () => {
   it('should prevent menu from overflowing screen edges', () => {
     const anchor = { x: 350, y: 50, width: 40, height: 40 };
     const insetTop = 44;
-    
+
     const position = getMenuPosition(anchor, insetTop, 180);
-    
+
     // Menu should fit within screen bounds
     expect(position.left + 180).toBeLessThanOrEqual(375 - 16);
   });
@@ -174,12 +175,12 @@ describe('getMenuPosition', () => {
 ```
 
 UI utility tests cover menu positioning logic, including:
+
 - Basic positioning relative to anchor elements
 - Horizontal overflow prevention (left and right edges)
 - Vertical positioning with safe area insets
 - Edge cases for various screen sizes (phones, tablets)
 - Consistency and boundary conditions
-
 
 ### Service Test Pattern with Mocks
 
@@ -732,6 +733,7 @@ See these files for complete examples:
 
 - `__tests__/screens/auth.test.tsx` - Authentication flows
 - `__tests__/screens/groups.test.tsx` - Groups list and navigation
+- `__tests__/screens/groupDetail.test.tsx` - Group detail screen, overflow menu, and leave group flows
 - `__tests__/screens/settings.test.tsx` - Profile, logout, delete flows
 
 ### Tips for Screen Testing
