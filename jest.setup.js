@@ -13,8 +13,20 @@ jest.mock('react-native', () => {
       React.createElement(name, { ...props, ref }, props.children),
     );
 
-  const FlatList = ({ data = [], renderItem, keyExtractor }) =>
-    React.createElement(
+  const FlatList = ({
+    data = [],
+    renderItem,
+    keyExtractor,
+    ListEmptyComponent,
+  }) => {
+    if (data.length === 0 && ListEmptyComponent) {
+      const emptyElement = React.isValidElement(ListEmptyComponent)
+        ? ListEmptyComponent
+        : React.createElement(ListEmptyComponent);
+      return React.createElement(React.Fragment, null, emptyElement);
+    }
+
+    return React.createElement(
       React.Fragment,
       null,
       data.map((item, index) => {
@@ -26,6 +38,7 @@ jest.mock('react-native', () => {
         return element;
       }),
     );
+  };
 
   return {
     View: createMockComponent('View'),

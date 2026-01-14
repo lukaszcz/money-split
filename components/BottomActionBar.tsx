@@ -1,3 +1,4 @@
+import React from 'react';
 import { Text, TouchableOpacity, StyleSheet, View } from 'react-native';
 import { Plus } from 'lucide-react-native';
 
