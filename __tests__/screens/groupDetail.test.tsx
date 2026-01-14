@@ -264,6 +264,8 @@ describe('GroupDetail Screen - Overflow Menu', () => {
     });
 
     // Get the Leave button callback
+    await waitFor(() => expect(alertSpy).toHaveBeenCalled());
+
     const alertCall = alertSpy.mock.calls[0];
     const buttons = alertCall[2];
     const leaveButton = buttons.find((btn: any) => btn.text === 'Leave');
