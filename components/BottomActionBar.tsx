@@ -1,4 +1,4 @@
-import { Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Text, TouchableOpacity, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Plus } from 'lucide-react-native';
 
@@ -12,28 +12,32 @@ export default function BottomActionBar({
   onPress,
 }: BottomActionBarProps) {
   return (
-    <SafeAreaView edges={['bottom']} style={styles.container}>
-      <TouchableOpacity
-        style={styles.button}
-        accessibilityRole="button"
-        accessibilityLabel={label}
-        onPress={onPress}
-      >
-        <Plus color="#ffffff" size={20} />
-        <Text style={styles.buttonText}>{label}</Text>
-      </TouchableOpacity>
+    <SafeAreaView edges={['bottom']} style={styles.safeArea}>
+      <View style={styles.container}>
+        <TouchableOpacity
+          style={styles.button}
+          accessibilityRole="button"
+          accessibilityLabel={label}
+          onPress={onPress}
+        >
+          <Plus color="#ffffff" size={20} />
+          <Text style={styles.buttonText}>{label}</Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    backgroundColor: '#f9fafb',
+  },
   container: {
     borderTopWidth: 1,
     borderTopColor: '#e5e7eb',
     backgroundColor: '#ffffff',
     paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 12,
+    paddingVertical: 8,
     alignItems: 'center',
   },
   button: {
