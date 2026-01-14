@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,6 @@ import {
   SafeAreaView,
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
-import { useState, useCallback, useEffect, useRef } from 'react';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { ArrowLeft, User, Mail, Link, MoreVertical } from 'lucide-react-native';
 import {
