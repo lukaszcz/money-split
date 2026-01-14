@@ -69,14 +69,6 @@ export default function GroupDetailScreen() {
   const currencySymbol = getCurrencySymbol(group.mainCurrencyCode);
   const balances = computeBalances(expenses, group.members);
 
-  const handleAddPress = () => {
-    if (activeTab === 'payments') {
-      router.push(`/group/${id}/add-expense` as any);
-    } else if (activeTab === 'members') {
-      router.push(`/group/${id}/add-member` as any);
-    }
-  };
-
   const handleLeaveGroup = () => {
     Alert.alert(
       'Leave Group',
@@ -124,11 +116,6 @@ export default function GroupDetailScreen() {
           >
             <Trash2 color="#dc2626" size={20} />
           </TouchableOpacity>
-          {(activeTab === 'payments' || activeTab === 'members') && (
-            <TouchableOpacity style={styles.addButton} onPress={handleAddPress}>
-              <Plus color="#ffffff" size={20} />
-            </TouchableOpacity>
-          )}
         </View>
       </View>
 
@@ -215,6 +202,14 @@ export default function GroupDetailScreen() {
   );
 }
 
+function TabAddButton({ onPress }: { onPress: () => void }) {
+  return (
+    <TouchableOpacity style={styles.addButton} onPress={onPress}>
+      <Plus color="#ffffff" size={24} />
+    </TouchableOpacity>
+  );
+}
+
 function ExpensesTab({
   expenses,
   group,
@@ -260,11 +255,20 @@ function ExpensesTab({
 
   if (expenses.length === 0) {
     return (
-      <View style={styles.emptyState}>
-        <Text style={styles.emptyText}>No expenses yet</Text>
-        <Text style={styles.emptySubtext}>
-          Add your first expense to get started
-        </Text>
+      <View style={styles.tabContent}>
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyText}>No expenses yet</Text>
+          <Text style={styles.emptySubtext}>
+            Add your first expense to get started
+          </Text>
+        </View>
+        <View style={styles.addButtonRow}>
+          <TabAddButton
+            onPress={() =>
+              router.push(`/group/${group.id}/add-expense` as any)
+            }
+          />
+        </View>
       </View>
     );
   }
@@ -313,6 +317,11 @@ function ExpensesTab({
           </TouchableOpacity>
         );
       })}
+      <View style={styles.addButtonRow}>
+        <TabAddButton
+          onPress={() => router.push(`/group/${group.id}/add-expense` as any)}
+        />
+      </View>
     </View>
   );
 }
@@ -407,6 +416,12 @@ function MembersTab({
           </Text>
         </View>
       )}
+
+      <View style={styles.addButtonRow}>
+        <TabAddButton
+          onPress={() => router.push(`/group/${groupId}/add-member` as any)}
+        />
+      </View>
     </View>
   );
 }
@@ -502,11 +517,15 @@ const styles = StyleSheet.create({
   },
   addButton: {
     backgroundColor: '#2563eb',
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  addButtonRow: {
+    alignItems: 'flex-end',
+    marginTop: 8,
   },
   tabs: {
     flexDirection: 'row',
