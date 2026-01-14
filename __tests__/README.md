@@ -27,8 +27,8 @@ The MoneySplit test suite includes:
 
 ### Test Statistics
 
-- **Total Tests**: 319
-- **Test Suites**: 14
+- **Total Tests**: 325
+- **Test Suites**: 15
 - **Coverage Targets**:
   - Lines: 80%
   - Functions: 80%
@@ -44,8 +44,8 @@ __tests__/
 │   └── testData.ts                # Reusable test data
 ├── utils/
 │   ├── mockSupabase.ts            # Supabase client mocking
-│   ├── mockExpoRouter.ts          # Expo Router mocking (NEW)
-│   ├── mockAuthContext.ts         # Auth context mocking (NEW)
+│   ├── mockExpoRouter.ts          # Expo Router mocking
+│   ├── mockAuthContext.ts         # Auth context mocking
 │   └── testHelpers.ts             # Test utilities
 ├── setup/
 │   ├── docker-compose.test.yml    # Integration test environment
@@ -61,9 +61,10 @@ __tests__/
 │   ├── useCurrencyOrder.test.ts   # Currency ordering hook
 │   └── useFrameworkReady.test.ts  # Framework ready hook
 ├── screens/
-│   ├── auth.test.tsx              # Auth screen tests (NEW)
-│   ├── groups.test.tsx            # Groups screen tests (NEW)
-│   └── settings.test.tsx          # Settings screen tests (NEW)
+│   ├── auth.test.tsx              # Auth screen tests
+│   ├── groups.test.tsx            # Groups screen tests
+│   ├── groupDetail.test.tsx       # Group detail screen tests
+│   └── settings.test.tsx          # Settings screen tests
 ├── currencies.test.ts             # Currency utilities
 ├── money.test.ts                  # Money math
 ├── settlementService.test.ts      # Settlement algorithms
@@ -605,6 +606,7 @@ See these files for complete examples:
 
 - `__tests__/screens/auth.test.tsx` - Authentication flows
 - `__tests__/screens/groups.test.tsx` - Groups list and navigation
+- `__tests__/screens/groupDetail.test.tsx` - Group detail screen, overflow menu, and leave group flows
 - `__tests__/screens/settings.test.tsx` - Profile, logout, delete flows
 
 ### Tips for Screen Testing
