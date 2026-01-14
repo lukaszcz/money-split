@@ -1,19 +1,30 @@
 import { Text, TouchableOpacity, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Plus } from 'lucide-react-native';
 
 type BottomActionBarProps = {
   label: string;
   onPress: () => void;
+  safeAreaBottom?: boolean;
 };
+
+const BASE_PADDING_VERTICAL = 8;
 
 export default function BottomActionBar({
   label,
   onPress,
+  safeAreaBottom = true,
 }: BottomActionBarProps) {
+  const insets = useSafeAreaInsets();
+  const bottomInset = safeAreaBottom ? insets.bottom : 0;
+  const containerStyle = [
+    styles.container,
+    bottomInset ? { paddingBottom: BASE_PADDING_VERTICAL + bottomInset } : null,
+  ];
+
   return (
-    <SafeAreaView edges={['bottom']} style={styles.safeArea}>
-      <View style={styles.container}>
+    <View style={styles.safeArea}>
+      <View style={containerStyle}>
         <TouchableOpacity
           style={styles.button}
           accessibilityRole="button"
@@ -24,20 +35,20 @@ export default function BottomActionBar({
           <Text style={styles.buttonText}>{label}</Text>
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   safeArea: {
-    backgroundColor: '#f9fafb',
+    backgroundColor: '#ffffff',
   },
   container: {
     borderTopWidth: 1,
     borderTopColor: '#e5e7eb',
     backgroundColor: '#ffffff',
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: BASE_PADDING_VERTICAL,
     alignItems: 'center',
   },
   button: {
