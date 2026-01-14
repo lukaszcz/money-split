@@ -158,6 +158,7 @@ export default function GroupsScreen() {
         data={groups}
         renderItem={renderGroupItem}
         keyExtractor={(item) => item.id}
+        style={styles.listContainer}
         contentContainerStyle={styles.list}
         ListEmptyComponent={listEmptyComponent}
         refreshControl={
@@ -195,6 +196,9 @@ const styles = StyleSheet.create({
   list: {
     padding: 16,
     paddingBottom: 24,
+  },
+  listContainer: {
+    flex: 1,
   },
   emptyState: {
     alignItems: 'center',

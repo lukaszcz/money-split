@@ -5,11 +5,12 @@ import {
   StyleSheet,
   ScrollView,
   Alert,
-  ActionSheetIOS,
-  Platform,
+  Modal,
+  Pressable,
+  Dimensions,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useState, useCallback, useEffect } from 'react';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { ArrowLeft, User, Mail, Link, MoreVertical } from 'lucide-react-native';
 import {
@@ -29,13 +30,24 @@ import BottomActionBar from '../../components/BottomActionBar';
 
 type Tab = 'payments' | 'balances' | 'members' | 'settle';
 
+const MENU_WIDTH = 180;
+
 export default function GroupDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const moreButtonRef = useRef<View>(null);
   const [group, setGroup] = useState<GroupWithMembers | null>(null);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [activeTab, setActiveTab] = useState<Tab>('payments');
   const [loading, setLoading] = useState(true);
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [menuAnchor, setMenuAnchor] = useState<{
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } | null>(null);
 
   const loadData = useCallback(async () => {
     if (!id || typeof id !== 'string') return;
@@ -110,33 +122,14 @@ export default function GroupDetailScreen() {
   };
 
   const handleMorePress = () => {
-    const destructiveLabel = 'Leave group';
+    moreButtonRef.current?.measureInWindow((x, y, width, height) => {
+      setMenuAnchor({ x, y, width, height });
+      setMenuVisible(true);
+    });
+  };
 
-    if (Platform.OS === 'ios') {
-      ActionSheetIOS.showActionSheetWithOptions(
-        {
-          options: ['Cancel', destructiveLabel],
-          cancelButtonIndex: 0,
-          destructiveButtonIndex: 1,
-          title: group.name,
-        },
-        (buttonIndex) => {
-          if (buttonIndex === 1) {
-            handleLeaveGroup();
-          }
-        },
-      );
-      return;
-    }
-
-    Alert.alert('Group actions', undefined, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: destructiveLabel,
-        style: 'destructive',
-        onPress: handleLeaveGroup,
-      },
-    ]);
+  const handleMenuClose = () => {
+    setMenuVisible(false);
   };
 
   return (
@@ -153,14 +146,16 @@ export default function GroupDetailScreen() {
           <Text style={styles.headerSubtitle}>{group.mainCurrencyCode}</Text>
         </View>
         <View style={styles.headerActions}>
-          <TouchableOpacity
-            style={styles.moreButton}
-            accessibilityRole="button"
-            accessibilityLabel="Group actions"
-            onPress={handleMorePress}
-          >
-            <MoreVertical color="#6b7280" size={20} />
-          </TouchableOpacity>
+          <View ref={moreButtonRef} collapsable={false}>
+            <TouchableOpacity
+              style={styles.moreButton}
+              accessibilityRole="button"
+              accessibilityLabel="Group actions"
+              onPress={handleMorePress}
+            >
+              <MoreVertical color="#6b7280" size={20} />
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
 
@@ -250,9 +245,55 @@ export default function GroupDetailScreen() {
           onPress={handleAddPress}
         />
       )}
+
+      <Modal
+        transparent
+        visible={menuVisible}
+        animationType="fade"
+        onRequestClose={handleMenuClose}
+      >
+        <View style={styles.menuOverlay}>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={handleMenuClose}
+          />
+          {menuAnchor && (
+            <View
+              style={[
+                styles.menu,
+                getMenuPosition(menuAnchor, insets.top),
+              ]}
+            >
+              <Pressable
+                style={styles.menuItem}
+                onPress={() => {
+                  handleMenuClose();
+                  handleLeaveGroup();
+                }}
+              >
+                <Text style={styles.menuItemDestructive}>Leave group</Text>
+              </Pressable>
+            </View>
+          )}
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
+
+const getMenuPosition = (
+  anchor: { x: number; y: number; width: number; height: number },
+  insetTop: number,
+) => {
+  const screenWidth = Dimensions.get('window').width;
+  const left = Math.min(
+    Math.max(16, anchor.x + anchor.width - MENU_WIDTH),
+    screenWidth - MENU_WIDTH - 16,
+  );
+  const top = Math.max(anchor.y + anchor.height + 8, insetTop + 8);
+
+  return { top, left };
+};
 
 function ExpensesTab({
   expenses,
@@ -540,6 +581,33 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#f3f4f6',
+  },
+  menuOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.12)',
+  },
+  menu: {
+    position: 'absolute',
+    width: MENU_WIDTH,
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    paddingVertical: 6,
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.16,
+    shadowRadius: 16,
+    elevation: 6,
+  },
+  menuItem: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  menuItemDestructive: {
+    color: '#dc2626',
+    fontSize: 16,
+    fontWeight: '600',
   },
   tabs: {
     flexDirection: 'row',
