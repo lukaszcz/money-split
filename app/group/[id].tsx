@@ -1,3 +1,4 @@
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -5,11 +6,15 @@ import {
   StyleSheet,
   ScrollView,
   Alert,
+  Modal,
+  Pressable,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useState, useCallback, useEffect } from 'react';
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
-import { ArrowLeft, Plus, User, Mail, Link, Trash2 } from 'lucide-react-native';
+import { ArrowLeft, User, Mail, Link, MoreVertical } from 'lucide-react-native';
 import {
   getGroup,
   getGroupExpenses,
@@ -23,16 +28,29 @@ import { formatNumber, multiplyScaled } from '../../utils/money';
 import { getCurrencySymbol } from '../../utils/currencies';
 import { getExchangeRate } from '../../services/exchangeRateService';
 import { recordGroupVisit } from '../../services/groupPreferenceService';
+import { getMenuPosition } from '../../utils/ui';
+import BottomActionBar from '../../components/BottomActionBar';
 
 type Tab = 'payments' | 'balances' | 'members' | 'settle';
+
+const MENU_WIDTH = 180;
 
 export default function GroupDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const moreButtonRef = useRef<View>(null);
   const [group, setGroup] = useState<GroupWithMembers | null>(null);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [activeTab, setActiveTab] = useState<Tab>('payments');
   const [loading, setLoading] = useState(true);
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [menuAnchor, setMenuAnchor] = useState<{
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } | null>(null);
 
   const loadData = useCallback(async () => {
     if (!id || typeof id !== 'string') return;
@@ -68,13 +86,15 @@ export default function GroupDetailScreen() {
 
   const currencySymbol = getCurrencySymbol(group.mainCurrencyCode);
   const balances = computeBalances(expenses, group.members);
+  const showAddButton = activeTab === 'payments' || activeTab === 'members';
 
   const handleAddPress = () => {
     if (activeTab === 'payments') {
-      router.push(`/group/${id}/add-expense` as any);
-    } else if (activeTab === 'members') {
-      router.push(`/group/${id}/add-member` as any);
+      router.push(`/group/${group.id}/add-expense` as any);
+      return;
     }
+
+    router.push(`/group/${group.id}/add-member` as any);
   };
 
   const handleLeaveGroup = () => {
@@ -104,6 +124,17 @@ export default function GroupDetailScreen() {
     );
   };
 
+  const handleMorePress = () => {
+    moreButtonRef.current?.measureInWindow((x, y, width, height) => {
+      setMenuAnchor({ x, y, width, height });
+      setMenuVisible(true);
+    });
+  };
+
+  const handleMenuClose = () => {
+    setMenuVisible(false);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -118,17 +149,16 @@ export default function GroupDetailScreen() {
           <Text style={styles.headerSubtitle}>{group.mainCurrencyCode}</Text>
         </View>
         <View style={styles.headerActions}>
-          <TouchableOpacity
-            style={styles.deleteButton}
-            onPress={handleLeaveGroup}
-          >
-            <Trash2 color="#dc2626" size={20} />
-          </TouchableOpacity>
-          {(activeTab === 'payments' || activeTab === 'members') && (
-            <TouchableOpacity style={styles.addButton} onPress={handleAddPress}>
-              <Plus color="#ffffff" size={20} />
+          <View ref={moreButtonRef} collapsable={false}>
+            <TouchableOpacity
+              style={styles.moreButton}
+              accessibilityRole="button"
+              accessibilityLabel="Group actions"
+              onPress={handleMorePress}
+            >
+              <MoreVertical color="#6b7280" size={20} />
             </TouchableOpacity>
-          )}
+          </View>
         </View>
       </View>
 
@@ -187,7 +217,10 @@ export default function GroupDetailScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.content}>
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={styles.scrollContent}
+      >
         {activeTab === 'payments' && (
           <ExpensesTab expenses={expenses} group={group} reload={loadData} />
         )}
@@ -211,6 +244,45 @@ export default function GroupDetailScreen() {
           />
         )}
       </ScrollView>
+
+      {showAddButton && (
+        <BottomActionBar
+          label={activeTab === 'payments' ? 'Add expense' : 'Add member'}
+          onPress={handleAddPress}
+        />
+      )}
+
+      <Modal
+        transparent
+        visible={menuVisible}
+        animationType="fade"
+        onRequestClose={handleMenuClose}
+      >
+        <View style={styles.menuOverlay}>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={handleMenuClose}
+          />
+          {menuAnchor && (
+            <View
+              style={[
+                styles.menu,
+                getMenuPosition(menuAnchor, insets.top, MENU_WIDTH),
+              ]}
+            >
+              <Pressable
+                style={styles.menuItem}
+                onPress={() => {
+                  handleMenuClose();
+                  handleLeaveGroup();
+                }}
+              >
+                <Text style={styles.menuItemDestructive}>Leave group</Text>
+              </Pressable>
+            </View>
+          )}
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -260,11 +332,13 @@ function ExpensesTab({
 
   if (expenses.length === 0) {
     return (
-      <View style={styles.emptyState}>
-        <Text style={styles.emptyText}>No expenses yet</Text>
-        <Text style={styles.emptySubtext}>
-          Add your first expense to get started
-        </Text>
+      <View style={styles.tabContent}>
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyText}>No expenses yet</Text>
+          <Text style={styles.emptySubtext}>
+            Add your first expense to get started
+          </Text>
+        </View>
       </View>
     );
   }
@@ -492,21 +566,40 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  deleteButton: {
+  moreButton: {
     width: 36,
     height: 36,
     borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#fee2e2',
+    backgroundColor: '#f3f4f6',
   },
-  addButton: {
-    backgroundColor: '#2563eb',
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
+  menuOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.12)',
+  },
+  menu: {
+    position: 'absolute',
+    width: MENU_WIDTH,
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    paddingVertical: 6,
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.16,
+    shadowRadius: 16,
+    elevation: 6,
+  },
+  menuItem: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  menuItemDestructive: {
+    color: '#dc2626',
+    fontSize: 16,
+    fontWeight: '600',
   },
   tabs: {
     flexDirection: 'row',
@@ -534,6 +627,9 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 24,
   },
   tabContent: {
     padding: 16,

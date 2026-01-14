@@ -9,10 +9,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useState, useCallback } from 'react';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { Plus } from 'lucide-react-native';
 import { getAllGroups, GroupWithMembers } from '../../services/groupRepository';
 import { computeBalances } from '../../services/settlementService';
 import { getOrderedGroups } from '../../services/groupPreferenceService';
+import BottomActionBar from '../../components/BottomActionBar';
 
 interface GroupWithSettledStatus extends GroupWithMembers {
   isSettled?: boolean;
@@ -135,42 +135,41 @@ export default function GroupsScreen() {
     </TouchableOpacity>
   );
 
+  const listEmptyComponent = (
+    <View style={styles.emptyState}>
+      <Text style={styles.emptyText}>
+        {loading ? 'Loading groups...' : 'No groups yet'}
+      </Text>
+      {!loading && (
+        <Text style={styles.emptySubtext}>
+          Create your first group to get started
+        </Text>
+      )}
+    </View>
+  );
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <Text style={styles.title}>Groups</Text>
-        <TouchableOpacity
-          style={styles.addButton}
-          accessibilityRole="button"
-          accessibilityLabel="Create group"
-          onPress={() => router.push('/create-group' as any)}
-        >
-          <Plus color="#ffffff" size={24} />
-        </TouchableOpacity>
       </View>
 
-      {loading ? (
-        <View style={styles.centered}>
-          <Text>Loading groups...</Text>
-        </View>
-      ) : groups.length === 0 ? (
-        <View style={styles.centered}>
-          <Text style={styles.emptyText}>No groups yet</Text>
-          <Text style={styles.emptySubtext}>
-            Create your first group to get started
-          </Text>
-        </View>
-      ) : (
-        <FlatList
-          data={groups}
-          renderItem={renderGroupItem}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.list}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-        />
-      )}
+      <FlatList
+        data={groups}
+        renderItem={renderGroupItem}
+        keyExtractor={(item) => item.id}
+        style={styles.listContainer}
+        contentContainerStyle={styles.list}
+        ListEmptyComponent={listEmptyComponent}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      />
+
+      <BottomActionBar
+        label="Add group"
+        onPress={() => router.push('/create-group' as any)}
+      />
     </SafeAreaView>
   );
 }
@@ -194,16 +193,16 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#111827',
   },
-  addButton: {
-    backgroundColor: '#2563eb',
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   list: {
     padding: 16,
+    paddingBottom: 24,
+  },
+  listContainer: {
+    flex: 1,
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingTop: 60,
   },
   groupCard: {
     backgroundColor: '#ffffff',
@@ -252,11 +251,6 @@ const styles = StyleSheet.create({
   },
   membersSettled: {
     color: '#9ca3af',
-  },
-  centered: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   emptyText: {
     fontSize: 18,
