@@ -169,7 +169,6 @@ export default function GroupsScreen() {
       <BottomActionBar
         label="Add group"
         onPress={() => router.push('/create-group' as any)}
-        safeAreaBottom={false}
       />
     </SafeAreaView>
   );
