@@ -66,6 +66,28 @@ describe('GroupDetail Screen - Overflow Menu', () => {
   let useRefSpy: jest.SpyInstance;
 
   const originalUseRef = React.useRef;
+  const createMeasureRef = () => {
+    const measureInWindow = (callback: any) => callback(0, 0, 120, 40);
+    let currentValue: any = { measureInWindow };
+
+    return {
+      get current() {
+        return currentValue;
+      },
+      set current(value) {
+        if (!value) {
+          return;
+        }
+
+        if (typeof value === 'object' && !('measureInWindow' in value)) {
+          currentValue = { ...value, measureInWindow };
+          return;
+        }
+
+        currentValue = value;
+      },
+    };
+  };
 
   const mockGroup = {
     id: 'group-1',
@@ -127,11 +149,7 @@ describe('GroupDetail Screen - Overflow Menu', () => {
 
     useRefSpy = jest.spyOn(React, 'useRef').mockImplementation((value) => {
       if (value === null) {
-        return {
-          current: {
-            measureInWindow: (callback: any) => callback(0, 0, 120, 40),
-          },
-        };
+        return createMeasureRef();
       }
 
       return originalUseRef(value);
@@ -196,12 +214,6 @@ describe('GroupDetail Screen - Overflow Menu', () => {
 
     fireEvent.press(getByText('Leave group'));
 
-    await waitFor(() => {
-      expect(getByText('Leave group')).toBeTruthy();
-    });
-
-    fireEvent.press(getByText('Leave group'));
-
     expect(alertSpy).toHaveBeenCalledWith(
       'Leave Group',
       'Are you sure you want to leave this group? If you are the last member, the group will be deleted.',
@@ -218,7 +230,7 @@ describe('GroupDetail Screen - Overflow Menu', () => {
   it('successfully leaves group and navigates back', async () => {
     mockLeaveGroup.mockResolvedValue(true);
 
-    const { getByLabelText } = render(<GroupDetailScreen />);
+    const { getByLabelText, getByText } = render(<GroupDetailScreen />);
 
     await act(async () => {
       await Promise.resolve();
@@ -229,6 +241,12 @@ describe('GroupDetail Screen - Overflow Menu', () => {
     });
 
     fireEvent.press(getByLabelText('Group actions'));
+
+    await waitFor(() => {
+      expect(getByText('Leave group')).toBeTruthy();
+    });
+
+    fireEvent.press(getByText('Leave group'));
 
     // Verify Alert was called
     await waitFor(() => {
