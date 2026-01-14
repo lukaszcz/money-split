@@ -28,8 +28,8 @@ The MoneySplit test suite includes:
 
 ### Test Statistics
 
-- **Total Tests**: 334
-- **Test Suites**: 15
+- **Total Tests**: 337
+- **Test Suites**: 16
 - **Coverage Targets**:
   - Lines: 80%
   - Functions: 80%
