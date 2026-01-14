@@ -339,6 +339,14 @@ describe('GroupDetail Screen - Overflow Menu', () => {
 
     fireEvent.press(getByText('Leave group'));
 
+    const alertCall = alertSpy.mock.calls[0];
+    const buttons = alertCall[2];
+    const cancelButton = buttons.find((btn: any) => btn.text === 'Cancel');
+
+    await act(async () => {
+      await cancelButton?.onPress?.();
+    });
+
     // User presses Cancel - the onPress callback should not be called
     // Verify leaveGroup was NOT called
     expect(mockLeaveGroup).not.toHaveBeenCalled();
