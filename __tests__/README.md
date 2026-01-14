@@ -27,8 +27,8 @@ The MoneySplit test suite includes:
 
 ### Test Statistics
 
-- **Total Tests**: 334
-- **Test Suites**: 15
+- **Total Tests**: 340
+- **Test Suites**: 16
 - **Coverage Targets**:
   - Lines: 80%
   - Functions: 80%
@@ -162,9 +162,9 @@ describe('getMenuPosition', () => {
   it('should prevent menu from overflowing screen edges', () => {
     const anchor = { x: 350, y: 50, width: 40, height: 40 };
     const insetTop = 44;
-    
+
     const position = getMenuPosition(anchor, insetTop, 180);
-    
+
     // Menu should fit within screen bounds
     expect(position.left + 180).toBeLessThanOrEqual(375 - 16);
   });
@@ -172,12 +172,12 @@ describe('getMenuPosition', () => {
 ```
 
 UI utility tests cover menu positioning logic, including:
+
 - Basic positioning relative to anchor elements
 - Horizontal overflow prevention (left and right edges)
 - Vertical positioning with safe area insets
 - Edge cases for various screen sizes (phones, tablets)
 - Consistency and boundary conditions
-
 
 ### Service Test Pattern with Mocks
 
