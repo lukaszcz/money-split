@@ -9,7 +9,10 @@ import {
   Pressable,
   Dimensions,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { ArrowLeft, User, Mail, Link, MoreVertical } from 'lucide-react-native';
@@ -214,7 +217,10 @@ export default function GroupDetailScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={styles.scrollContent}
+      >
         {activeTab === 'payments' && (
           <ExpensesTab expenses={expenses} group={group} reload={loadData} />
         )}
@@ -259,10 +265,7 @@ export default function GroupDetailScreen() {
           />
           {menuAnchor && (
             <View
-              style={[
-                styles.menu,
-                getMenuPosition(menuAnchor, insets.top),
-              ]}
+              style={[styles.menu, getMenuPosition(menuAnchor, insets.top)]}
             >
               <Pressable
                 style={styles.menuItem}
