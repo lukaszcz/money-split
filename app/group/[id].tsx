@@ -5,11 +5,13 @@ import {
   StyleSheet,
   ScrollView,
   Alert,
+  ActionSheetIOS,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useCallback, useEffect } from 'react';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
-import { ArrowLeft, Plus, User, Mail, Link, Trash2 } from 'lucide-react-native';
+import { ArrowLeft, User, Mail, Link, MoreVertical } from 'lucide-react-native';
 import {
   getGroup,
   getGroupExpenses,
@@ -23,6 +25,7 @@ import { formatNumber, multiplyScaled } from '../../utils/money';
 import { getCurrencySymbol } from '../../utils/currencies';
 import { getExchangeRate } from '../../services/exchangeRateService';
 import { recordGroupVisit } from '../../services/groupPreferenceService';
+import BottomActionBar from '../../components/BottomActionBar';
 
 type Tab = 'payments' | 'balances' | 'members' | 'settle';
 
@@ -106,6 +109,36 @@ export default function GroupDetailScreen() {
     );
   };
 
+  const handleMorePress = () => {
+    const destructiveLabel = 'Leave group';
+
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: ['Cancel', destructiveLabel],
+          cancelButtonIndex: 0,
+          destructiveButtonIndex: 1,
+          title: group.name,
+        },
+        (buttonIndex) => {
+          if (buttonIndex === 1) {
+            handleLeaveGroup();
+          }
+        },
+      );
+      return;
+    }
+
+    Alert.alert('Group actions', undefined, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: destructiveLabel,
+        style: 'destructive',
+        onPress: handleLeaveGroup,
+      },
+    ]);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -121,10 +154,12 @@ export default function GroupDetailScreen() {
         </View>
         <View style={styles.headerActions}>
           <TouchableOpacity
-            style={styles.deleteButton}
-            onPress={handleLeaveGroup}
+            style={styles.moreButton}
+            accessibilityRole="button"
+            accessibilityLabel="Group actions"
+            onPress={handleMorePress}
           >
-            <Trash2 color="#dc2626" size={20} />
+            <MoreVertical color="#6b7280" size={20} />
           </TouchableOpacity>
         </View>
       </View>
@@ -184,13 +219,7 @@ export default function GroupDetailScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView
-        style={styles.content}
-        contentContainerStyle={[
-          styles.scrollContent,
-          showAddButton && styles.scrollContentWithFloatingButton,
-        ]}
-      >
+      <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
         {activeTab === 'payments' && (
           <ExpensesTab expenses={expenses} group={group} reload={loadData} />
         )}
@@ -216,19 +245,12 @@ export default function GroupDetailScreen() {
       </ScrollView>
 
       {showAddButton && (
-        <View style={styles.floatingAddButton}>
-          <TabAddButton onPress={handleAddPress} />
-        </View>
+        <BottomActionBar
+          label={activeTab === 'payments' ? 'Add expense' : 'Add member'}
+          onPress={handleAddPress}
+        />
       )}
     </SafeAreaView>
-  );
-}
-
-function TabAddButton({ onPress }: { onPress: () => void }) {
-  return (
-    <TouchableOpacity style={styles.addButton} onPress={onPress}>
-      <Plus color="#ffffff" size={24} />
-    </TouchableOpacity>
   );
 }
 
@@ -511,28 +533,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  deleteButton: {
+  moreButton: {
     width: 36,
     height: 36,
     borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#fee2e2',
-  },
-  addButton: {
-    backgroundColor: '#2563eb',
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  floatingAddButton: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 24,
-    alignItems: 'center',
+    backgroundColor: '#f3f4f6',
   },
   tabs: {
     flexDirection: 'row',
@@ -562,10 +569,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 32,
-  },
-  scrollContentWithFloatingButton: {
-    paddingBottom: 120,
+    paddingBottom: 24,
   },
   tabContent: {
     padding: 16,

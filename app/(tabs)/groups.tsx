@@ -9,10 +9,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useState, useCallback } from 'react';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { Plus } from 'lucide-react-native';
 import { getAllGroups, GroupWithMembers } from '../../services/groupRepository';
 import { computeBalances } from '../../services/settlementService';
 import { getOrderedGroups } from '../../services/groupPreferenceService';
+import BottomActionBar from '../../components/BottomActionBar';
 
 interface GroupWithSettledStatus extends GroupWithMembers {
   isSettled?: boolean;
@@ -165,16 +165,10 @@ export default function GroupsScreen() {
         }
       />
 
-      <View style={styles.floatingAddButton}>
-        <TouchableOpacity
-          style={styles.addButton}
-          accessibilityRole="button"
-          accessibilityLabel="Create group"
-          onPress={() => router.push('/create-group' as any)}
-        >
-          <Plus color="#ffffff" size={24} />
-        </TouchableOpacity>
-      </View>
+      <BottomActionBar
+        label="Add group"
+        onPress={() => router.push('/create-group' as any)}
+      />
     </SafeAreaView>
   );
 }
@@ -198,24 +192,9 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#111827',
   },
-  addButton: {
-    backgroundColor: '#2563eb',
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   list: {
     padding: 16,
-    paddingBottom: 120,
-  },
-  floatingAddButton: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 24,
-    alignItems: 'center',
+    paddingBottom: 24,
   },
   emptyState: {
     alignItems: 'center',
