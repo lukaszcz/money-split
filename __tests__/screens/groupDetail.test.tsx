@@ -280,7 +280,10 @@ describe('GroupDetail Screen - Overflow Menu', () => {
               if (success) {
                 mockRouter.back();
               } else {
-                Alert.alert('Error', 'Failed to leave group. Please try again.');
+                Alert.alert(
+                  'Error',
+                  'Failed to leave group. Please try again.',
+                );
               }
             },
           },
