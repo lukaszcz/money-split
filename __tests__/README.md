@@ -27,7 +27,7 @@ The MoneySplit test suite includes:
 
 ### Test Statistics
 
-- **Total Tests**: 325
+- **Total Tests**: 334
 - **Test Suites**: 15
 - **Coverage Targets**:
   - Lines: 80%
@@ -46,7 +46,8 @@ __tests__/
 │   ├── mockSupabase.ts            # Supabase client mocking
 │   ├── mockExpoRouter.ts          # Expo Router mocking
 │   ├── mockAuthContext.ts         # Auth context mocking
-│   └── testHelpers.ts             # Test utilities
+│   ├── testHelpers.ts             # Test utilities
+│   └── ui.test.ts                 # UI utilities tests
 ├── setup/
 │   ├── docker-compose.test.yml    # Integration test environment
 │   └── integration.setup.ts       # Integration test helpers
@@ -69,6 +70,7 @@ __tests__/
 ├── money.test.ts                  # Money math
 ├── settlementService.test.ts      # Settlement algorithms
 └── validation.test.ts             # Validation helpers
+
 ```
 
 ## Running Tests
@@ -131,6 +133,51 @@ describe('money utilities', () => {
 
 Money utility tests also cover share calculations via `calculateSharesForSplit`.
 Validation tests include `validateDecimalInput` coverage.
+
+### UI Utilities Test Pattern
+
+```typescript
+import { Dimensions } from 'react-native';
+import { getMenuPosition } from '../../utils/ui';
+
+// Mock React Native Dimensions
+jest.mock('react-native', () => ({
+  Dimensions: {
+    get: jest.fn(),
+  },
+}));
+
+const mockDimensions = Dimensions as jest.Mocked<typeof Dimensions>;
+
+describe('getMenuPosition', () => {
+  beforeEach(() => {
+    mockDimensions.get.mockReturnValue({
+      width: 375,
+      height: 667,
+      scale: 2,
+      fontScale: 1,
+    });
+  });
+
+  it('should prevent menu from overflowing screen edges', () => {
+    const anchor = { x: 350, y: 50, width: 40, height: 40 };
+    const insetTop = 44;
+    
+    const position = getMenuPosition(anchor, insetTop, 180);
+    
+    // Menu should fit within screen bounds
+    expect(position.left + 180).toBeLessThanOrEqual(375 - 16);
+  });
+});
+```
+
+UI utility tests cover menu positioning logic, including:
+- Basic positioning relative to anchor elements
+- Horizontal overflow prevention (left and right edges)
+- Vertical positioning with safe area insets
+- Edge cases for various screen sizes (phones, tablets)
+- Consistency and boundary conditions
+
 
 ### Service Test Pattern with Mocks
 
