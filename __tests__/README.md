@@ -22,6 +22,7 @@ The MoneySplit test suite includes:
 - **Service tests** for data access layer (groupRepository, exchangeRateService)
 - **Context tests** for React state management (AuthContext)
 - **Hook tests** for client hooks (currency order, framework ready)
+- **Component tests** for reusable UI components (BottomActionBar)
 - **Screen tests** for UI business logic (auth, groups, settings)
 - **Integration tests** (optional, requires local Supabase)
 
@@ -61,6 +62,8 @@ __tests__/
 ├── hooks/
 │   ├── useCurrencyOrder.test.ts   # Currency ordering hook
 │   └── useFrameworkReady.test.ts  # Framework ready hook
+├── components/
+│   └── BottomActionBar.test.tsx   # BottomActionBar component tests
 ├── screens/
 │   ├── auth.test.tsx              # Auth screen tests
 │   ├── groups.test.tsx            # Groups screen tests
@@ -513,6 +516,83 @@ npm run test:coverage -- --coverageReporters=json-summary
 - **Refactor tests**: Apply same standards as production code
 - **Remove obsolete tests**: Delete tests for removed features
 - **Review test failures**: Understand why tests fail
+
+## Component Testing
+
+### Overview
+
+Component tests verify individual UI components in isolation using `@testing-library/react-native`. These tests ensure components:
+
+- Render correctly with various props
+- Apply accessibility labels for screen readers
+- Call handlers when user interactions occur
+- Follow established patterns for testability
+
+### What to Test
+
+✅ **Do test**:
+
+- Component renders with required props
+- Accessibility labels are correctly applied
+- Event handlers (onPress, onChange) are called correctly
+- Component handles edge cases (empty strings, undefined props)
+
+❌ **Don't test**:
+
+- Styling details (colors, sizes, margins)
+- Component internal implementation
+- Third-party library behavior
+
+### Writing Component Tests
+
+Component tests follow a simple pattern:
+
+```typescript
+import React from 'react';
+import { render, fireEvent } from '@testing-library/react-native';
+import BottomActionBar from '../../components/BottomActionBar';
+
+describe('BottomActionBar', () => {
+  it('renders correctly with label', () => {
+    const { getByText } = render(
+      <BottomActionBar label="Add Item" onPress={jest.fn()} />,
+    );
+
+    expect(getByText('Add Item')).toBeTruthy();
+  });
+
+  it('applies correct accessibility label', () => {
+    const { getByLabelText } = render(
+      <BottomActionBar label="Add Group" onPress={jest.fn()} />,
+    );
+
+    expect(getByLabelText('Add Group')).toBeTruthy();
+  });
+
+  it('calls onPress handler when pressed', () => {
+    const mockOnPress = jest.fn();
+    const { getByLabelText } = render(
+      <BottomActionBar label="Add Expense" onPress={mockOnPress} />,
+    );
+
+    fireEvent.press(getByLabelText('Add Expense'));
+
+    expect(mockOnPress).toHaveBeenCalledTimes(1);
+  });
+});
+```
+
+### Example Component Tests
+
+See `__tests__/components/BottomActionBar.test.tsx` for a complete example.
+
+### Tips for Component Testing
+
+1. **Keep tests simple** - Focus on public API, not implementation
+2. **Use accessibility queries** - Prefer `getByLabelText` over `getByTestId`
+3. **Test user interactions** - Verify handlers are called correctly
+4. **Mock child components** - If needed, mock complex children (already handled in `jest.setup.js`)
+5. **Avoid snapshot tests** - They're brittle and don't test behavior
 
 ## Screen Testing
 
