@@ -69,12 +69,12 @@ export default function GroupDetailScreen() {
   const currencySymbol = getCurrencySymbol(group.mainCurrencyCode);
   const balances = computeBalances(expenses, group.members);
 
-  const handleAddPress = () => {
-    if (activeTab === 'payments') {
-      router.push(`/group/${id}/add-expense` as any);
-    } else if (activeTab === 'members') {
-      router.push(`/group/${id}/add-member` as any);
-    }
+  const handleAddExpense = () => {
+    router.push(`/group/${id}/add-expense` as any);
+  };
+
+  const handleAddMember = () => {
+    router.push(`/group/${id}/add-member` as any);
   };
 
   const handleLeaveGroup = () => {
@@ -124,11 +124,6 @@ export default function GroupDetailScreen() {
           >
             <Trash2 color="#dc2626" size={20} />
           </TouchableOpacity>
-          {(activeTab === 'payments' || activeTab === 'members') && (
-            <TouchableOpacity style={styles.addButton} onPress={handleAddPress}>
-              <Plus color="#ffffff" size={20} />
-            </TouchableOpacity>
-          )}
         </View>
       </View>
 
@@ -189,7 +184,12 @@ export default function GroupDetailScreen() {
 
       <ScrollView style={styles.content}>
         {activeTab === 'payments' && (
-          <ExpensesTab expenses={expenses} group={group} reload={loadData} />
+          <ExpensesTab
+            expenses={expenses}
+            group={group}
+            reload={loadData}
+            onAddExpense={handleAddExpense}
+          />
         )}
         {activeTab === 'balances' && (
           <BalancesTab
@@ -199,7 +199,11 @@ export default function GroupDetailScreen() {
           />
         )}
         {activeTab === 'members' && (
-          <MembersTab members={group.members} groupId={group.id} />
+          <MembersTab
+            members={group.members}
+            groupId={group.id}
+            onAddMember={handleAddMember}
+          />
         )}
         {activeTab === 'settle' && (
           <SettleTab
@@ -218,10 +222,12 @@ export default function GroupDetailScreen() {
 function ExpensesTab({
   expenses,
   group,
+  onAddExpense,
 }: {
   expenses: Expense[];
   group: GroupWithMembers;
   reload: () => void;
+  onAddExpense: () => void;
 }) {
   const router = useRouter();
   const memberMap = new Map(group.members.map((m) => [m.id, m]));
@@ -258,61 +264,64 @@ function ExpensesTab({
     }
   }, [expenses, group.mainCurrencyCode]);
 
-  if (expenses.length === 0) {
-    return (
-      <View style={styles.emptyState}>
-        <Text style={styles.emptyText}>No expenses yet</Text>
-        <Text style={styles.emptySubtext}>
-          Add your first expense to get started
-        </Text>
-      </View>
-    );
-  }
-
   return (
     <View style={styles.tabContent}>
-      {expenses.map((expense) => {
-        const payer = memberMap.get(expense.payerMemberId);
-        const convertedAmount = convertedAmounts.get(expense.id);
-        const showConversion =
-          expense.currencyCode !== group.mainCurrencyCode && convertedAmount;
-        const isTransfer = expense.paymentType === 'transfer';
-        const editRoute = isTransfer
-          ? `/group/${group.id}/edit-transfer?expenseId=${expense.id}`
-          : `/group/${group.id}/edit-expense?expenseId=${expense.id}`;
+      {expenses.length === 0 ? (
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyText}>No expenses yet</Text>
+          <Text style={styles.emptySubtext}>
+            Add your first expense to get started
+          </Text>
+        </View>
+      ) : (
+        expenses.map((expense) => {
+          const payer = memberMap.get(expense.payerMemberId);
+          const convertedAmount = convertedAmounts.get(expense.id);
+          const showConversion =
+            expense.currencyCode !== group.mainCurrencyCode && convertedAmount;
+          const isTransfer = expense.paymentType === 'transfer';
+          const editRoute = isTransfer
+            ? `/group/${group.id}/edit-transfer?expenseId=${expense.id}`
+            : `/group/${group.id}/edit-expense?expenseId=${expense.id}`;
 
-        return (
-          <TouchableOpacity
-            key={expense.id}
-            style={styles.expenseCard}
-            onPress={() => router.push(editRoute as any)}
-          >
-            <View style={styles.expenseHeader}>
-              <Text style={styles.expenseDescription}>
-                {expense.description || 'Expense'}
-              </Text>
-              <View style={styles.expenseAmountContainer}>
-                <Text style={styles.expenseAmount}>
-                  {expense.currencyCode}{' '}
-                  {formatNumber(expense.totalAmountScaled)}
+          return (
+            <TouchableOpacity
+              key={expense.id}
+              style={styles.expenseCard}
+              onPress={() => router.push(editRoute as any)}
+            >
+              <View style={styles.expenseHeader}>
+                <Text style={styles.expenseDescription}>
+                  {expense.description || 'Expense'}
                 </Text>
-                {showConversion && (
-                  <Text style={styles.expenseConverted}>
-                    ({groupCurrencySymbol}
-                    {formatNumber(convertedAmount)})
+                <View style={styles.expenseAmountContainer}>
+                  <Text style={styles.expenseAmount}>
+                    {expense.currencyCode}{' '}
+                    {formatNumber(expense.totalAmountScaled)}
                   </Text>
-                )}
+                  {showConversion && (
+                    <Text style={styles.expenseConverted}>
+                      ({groupCurrencySymbol}
+                      {formatNumber(convertedAmount)})
+                    </Text>
+                  )}
+                </View>
               </View>
-            </View>
-            <Text style={styles.expenseDetails}>
-              Paid by {payer?.name || 'Unknown'}
-            </Text>
-            <Text style={styles.expenseDate}>
-              {new Date(expense.createdAt).toLocaleDateString()}
-            </Text>
-          </TouchableOpacity>
-        );
-      })}
+              <Text style={styles.expenseDetails}>
+                Paid by {payer?.name || 'Unknown'}
+              </Text>
+              <Text style={styles.expenseDate}>
+                {new Date(expense.createdAt).toLocaleDateString()}
+              </Text>
+            </TouchableOpacity>
+          );
+        })
+      )}
+      <View style={styles.addButtonRow}>
+        <TouchableOpacity style={styles.addButton} onPress={onAddExpense}>
+          <Plus color="#ffffff" size={28} />
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -357,9 +366,11 @@ function BalancesTab({
 function MembersTab({
   members,
   groupId,
+  onAddMember,
 }: {
   members: GroupMember[];
   groupId: string;
+  onAddMember: () => void;
 }) {
   const router = useRouter();
 
@@ -407,6 +418,12 @@ function MembersTab({
           </Text>
         </View>
       )}
+
+      <View style={styles.addButtonRow}>
+        <TouchableOpacity style={styles.addButton} onPress={onAddMember}>
+          <Plus color="#ffffff" size={28} />
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -502,11 +519,15 @@ const styles = StyleSheet.create({
   },
   addButton: {
     backgroundColor: '#2563eb',
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  addButtonRow: {
+    alignItems: 'flex-end',
+    marginTop: 12,
   },
   tabs: {
     flexDirection: 'row',
