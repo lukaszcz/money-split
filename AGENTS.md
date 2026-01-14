@@ -22,6 +22,7 @@ MoneySplit is a React Native/Expo mobile app for tracking shared expenses and de
 - `npm run dev` starts the Expo development server.
 - `npm run lint` runs Expo lint rules.
 - `npm run typecheck` runs TypeScript type checking.
+- `npm run format` format TypeScript code.
 - `npm run test` runs Jest.
 
 ## Coding Style & Naming Conventions
@@ -30,6 +31,7 @@ MoneySplit is a React Native/Expo mobile app for tracking shared expenses and de
 - Indentation: 2 spaces in JSON/JS/TS (match existing files).
 - Keep file names and routes consistent with Expo Router patterns (`app/group/[id]/...`).
 - Linting: `eslint.config.js` uses `eslint-config-expo`.
+- Make sure code is properly formatted by running `npm run format`.
 
 ## Testing Guidelines
 

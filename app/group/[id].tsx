@@ -7,7 +7,6 @@ import {
   Alert,
   Modal,
   Pressable,
-  Dimensions,
 } from 'react-native';
 import {
   SafeAreaView,
@@ -29,6 +28,7 @@ import { formatNumber, multiplyScaled } from '../../utils/money';
 import { getCurrencySymbol } from '../../utils/currencies';
 import { getExchangeRate } from '../../services/exchangeRateService';
 import { recordGroupVisit } from '../../services/groupPreferenceService';
+import { getMenuPosition } from '../../utils/ui';
 import BottomActionBar from '../../components/BottomActionBar';
 
 type Tab = 'payments' | 'balances' | 'members' | 'settle';
@@ -265,7 +265,10 @@ export default function GroupDetailScreen() {
           />
           {menuAnchor && (
             <View
-              style={[styles.menu, getMenuPosition(menuAnchor, insets.top)]}
+              style={[
+                styles.menu,
+                getMenuPosition(menuAnchor, insets.top, MENU_WIDTH),
+              ]}
             >
               <Pressable
                 style={styles.menuItem}
@@ -283,20 +286,6 @@ export default function GroupDetailScreen() {
     </SafeAreaView>
   );
 }
-
-const getMenuPosition = (
-  anchor: { x: number; y: number; width: number; height: number },
-  insetTop: number,
-) => {
-  const screenWidth = Dimensions.get('window').width;
-  const left = Math.min(
-    Math.max(16, anchor.x + anchor.width - MENU_WIDTH),
-    screenWidth - MENU_WIDTH - 16,
-  );
-  const top = Math.max(anchor.y + anchor.height + 8, insetTop + 8);
-
-  return { top, left };
-};
 
 function ExpensesTab({
   expenses,
