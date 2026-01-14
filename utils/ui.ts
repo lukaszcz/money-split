@@ -29,7 +29,10 @@ export const getMenuPosition = (
   // Calculate vertical position:
   // - Position below anchor with spacing
   // - Ensure menu is below safe area top inset
-  const top = Math.max(anchor.y + anchor.height + VERTICAL_SPACING, insetTop + VERTICAL_SPACING);
+  const top = Math.max(
+    anchor.y + anchor.height + VERTICAL_SPACING,
+    insetTop + VERTICAL_SPACING,
+  );
 
   return { top, left };
 };

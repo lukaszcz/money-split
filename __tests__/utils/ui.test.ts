@@ -76,7 +76,7 @@ describe('getMenuPosition', () => {
       // Maximum left = screenWidth - menuWidth - padding = 375 - 180 - 16 = 179
       expect(position.left).toBe(179);
       expect(position.left + DEFAULT_MENU_WIDTH).toBeLessThanOrEqual(
-        SCREEN_WIDTH - HORIZONTAL_PADDING
+        SCREEN_WIDTH - HORIZONTAL_PADDING,
       );
     });
 
@@ -189,7 +189,7 @@ describe('getMenuPosition', () => {
       expect(position.top).toBe(58); // 50 + 0 + 8
       expect(position.left).toBeGreaterThanOrEqual(HORIZONTAL_PADDING);
       expect(position.left).toBeLessThanOrEqual(
-        SCREEN_WIDTH - DEFAULT_MENU_WIDTH - HORIZONTAL_PADDING
+        SCREEN_WIDTH - DEFAULT_MENU_WIDTH - HORIZONTAL_PADDING,
       );
     });
 
@@ -219,7 +219,7 @@ describe('getMenuPosition', () => {
 
         expect(position.left).toBeGreaterThanOrEqual(HORIZONTAL_PADDING);
         expect(position.left + DEFAULT_MENU_WIDTH).toBeLessThanOrEqual(
-          SCREEN_WIDTH - HORIZONTAL_PADDING
+          SCREEN_WIDTH - HORIZONTAL_PADDING,
         );
         expect(position.top).toBeGreaterThanOrEqual(0);
       });

@@ -265,7 +265,10 @@ export default function GroupDetailScreen() {
           />
           {menuAnchor && (
             <View
-              style={[styles.menu, getMenuPosition(menuAnchor, insets.top, MENU_WIDTH)]}
+              style={[
+                styles.menu,
+                getMenuPosition(menuAnchor, insets.top, MENU_WIDTH),
+              ]}
             >
               <Pressable
                 style={styles.menuItem}
@@ -283,8 +286,6 @@ export default function GroupDetailScreen() {
     </SafeAreaView>
   );
 }
-
-
 
 function ExpensesTab({
   expenses,
