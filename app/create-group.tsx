@@ -87,7 +87,8 @@ export default function CreateGroupScreen() {
     }
 
     let memberName = newMemberName.trim();
-    let memberEmail = newMemberEmail.trim() || undefined;
+    const memberEmail = newMemberEmail.trim() || undefined;
+    const nameWasDerived = !memberName && !!memberEmail;
 
     if (memberEmail && !isValidEmail(memberEmail)) {
       Alert.alert('Error', 'Please enter a valid email address');
@@ -114,6 +115,10 @@ export default function CreateGroupScreen() {
 
     // Check for duplicate names
     if (checkForDuplicateName(memberName)) {
+      // If name was derived from email, populate the input so user can see and edit it
+      if (nameWasDerived) {
+        setNewMemberName(memberName);
+      }
       Alert.alert(
         'Duplicate Name',
         'A member with this name already exists in the group. Please use a unique name.',

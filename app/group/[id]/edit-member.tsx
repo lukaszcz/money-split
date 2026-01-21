@@ -104,7 +104,8 @@ export default function EditMemberScreen() {
 
     try {
       let memberName = trimmedName;
-      let memberEmail = trimmedEmail || undefined;
+      const memberEmail = trimmedEmail || undefined;
+      const nameWasDerived = !memberName && !!memberEmail;
       let connectedUserId: string | undefined;
       const emailChanged = memberEmail !== originalEmail;
 
@@ -136,6 +137,10 @@ export default function EditMemberScreen() {
 
       // Check for duplicate names
       if (checkForDuplicateName(memberName)) {
+        // If name was derived from email, populate the input so user can see and edit it
+        if (nameWasDerived) {
+          setName(memberName);
+        }
         Alert.alert(
           'Duplicate Name',
           'A member with this name already exists in the group. Please use a unique name.',
