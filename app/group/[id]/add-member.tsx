@@ -10,7 +10,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
 import {
@@ -18,8 +18,9 @@ import {
   getUserByEmail,
   sendInvitationEmail,
   getGroup,
+  getGroupMembers,
 } from '../../../services/groupRepository';
-import { isValidEmail } from '../../../utils/validation';
+import { isValidEmail, isDuplicateMemberName } from '../../../utils/validation';
 
 export default function AddMemberScreen() {
   const { id } = useLocalSearchParams();
@@ -27,6 +28,24 @@ export default function AddMemberScreen() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
+  const [existingMemberNames, setExistingMemberNames] = useState<string[]>([]);
+  const [hasDuplicateName, setHasDuplicateName] = useState(false);
+
+  const loadExistingMembers = useCallback(async () => {
+    if (!id || typeof id !== 'string') return;
+    const members = await getGroupMembers(id);
+    setExistingMemberNames(members.map((m) => m.name));
+  }, [id]);
+
+  useEffect(() => {
+    loadExistingMembers();
+  }, [loadExistingMembers]);
+
+  const checkForDuplicateName = (nameToCheck: string) => {
+    const isDuplicate = isDuplicateMemberName(nameToCheck, existingMemberNames);
+    setHasDuplicateName(isDuplicate);
+    return isDuplicate;
+  };
 
   const handleAddMember = async () => {
     const trimmedName = name.trim();
@@ -51,7 +70,8 @@ export default function AddMemberScreen() {
 
     try {
       let memberName = trimmedName;
-      let memberEmail = trimmedEmail || undefined;
+      const memberEmail = trimmedEmail || undefined;
+      const nameWasDerived = !memberName && !!memberEmail;
       let connectedUserId: string | undefined;
 
       if (memberEmail) {
@@ -82,6 +102,20 @@ export default function AddMemberScreen() {
 
       if (!memberName) {
         Alert.alert('Error', 'Could not determine member name');
+        setLoading(false);
+        return;
+      }
+
+      // Check for duplicate names
+      if (checkForDuplicateName(memberName)) {
+        // If name was derived from email, populate the input so user can see and edit it
+        if (nameWasDerived) {
+          setName(memberName);
+        }
+        Alert.alert(
+          'Duplicate Name',
+          'A member with this name already exists in the group. Please use a unique name.',
+        );
         setLoading(false);
         return;
       }
@@ -133,9 +167,12 @@ export default function AddMemberScreen() {
           <View style={styles.section}>
             <Text style={styles.label}>Name</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, hasDuplicateName && styles.inputError]}
               value={name}
-              onChangeText={setName}
+              onChangeText={(text) => {
+                setName(text);
+                checkForDuplicateName(text);
+              }}
               onBlur={() => setName((nm) => nm.trim())}
               placeholder="Member name"
               placeholderTextColor="#9ca3af"
@@ -234,6 +271,10 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 16,
     color: '#111827',
+  },
+  inputError: {
+    borderColor: '#ef4444',
+    borderWidth: 2,
   },
   hint: {
     fontSize: 13,
