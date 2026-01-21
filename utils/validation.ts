@@ -308,7 +308,6 @@ export function isDuplicateMemberName(
   const validNames = existingNames.filter((name) => name?.trim());
 
   return validNames.some(
-    (existingName) =>
-      existingName.toLowerCase() === trimmedName.toLowerCase(),
+    (existingName) => existingName.toLowerCase() === trimmedName.toLowerCase(),
   );
 }

@@ -294,10 +294,7 @@ export default function CreateGroupScreen() {
               <View style={styles.addMemberForm}>
                 <Text style={styles.formLabel}>Name</Text>
                 <TextInput
-                  style={[
-                    styles.input,
-                    hasDuplicateName && styles.inputError,
-                  ]}
+                  style={[styles.input, hasDuplicateName && styles.inputError]}
                   value={newMemberName}
                   onChangeText={(text) => {
                     setNewMemberName(text);
