@@ -19,7 +19,7 @@ import {
   getUserByEmail,
   sendInvitationEmail,
   getGroup,
-  getGroupMembersWithStatus,
+  getGroupMembers,
 } from '../../../services/groupRepository';
 import { isValidEmail, isDuplicateMemberName } from '../../../utils/validation';
 
@@ -49,8 +49,8 @@ export default function EditMemberScreen() {
     setOtherMembersLoading(true);
     setOtherMembersLoadError(false);
     try {
-      const { members, error } = await getGroupMembersWithStatus(id);
-      if (error) {
+      const members = await getGroupMembers(id);
+      if (!members) {
         setOtherMembersLoadError(true);
         return null;
       }
@@ -94,10 +94,7 @@ export default function EditMemberScreen() {
 
   const checkForDuplicateName = useCallback(
     (nameToCheck: string) => {
-      const isDuplicate = isDuplicateMemberName(
-        nameToCheck,
-        otherMemberNames,
-      );
+      const isDuplicate = isDuplicateMemberName(nameToCheck, otherMemberNames);
       setHasDuplicateName(isDuplicate);
       return isDuplicate;
     },

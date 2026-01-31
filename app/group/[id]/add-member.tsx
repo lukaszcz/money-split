@@ -18,7 +18,7 @@ import {
   getUserByEmail,
   sendInvitationEmail,
   getGroup,
-  getGroupMembersWithStatus,
+  getGroupMembers,
 } from '../../../services/groupRepository';
 import { isValidEmail, isDuplicateMemberName } from '../../../utils/validation';
 
@@ -39,8 +39,8 @@ export default function AddMemberScreen() {
     setMembersLoading(true);
     setMembersLoadError(false);
     try {
-      const { members, error } = await getGroupMembersWithStatus(id);
-      if (error) {
+      const members = await getGroupMembers(id);
+      if (members === null) {
         setMembersLoadError(true);
         return null;
       }

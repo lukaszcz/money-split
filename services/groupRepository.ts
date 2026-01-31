@@ -174,7 +174,9 @@ export async function createGroupMember(
   }
 }
 
-export async function getGroupMembers(groupId: string): Promise<GroupMember[]> {
+export async function getGroupMembers(
+  groupId: string,
+): Promise<GroupMember[] | null> {
   try {
     const { data, error } = await supabase
       .from('group_members')
@@ -182,7 +184,10 @@ export async function getGroupMembers(groupId: string): Promise<GroupMember[]> {
       .eq('group_id', groupId)
       .order('created_at', { ascending: true });
 
-    if (error) throw error;
+    if (error) {
+      console.error('Failed to get group members:', error);
+      return null;
+    }
 
     return (data || []).map((m) => ({
       id: m.id,
@@ -194,39 +199,7 @@ export async function getGroupMembers(groupId: string): Promise<GroupMember[]> {
     }));
   } catch (error) {
     console.error('Failed to get group members:', error);
-    return [];
-  }
-}
-
-export async function getGroupMembersWithStatus(
-  groupId: string,
-): Promise<{ members: GroupMember[]; error: Error | null }> {
-  try {
-    const { data, error } = await supabase
-      .from('group_members')
-      .select('*')
-      .eq('group_id', groupId)
-      .order('created_at', { ascending: true });
-
-    if (error) {
-      console.error('Failed to get group members:', error);
-      return { members: [], error };
-    }
-
-    return {
-      members: (data || []).map((m) => ({
-        id: m.id,
-        groupId: m.group_id,
-        name: m.name,
-        email: m.email || undefined,
-        connectedUserId: m.connected_user_id || undefined,
-        createdAt: m.created_at,
-      })),
-      error: null,
-    };
-  } catch (error) {
-    console.error('Failed to get group members:', error);
-    return { members: [], error: error as Error };
+    return null;
   }
 }
 
@@ -400,6 +373,7 @@ export async function getGroup(
     if (!groupData) return null;
 
     const members = await getGroupMembers(groupId);
+    if (!members) return null;
 
     return {
       id: groupData.id,
