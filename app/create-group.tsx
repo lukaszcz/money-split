@@ -255,7 +255,7 @@ export default function CreateGroupScreen() {
 
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-                <Text style={styles.label}>Members</Text>
+              <Text style={styles.label}>Members</Text>
               <TouchableOpacity
                 style={[
                   styles.addMemberToggle,

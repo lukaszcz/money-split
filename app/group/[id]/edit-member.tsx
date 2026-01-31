@@ -19,7 +19,7 @@ import {
   getUserByEmail,
   sendInvitationEmail,
   getGroup,
-  getGroupMembers,
+  getGroupMembersWithStatus,
 } from '../../../services/groupRepository';
 import { isValidEmail, isDuplicateMemberName } from '../../../utils/validation';
 
@@ -33,6 +33,37 @@ export default function EditMemberScreen() {
   const [initialLoading, setInitialLoading] = useState(true);
   const [otherMemberNames, setOtherMemberNames] = useState<string[]>([]);
   const [hasDuplicateName, setHasDuplicateName] = useState(false);
+  const [otherMembersLoading, setOtherMembersLoading] = useState(false);
+  const [otherMembersLoaded, setOtherMembersLoaded] = useState(false);
+  const [otherMembersLoadError, setOtherMembersLoadError] = useState(false);
+
+  const loadOtherMembers = useCallback(async () => {
+    if (
+      !id ||
+      typeof id !== 'string' ||
+      !memberId ||
+      typeof memberId !== 'string'
+    ) {
+      return null;
+    }
+    setOtherMembersLoading(true);
+    setOtherMembersLoadError(false);
+    try {
+      const { members, error } = await getGroupMembersWithStatus(id);
+      if (error) {
+        setOtherMembersLoadError(true);
+        return null;
+      }
+      const otherNames = members
+        .filter((m) => m.id !== memberId)
+        .map((m) => m.name);
+      setOtherMemberNames(otherNames);
+      setOtherMembersLoaded(true);
+      return otherNames;
+    } finally {
+      setOtherMembersLoading(false);
+    }
+  }, [id, memberId]);
 
   const loadMember = useCallback(async () => {
     if (!memberId || typeof memberId !== 'string') {
@@ -53,28 +84,35 @@ export default function EditMemberScreen() {
       setEmail(member.email || '');
       setOriginalEmail(member.email || '');
 
-      // Load other members' names (excluding current member)
-      const allMembers = await getGroupMembers(id);
-      const otherNames = allMembers
-        .filter((m) => m.id !== memberId)
-        .map((m) => m.name);
-      setOtherMemberNames(otherNames);
+      await loadOtherMembers();
     } else {
       Alert.alert('Error', 'Member not found');
       router.back();
     }
     setInitialLoading(false);
-  }, [memberId, id, router]);
+  }, [memberId, id, router, loadOtherMembers]);
 
-  const checkForDuplicateName = (nameToCheck: string) => {
-    const isDuplicate = isDuplicateMemberName(nameToCheck, otherMemberNames);
-    setHasDuplicateName(isDuplicate);
-    return isDuplicate;
-  };
+  const checkForDuplicateName = useCallback(
+    (nameToCheck: string) => {
+      const isDuplicate = isDuplicateMemberName(
+        nameToCheck,
+        otherMemberNames,
+      );
+      setHasDuplicateName(isDuplicate);
+      return isDuplicate;
+    },
+    [otherMemberNames],
+  );
 
   useEffect(() => {
     loadMember();
   }, [loadMember]);
+
+  useEffect(() => {
+    if (name.trim()) {
+      checkForDuplicateName(name);
+    }
+  }, [checkForDuplicateName, name]);
 
   const handleUpdateMember = async () => {
     const trimmedName = name.trim();
@@ -100,9 +138,27 @@ export default function EditMemberScreen() {
       return;
     }
 
+    if (otherMembersLoading) {
+      Alert.alert('Please wait', 'Loading existing members...');
+      return;
+    }
+
     setLoading(true);
 
     try {
+      let currentOtherMemberNames = otherMemberNames;
+      if (!otherMembersLoaded || otherMembersLoadError) {
+        const refreshedNames = await loadOtherMembers();
+        if (!refreshedNames) {
+          Alert.alert(
+            'Error',
+            'Unable to load existing members. Please try again.',
+          );
+          return;
+        }
+        currentOtherMemberNames = refreshedNames;
+      }
+
       let memberName = trimmedName;
       const memberEmail = trimmedEmail || undefined;
       const nameWasDerived = !memberName && !!memberEmail;
@@ -136,7 +192,8 @@ export default function EditMemberScreen() {
       }
 
       // Check for duplicate names
-      if (checkForDuplicateName(memberName)) {
+      if (isDuplicateMemberName(memberName, currentOtherMemberNames)) {
+        setHasDuplicateName(true);
         // If name was derived from email, populate the input so user can see and edit it
         if (nameWasDerived) {
           setName(memberName);
@@ -250,13 +307,17 @@ export default function EditMemberScreen() {
           <TouchableOpacity
             style={[
               styles.updateButton,
-              loading && styles.updateButtonDisabled,
+              (loading || otherMembersLoading) && styles.updateButtonDisabled,
             ]}
             onPress={handleUpdateMember}
-            disabled={loading}
+            disabled={loading || otherMembersLoading}
           >
             <Text style={styles.updateButtonText}>
-              {loading ? 'Updating...' : 'Update Member'}
+              {otherMembersLoading
+                ? 'Loading members...'
+                : loading
+                  ? 'Updating...'
+                  : 'Update Member'}
             </Text>
           </TouchableOpacity>
         </View>

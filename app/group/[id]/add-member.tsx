@@ -18,7 +18,7 @@ import {
   getUserByEmail,
   sendInvitationEmail,
   getGroup,
-  getGroupMembers,
+  getGroupMembersWithStatus,
 } from '../../../services/groupRepository';
 import { isValidEmail, isDuplicateMemberName } from '../../../utils/validation';
 
@@ -30,22 +30,54 @@ export default function AddMemberScreen() {
   const [loading, setLoading] = useState(false);
   const [existingMemberNames, setExistingMemberNames] = useState<string[]>([]);
   const [hasDuplicateName, setHasDuplicateName] = useState(false);
+  const [membersLoading, setMembersLoading] = useState(false);
+  const [membersLoaded, setMembersLoaded] = useState(false);
+  const [membersLoadError, setMembersLoadError] = useState(false);
 
   const loadExistingMembers = useCallback(async () => {
-    if (!id || typeof id !== 'string') return;
-    const members = await getGroupMembers(id);
-    setExistingMemberNames(members.map((m) => m.name));
+    if (!id || typeof id !== 'string') return [];
+    setMembersLoading(true);
+    setMembersLoadError(false);
+    try {
+      const { members, error } = await getGroupMembersWithStatus(id);
+      if (error) {
+        setMembersLoadError(true);
+        return null;
+      }
+      const names = members.map((m) => m.name);
+      setExistingMemberNames(names);
+      setMembersLoaded(true);
+      return names;
+    } catch (error) {
+      console.error('Error loading group members:', error);
+      setMembersLoadError(true);
+      return null;
+    } finally {
+      setMembersLoading(false);
+    }
   }, [id]);
 
   useEffect(() => {
     loadExistingMembers();
   }, [loadExistingMembers]);
 
-  const checkForDuplicateName = (nameToCheck: string) => {
-    const isDuplicate = isDuplicateMemberName(nameToCheck, existingMemberNames);
-    setHasDuplicateName(isDuplicate);
-    return isDuplicate;
-  };
+  const checkForDuplicateName = useCallback(
+    (nameToCheck: string) => {
+      const isDuplicate = isDuplicateMemberName(
+        nameToCheck,
+        existingMemberNames,
+      );
+      setHasDuplicateName(isDuplicate);
+      return isDuplicate;
+    },
+    [existingMemberNames],
+  );
+
+  useEffect(() => {
+    if (name.trim()) {
+      checkForDuplicateName(name);
+    }
+  }, [checkForDuplicateName, name]);
 
   const handleAddMember = async () => {
     const trimmedName = name.trim();
@@ -66,9 +98,27 @@ export default function AddMemberScreen() {
       return;
     }
 
+    if (membersLoading) {
+      Alert.alert('Please wait', 'Loading existing members...');
+      return;
+    }
+
     setLoading(true);
 
     try {
+      let currentMemberNames = existingMemberNames;
+      if (!membersLoaded || membersLoadError) {
+        const refreshedNames = await loadExistingMembers();
+        if (!refreshedNames) {
+          Alert.alert(
+            'Error',
+            'Unable to load existing members. Please try again.',
+          );
+          return;
+        }
+        currentMemberNames = refreshedNames;
+      }
+
       let memberName = trimmedName;
       const memberEmail = trimmedEmail || undefined;
       const nameWasDerived = !memberName && !!memberEmail;
@@ -107,7 +157,8 @@ export default function AddMemberScreen() {
       }
 
       // Check for duplicate names
-      if (checkForDuplicateName(memberName)) {
+      if (isDuplicateMemberName(memberName, currentMemberNames)) {
+        setHasDuplicateName(true);
         // If name was derived from email, populate the input so user can see and edit it
         if (nameWasDerived) {
           setName(memberName);
@@ -205,12 +256,19 @@ export default function AddMemberScreen() {
 
         <View style={styles.footer}>
           <TouchableOpacity
-            style={[styles.addButton, loading && styles.addButtonDisabled]}
+            style={[
+              styles.addButton,
+              (loading || membersLoading) && styles.addButtonDisabled,
+            ]}
             onPress={handleAddMember}
-            disabled={loading}
+            disabled={loading || membersLoading}
           >
             <Text style={styles.addButtonText}>
-              {loading ? 'Adding...' : 'Add Member'}
+              {membersLoading
+                ? 'Loading members...'
+                : loading
+                  ? 'Adding...'
+                  : 'Add Member'}
             </Text>
           </TouchableOpacity>
         </View>
