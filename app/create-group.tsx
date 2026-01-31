@@ -38,6 +38,7 @@ export default function CreateGroupScreen() {
   const [newMemberName, setNewMemberName] = useState('');
   const [newMemberEmail, setNewMemberEmail] = useState('');
   const [currentUserName, setCurrentUserName] = useState('');
+  const [currentUserLoading, setCurrentUserLoading] = useState(true);
   const [hasDuplicateName, setHasDuplicateName] = useState(false);
 
   const {
@@ -57,13 +58,16 @@ export default function CreateGroupScreen() {
   }, [orderedCurrencies, currenciesLoading, mainCurrency]);
 
   const loadCurrentUser = async () => {
+    setCurrentUserLoading(true);
     const userProfile = await ensureUserProfile();
     if (userProfile) {
       setCurrentUserName(userProfile.name);
     }
+    setCurrentUserLoading(false);
+    return userProfile?.name ?? '';
   };
 
-  const checkForDuplicateName = (name: string) => {
+  const checkForDuplicateName = (name: string, userNameOverride?: string) => {
     const trimmedName = name.trim();
     if (!trimmedName) {
       setHasDuplicateName(false);
@@ -71,7 +75,7 @@ export default function CreateGroupScreen() {
     }
 
     const allMemberNames = [
-      currentUserName,
+      userNameOverride ?? currentUserName,
       ...pendingMembers.map((m) => m.name),
     ].filter((name) => name?.trim());
 
@@ -81,6 +85,7 @@ export default function CreateGroupScreen() {
   };
 
   const handleAddMember = async () => {
+    const resolvedUserName = currentUserName || (await loadCurrentUser());
     if (!newMemberName.trim() && !newMemberEmail.trim()) {
       Alert.alert('Error', 'Please enter a name or email');
       return;
@@ -114,7 +119,7 @@ export default function CreateGroupScreen() {
     }
 
     // Check for duplicate names
-    if (checkForDuplicateName(memberName)) {
+    if (checkForDuplicateName(memberName, resolvedUserName)) {
       // If name was derived from email, populate the input so user can see and edit it
       if (nameWasDerived) {
         setNewMemberName(memberName);
@@ -250,9 +255,13 @@ export default function CreateGroupScreen() {
 
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.label}>Members</Text>
+                <Text style={styles.label}>Members</Text>
               <TouchableOpacity
-                style={styles.addMemberToggle}
+                style={[
+                  styles.addMemberToggle,
+                  currentUserLoading && styles.addMemberToggleDisabled,
+                ]}
+                disabled={currentUserLoading}
                 onPress={() => setShowAddMember(!showAddMember)}
               >
                 <Plus color="#2563eb" size={20} />
@@ -341,7 +350,11 @@ export default function CreateGroupScreen() {
                     <Text style={styles.formCancelButtonText}>Cancel</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={styles.formAddButton}
+                    style={[
+                      styles.formAddButton,
+                      currentUserLoading && styles.formAddButtonDisabled,
+                    ]}
+                    disabled={currentUserLoading}
                     onPress={handleAddMember}
                   >
                     <Text style={styles.formAddButtonText}>Add Member</Text>
@@ -480,6 +493,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#2563eb',
   },
+  addMemberToggleDisabled: {
+    opacity: 0.5,
+  },
   memberCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -571,6 +587,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: '#2563eb',
     alignItems: 'center',
+  },
+  formAddButtonDisabled: {
+    opacity: 0.6,
   },
   formAddButtonText: {
     fontSize: 14,
