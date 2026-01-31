@@ -177,7 +177,7 @@ describe('Groups Screen', () => {
       await Promise.resolve();
     });
 
-    fireEvent.press(getByLabelText('Create group'));
+    fireEvent.press(getByLabelText('Add group'));
 
     expect(mockRouter.push).toHaveBeenCalledWith('/create-group');
   });

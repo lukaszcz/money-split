@@ -10,7 +10,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
 import {
@@ -18,8 +18,9 @@ import {
   getUserByEmail,
   sendInvitationEmail,
   getGroup,
+  getGroupMembers,
 } from '../../../services/groupRepository';
-import { isValidEmail } from '../../../utils/validation';
+import { isValidEmail, isDuplicateMemberName } from '../../../utils/validation';
 
 export default function AddMemberScreen() {
   const { id } = useLocalSearchParams();
@@ -27,6 +28,56 @@ export default function AddMemberScreen() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
+  const [existingMemberNames, setExistingMemberNames] = useState<string[]>([]);
+  const [hasDuplicateName, setHasDuplicateName] = useState(false);
+  const [membersLoading, setMembersLoading] = useState(false);
+  const [membersLoaded, setMembersLoaded] = useState(false);
+  const [membersLoadError, setMembersLoadError] = useState(false);
+
+  const loadExistingMembers = useCallback(async () => {
+    if (!id || typeof id !== 'string') return [];
+    setMembersLoading(true);
+    setMembersLoadError(false);
+    try {
+      const members = await getGroupMembers(id);
+      if (members === null) {
+        setMembersLoadError(true);
+        return null;
+      }
+      const names = members.map((m) => m.name);
+      setExistingMemberNames(names);
+      setMembersLoaded(true);
+      return names;
+    } catch (error) {
+      console.error('Error loading group members:', error);
+      setMembersLoadError(true);
+      return null;
+    } finally {
+      setMembersLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    loadExistingMembers();
+  }, [loadExistingMembers]);
+
+  const checkForDuplicateName = useCallback(
+    (nameToCheck: string) => {
+      const isDuplicate = isDuplicateMemberName(
+        nameToCheck,
+        existingMemberNames,
+      );
+      setHasDuplicateName(isDuplicate);
+      return isDuplicate;
+    },
+    [existingMemberNames],
+  );
+
+  useEffect(() => {
+    if (name.trim()) {
+      checkForDuplicateName(name);
+    }
+  }, [checkForDuplicateName, name]);
 
   const handleAddMember = async () => {
     const trimmedName = name.trim();
@@ -47,11 +98,30 @@ export default function AddMemberScreen() {
       return;
     }
 
+    if (membersLoading) {
+      Alert.alert('Please wait', 'Loading existing members...');
+      return;
+    }
+
     setLoading(true);
 
     try {
+      let currentMemberNames = existingMemberNames;
+      if (!membersLoaded || membersLoadError) {
+        const refreshedNames = await loadExistingMembers();
+        if (!refreshedNames) {
+          Alert.alert(
+            'Error',
+            'Unable to load existing members. Please try again.',
+          );
+          return;
+        }
+        currentMemberNames = refreshedNames;
+      }
+
       let memberName = trimmedName;
-      let memberEmail = trimmedEmail || undefined;
+      const memberEmail = trimmedEmail || undefined;
+      const nameWasDerived = !memberName && !!memberEmail;
       let connectedUserId: string | undefined;
 
       if (memberEmail) {
@@ -82,6 +152,21 @@ export default function AddMemberScreen() {
 
       if (!memberName) {
         Alert.alert('Error', 'Could not determine member name');
+        setLoading(false);
+        return;
+      }
+
+      // Check for duplicate names
+      if (isDuplicateMemberName(memberName, currentMemberNames)) {
+        setHasDuplicateName(true);
+        // If name was derived from email, populate the input so user can see and edit it
+        if (nameWasDerived) {
+          setName(memberName);
+        }
+        Alert.alert(
+          'Duplicate Name',
+          'A member with this name already exists in the group. Please use a unique name.',
+        );
         setLoading(false);
         return;
       }
@@ -133,9 +218,12 @@ export default function AddMemberScreen() {
           <View style={styles.section}>
             <Text style={styles.label}>Name</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, hasDuplicateName && styles.inputError]}
               value={name}
-              onChangeText={setName}
+              onChangeText={(text) => {
+                setName(text);
+                checkForDuplicateName(text);
+              }}
               onBlur={() => setName((nm) => nm.trim())}
               placeholder="Member name"
               placeholderTextColor="#9ca3af"
@@ -168,12 +256,19 @@ export default function AddMemberScreen() {
 
         <View style={styles.footer}>
           <TouchableOpacity
-            style={[styles.addButton, loading && styles.addButtonDisabled]}
+            style={[
+              styles.addButton,
+              (loading || membersLoading) && styles.addButtonDisabled,
+            ]}
             onPress={handleAddMember}
-            disabled={loading}
+            disabled={loading || membersLoading}
           >
             <Text style={styles.addButtonText}>
-              {loading ? 'Adding...' : 'Add Member'}
+              {membersLoading
+                ? 'Loading members...'
+                : loading
+                  ? 'Adding...'
+                  : 'Add Member'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -234,6 +329,10 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 16,
     color: '#111827',
+  },
+  inputError: {
+    borderColor: '#ef4444',
+    borderWidth: 2,
   },
   hint: {
     fontSize: 13,

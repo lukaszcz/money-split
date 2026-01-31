@@ -20,7 +20,7 @@ import {
   ensureUserProfile,
 } from '../services/groupRepository';
 import { useCurrencyOrder } from '../hooks/useCurrencyOrder';
-import { isValidEmail } from '../utils/validation';
+import { isValidEmail, isDuplicateMemberName } from '../utils/validation';
 
 interface PendingMember {
   id: string;
@@ -38,6 +38,8 @@ export default function CreateGroupScreen() {
   const [newMemberName, setNewMemberName] = useState('');
   const [newMemberEmail, setNewMemberEmail] = useState('');
   const [currentUserName, setCurrentUserName] = useState('');
+  const [currentUserLoading, setCurrentUserLoading] = useState(true);
+  const [hasDuplicateName, setHasDuplicateName] = useState(false);
 
   const {
     currencies: orderedCurrencies,
@@ -56,20 +58,42 @@ export default function CreateGroupScreen() {
   }, [orderedCurrencies, currenciesLoading, mainCurrency]);
 
   const loadCurrentUser = async () => {
+    setCurrentUserLoading(true);
     const userProfile = await ensureUserProfile();
     if (userProfile) {
       setCurrentUserName(userProfile.name);
     }
+    setCurrentUserLoading(false);
+    return userProfile?.name ?? '';
+  };
+
+  const checkForDuplicateName = (name: string, userNameOverride?: string) => {
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      setHasDuplicateName(false);
+      return false;
+    }
+
+    const allMemberNames = [
+      userNameOverride ?? currentUserName,
+      ...pendingMembers.map((m) => m.name),
+    ].filter((name) => name?.trim());
+
+    const isDuplicate = isDuplicateMemberName(trimmedName, allMemberNames);
+    setHasDuplicateName(isDuplicate);
+    return isDuplicate;
   };
 
   const handleAddMember = async () => {
+    const resolvedUserName = currentUserName || (await loadCurrentUser());
     if (!newMemberName.trim() && !newMemberEmail.trim()) {
       Alert.alert('Error', 'Please enter a name or email');
       return;
     }
 
     let memberName = newMemberName.trim();
-    let memberEmail = newMemberEmail.trim() || undefined;
+    const memberEmail = newMemberEmail.trim() || undefined;
+    const nameWasDerived = !memberName && !!memberEmail;
 
     if (memberEmail && !isValidEmail(memberEmail)) {
       Alert.alert('Error', 'Please enter a valid email address');
@@ -94,6 +118,19 @@ export default function CreateGroupScreen() {
       return;
     }
 
+    // Check for duplicate names
+    if (checkForDuplicateName(memberName, resolvedUserName)) {
+      // If name was derived from email, populate the input so user can see and edit it
+      if (nameWasDerived) {
+        setNewMemberName(memberName);
+      }
+      Alert.alert(
+        'Duplicate Name',
+        'A member with this name already exists in the group. Please use a unique name.',
+      );
+      return;
+    }
+
     const newMember: PendingMember = {
       id: Date.now().toString(),
       name: memberName,
@@ -103,6 +140,7 @@ export default function CreateGroupScreen() {
     setPendingMembers([...pendingMembers, newMember]);
     setNewMemberName('');
     setNewMemberEmail('');
+    setHasDuplicateName(false);
     setShowAddMember(false);
   };
 
@@ -219,7 +257,11 @@ export default function CreateGroupScreen() {
             <View style={styles.sectionHeader}>
               <Text style={styles.label}>Members</Text>
               <TouchableOpacity
-                style={styles.addMemberToggle}
+                style={[
+                  styles.addMemberToggle,
+                  currentUserLoading && styles.addMemberToggleDisabled,
+                ]}
+                disabled={currentUserLoading}
                 onPress={() => setShowAddMember(!showAddMember)}
               >
                 <Plus color="#2563eb" size={20} />
@@ -266,9 +308,12 @@ export default function CreateGroupScreen() {
               <View style={styles.addMemberForm}>
                 <Text style={styles.formLabel}>Name</Text>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, hasDuplicateName && styles.inputError]}
                   value={newMemberName}
-                  onChangeText={setNewMemberName}
+                  onChangeText={(text) => {
+                    setNewMemberName(text);
+                    checkForDuplicateName(text);
+                  }}
                   onBlur={() => setNewMemberName((name) => name.trim())}
                   placeholder="Member name"
                   placeholderTextColor="#9ca3af"
@@ -305,7 +350,11 @@ export default function CreateGroupScreen() {
                     <Text style={styles.formCancelButtonText}>Cancel</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={styles.formAddButton}
+                    style={[
+                      styles.formAddButton,
+                      currentUserLoading && styles.formAddButtonDisabled,
+                    ]}
+                    disabled={currentUserLoading}
                     onPress={handleAddMember}
                   >
                     <Text style={styles.formAddButtonText}>Add Member</Text>
@@ -391,6 +440,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#111827',
   },
+  inputError: {
+    borderColor: '#ef4444',
+    borderWidth: 2,
+  },
   currencyButton: {
     backgroundColor: '#ffffff',
     borderWidth: 1,
@@ -439,6 +492,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#2563eb',
+  },
+  addMemberToggleDisabled: {
+    opacity: 0.5,
   },
   memberCard: {
     flexDirection: 'row',
@@ -531,6 +587,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: '#2563eb',
     alignItems: 'center',
+  },
+  formAddButtonDisabled: {
+    opacity: 0.6,
   },
   formAddButtonText: {
     fontSize: 14,

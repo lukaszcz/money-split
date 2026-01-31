@@ -516,7 +516,7 @@ describe('groupRepository', () => {
       ]);
     });
 
-    it('should return empty array on error', async () => {
+    it('should return null on error', async () => {
       const { getGroupMembers } = require('../../services/groupRepository');
 
       mockSupabase.from.mockReturnValue({
@@ -530,7 +530,7 @@ describe('groupRepository', () => {
 
       const result = await getGroupMembers('group-trip');
 
-      expect(result).toEqual([]);
+      expect(result).toBeNull();
     });
   });
 
