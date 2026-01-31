@@ -19,8 +19,9 @@ import {
   getUserByEmail,
   sendInvitationEmail,
   getGroup,
+  getGroupMembers,
 } from '../../../services/groupRepository';
-import { isValidEmail } from '../../../utils/validation';
+import { isValidEmail, isDuplicateMemberName } from '../../../utils/validation';
 
 export default function EditMemberScreen() {
   const { id, memberId } = useLocalSearchParams();
@@ -30,10 +31,49 @@ export default function EditMemberScreen() {
   const [originalEmail, setOriginalEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [otherMemberNames, setOtherMemberNames] = useState<string[]>([]);
+  const [hasDuplicateName, setHasDuplicateName] = useState(false);
+  const [otherMembersLoading, setOtherMembersLoading] = useState(false);
+  const [otherMembersLoaded, setOtherMembersLoaded] = useState(false);
+  const [otherMembersLoadError, setOtherMembersLoadError] = useState(false);
+
+  const loadOtherMembers = useCallback(async () => {
+    if (
+      !id ||
+      typeof id !== 'string' ||
+      !memberId ||
+      typeof memberId !== 'string'
+    ) {
+      return null;
+    }
+    setOtherMembersLoading(true);
+    setOtherMembersLoadError(false);
+    try {
+      const members = await getGroupMembers(id);
+      if (!members) {
+        setOtherMembersLoadError(true);
+        return null;
+      }
+      const otherNames = members
+        .filter((m) => m.id !== memberId)
+        .map((m) => m.name);
+      setOtherMemberNames(otherNames);
+      setOtherMembersLoaded(true);
+      return otherNames;
+    } finally {
+      setOtherMembersLoading(false);
+    }
+  }, [id, memberId]);
 
   const loadMember = useCallback(async () => {
     if (!memberId || typeof memberId !== 'string') {
       Alert.alert('Error', 'Invalid member');
+      router.back();
+      return;
+    }
+
+    if (!id || typeof id !== 'string') {
+      Alert.alert('Error', 'Invalid group');
       router.back();
       return;
     }
@@ -43,16 +83,33 @@ export default function EditMemberScreen() {
       setName(member.name);
       setEmail(member.email || '');
       setOriginalEmail(member.email || '');
+
+      await loadOtherMembers();
     } else {
       Alert.alert('Error', 'Member not found');
       router.back();
     }
     setInitialLoading(false);
-  }, [memberId, router]);
+  }, [memberId, id, router, loadOtherMembers]);
+
+  const checkForDuplicateName = useCallback(
+    (nameToCheck: string) => {
+      const isDuplicate = isDuplicateMemberName(nameToCheck, otherMemberNames);
+      setHasDuplicateName(isDuplicate);
+      return isDuplicate;
+    },
+    [otherMemberNames],
+  );
 
   useEffect(() => {
     loadMember();
   }, [loadMember]);
+
+  useEffect(() => {
+    if (name.trim()) {
+      checkForDuplicateName(name);
+    }
+  }, [checkForDuplicateName, name]);
 
   const handleUpdateMember = async () => {
     const trimmedName = name.trim();
@@ -78,11 +135,30 @@ export default function EditMemberScreen() {
       return;
     }
 
+    if (otherMembersLoading) {
+      Alert.alert('Please wait', 'Loading existing members...');
+      return;
+    }
+
     setLoading(true);
 
     try {
+      let currentOtherMemberNames = otherMemberNames;
+      if (!otherMembersLoaded || otherMembersLoadError) {
+        const refreshedNames = await loadOtherMembers();
+        if (!refreshedNames) {
+          Alert.alert(
+            'Error',
+            'Unable to load existing members. Please try again.',
+          );
+          return;
+        }
+        currentOtherMemberNames = refreshedNames;
+      }
+
       let memberName = trimmedName;
-      let memberEmail = trimmedEmail || undefined;
+      const memberEmail = trimmedEmail || undefined;
+      const nameWasDerived = !memberName && !!memberEmail;
       let connectedUserId: string | undefined;
       const emailChanged = memberEmail !== originalEmail;
 
@@ -108,6 +184,21 @@ export default function EditMemberScreen() {
 
       if (!memberName) {
         Alert.alert('Error', 'Could not determine member name');
+        setLoading(false);
+        return;
+      }
+
+      // Check for duplicate names
+      if (isDuplicateMemberName(memberName, currentOtherMemberNames)) {
+        setHasDuplicateName(true);
+        // If name was derived from email, populate the input so user can see and edit it
+        if (nameWasDerived) {
+          setName(memberName);
+        }
+        Alert.alert(
+          'Duplicate Name',
+          'A member with this name already exists in the group. Please use a unique name.',
+        );
         setLoading(false);
         return;
       }
@@ -176,9 +267,12 @@ export default function EditMemberScreen() {
           <View style={styles.section}>
             <Text style={styles.label}>Name</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, hasDuplicateName && styles.inputError]}
               value={name}
-              onChangeText={setName}
+              onChangeText={(text) => {
+                setName(text);
+                checkForDuplicateName(text);
+              }}
               onBlur={() => setName((nm) => nm.trim())}
               placeholder="Member name"
               placeholderTextColor="#9ca3af"
@@ -210,13 +304,17 @@ export default function EditMemberScreen() {
           <TouchableOpacity
             style={[
               styles.updateButton,
-              loading && styles.updateButtonDisabled,
+              (loading || otherMembersLoading) && styles.updateButtonDisabled,
             ]}
             onPress={handleUpdateMember}
-            disabled={loading}
+            disabled={loading || otherMembersLoading}
           >
             <Text style={styles.updateButtonText}>
-              {loading ? 'Updating...' : 'Update Member'}
+              {otherMembersLoading
+                ? 'Loading members...'
+                : loading
+                  ? 'Updating...'
+                  : 'Update Member'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -277,6 +375,10 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 16,
     color: '#111827',
+  },
+  inputError: {
+    borderColor: '#ef4444',
+    borderWidth: 2,
   },
   hint: {
     fontSize: 13,

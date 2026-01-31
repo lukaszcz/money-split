@@ -24,6 +24,7 @@ MoneySplit is a React Native/Expo mobile app for tracking shared expenses and de
 - `npm run typecheck` runs TypeScript type checking.
 - `npm run format` format TypeScript code.
 - `npm run test` runs Jest.
+- `npm run check` runs type checking, linting, formatting, and tests.
 
 ## Coding Style & Naming Conventions
 
@@ -57,3 +58,4 @@ MoneySplit is a React Native/Expo mobile app for tracking shared expenses and de
 ## Instructions
 
 - Avoid code duplication. Abstract common logic into parameterized functions.
+- Use `npm run check` to verify that no compilation, formatting or test errors were introduced.

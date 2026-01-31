@@ -174,7 +174,9 @@ export async function createGroupMember(
   }
 }
 
-export async function getGroupMembers(groupId: string): Promise<GroupMember[]> {
+export async function getGroupMembers(
+  groupId: string,
+): Promise<GroupMember[] | null> {
   try {
     const { data, error } = await supabase
       .from('group_members')
@@ -182,7 +184,10 @@ export async function getGroupMembers(groupId: string): Promise<GroupMember[]> {
       .eq('group_id', groupId)
       .order('created_at', { ascending: true });
 
-    if (error) throw error;
+    if (error) {
+      console.error('Failed to get group members:', error);
+      return null;
+    }
 
     return (data || []).map((m) => ({
       id: m.id,
@@ -194,7 +199,7 @@ export async function getGroupMembers(groupId: string): Promise<GroupMember[]> {
     }));
   } catch (error) {
     console.error('Failed to get group members:', error);
-    return [];
+    return null;
   }
 }
 
@@ -368,6 +373,7 @@ export async function getGroup(
     if (!groupData) return null;
 
     const members = await getGroupMembers(groupId);
+    if (!members) return null;
 
     return {
       id: groupData.id,
