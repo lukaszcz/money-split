@@ -410,8 +410,8 @@ export default function EditMemberScreen() {
 
           {!canDelete && !checkingDelete && (
             <Text style={styles.deleteHint}>
-              This member cannot be removed. Members with expense shares cannot
-              be deleted.
+              This member cannot be removed. Members involved in any expenses
+              cannot be deleted.
             </Text>
           )}
         </View>
