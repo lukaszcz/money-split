@@ -218,8 +218,13 @@ export default function SettleContent({
 
   const currencySymbol = getCurrencySymbol(group.mainCurrencyCode);
   const transferCount = settlements.length;
-  const showLastUpdated =
-    lastUpdated !== null && Date.now() - lastUpdated > 60 * 1000;
+  const showLastUpdated = lastUpdated !== null;
+  const lastUpdatedLabel = lastUpdated
+    ? `Last updated ${new Date(lastUpdated).toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+      })}`
+    : null;
 
   return (
     <View style={embedded ? styles.embedded : styles.content}>
@@ -339,8 +344,10 @@ export default function SettleContent({
               <View style={styles.infoTextGroup}>
                 <Text style={styles.infoText}>
                   {transferCount} transfer{transferCount !== 1 ? 's' : ''}
-                  {showLastUpdated ? ' · Updated recently' : ''}
                 </Text>
+                {showLastUpdated && lastUpdatedLabel && (
+                  <Text style={styles.lastUpdatedText}>{lastUpdatedLabel}</Text>
+                )}
               </View>
               <TouchableOpacity
                 style={styles.simplifyToggle}
@@ -444,6 +451,11 @@ const styles = StyleSheet.create({
   infoSubtext: {
     fontSize: 12,
     color: '#3b82f6',
+  },
+  lastUpdatedText: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginTop: 2,
   },
   infoHeader: {
     flexDirection: 'row',
