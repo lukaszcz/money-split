@@ -6,6 +6,7 @@ import {
 } from '@/__tests__/utils/mockSupabase';
 import * as groupPreferenceService from '@/services/groupPreferenceService';
 import type { GroupWithMembers } from '@/services/groupRepository';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 jest.mock('@/lib/supabase', () => ({
   supabase: null,
@@ -13,6 +14,7 @@ jest.mock('@/lib/supabase', () => ({
 
 let mockSupabase: MockSupabaseClient;
 let supabaseModule: any;
+const storage = AsyncStorage as jest.Mocked<typeof AsyncStorage>;
 
 describe('groupPreferenceService', () => {
   const originalConsoleError = console.error;
@@ -30,6 +32,8 @@ describe('groupPreferenceService', () => {
     mockSupabase = createMockSupabaseClient();
     supabaseModule = require('@/lib/supabase');
     supabaseModule.supabase = mockSupabase;
+    storage.getItem.mockResolvedValue(null);
+    storage.setItem.mockResolvedValue();
   });
 
   afterEach(() => {
@@ -46,6 +50,20 @@ describe('groupPreferenceService', () => {
     const result = await groupPreferenceService.getGroupPreferences();
 
     expect(result).toEqual([]);
+    expect(mockSupabase.from).not.toHaveBeenCalled();
+  });
+
+  it('returns cached preferences without fetching from the database', async () => {
+    const mockUser = createMockUser({ id: 'user-123' });
+    mockSupabase.auth.getUser.mockResolvedValue({
+      data: { user: mockUser },
+      error: null,
+    });
+    storage.getItem.mockResolvedValueOnce('["group-1","group-2"]');
+
+    const result = await groupPreferenceService.getGroupPreferences();
+
+    expect(result).toEqual(['group-1', 'group-2']);
     expect(mockSupabase.from).not.toHaveBeenCalled();
   });
 
@@ -239,6 +257,41 @@ describe('groupPreferenceService', () => {
     ]);
 
     expect(mockSupabase.from).toHaveBeenCalledTimes(1);
+  });
+
+  it('logs and skips cache update when cleanup update fails', async () => {
+    const mockUser = createMockUser({ id: 'user-123' });
+    mockSupabase.auth.getUser.mockResolvedValue({
+      data: { user: mockUser },
+      error: null,
+    });
+
+    const preferenceBuilder = {
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      maybeSingle: jest.fn().mockResolvedValue({
+        data: { group_order: ['group-1', 'group-2', 'group-3'] },
+        error: null,
+      }),
+    };
+
+    const updateBuilder = {
+      update: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockResolvedValue({ error: new Error('Update failed') }),
+    };
+
+    let callCount = 0;
+    mockSupabase.from.mockImplementation(() => {
+      callCount += 1;
+      if (callCount === 1) {
+        return preferenceBuilder as any;
+      }
+      return updateBuilder as any;
+    });
+
+    await groupPreferenceService.cleanupGroupPreferences(['group-1']);
+
+    expect(console.error).toHaveBeenCalled();
   });
 
   it('orders new groups ahead of saved preferences', async () => {
@@ -443,5 +496,23 @@ describe('groupPreferenceService', () => {
     const result = await groupPreferenceService.getOrderedGroups([]);
 
     expect(result).toEqual([]);
+  });
+
+  it('returns null when refreshGroupPreferencesForUser fails', async () => {
+    const preferenceBuilder = {
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      maybeSingle: jest
+        .fn()
+        .mockResolvedValue({ data: null, error: new Error('Fail') }),
+    };
+
+    mockSupabase.from.mockReturnValue(preferenceBuilder as any);
+
+    const result =
+      await groupPreferenceService.refreshGroupPreferencesForUser('user-123');
+
+    expect(result).toBeNull();
+    expect(console.error).toHaveBeenCalled();
   });
 });

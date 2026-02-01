@@ -1,5 +1,11 @@
 import { supabase } from '../lib/supabase';
 import { GroupWithMembers } from './groupRepository';
+import {
+  getCachedUserPreference,
+  setCachedUserPreference,
+} from './userPreferenceCache';
+
+const GROUP_ORDER_CACHE = 'group_order';
 
 export async function getGroupPreferences(): Promise<string[]> {
   const {
@@ -8,6 +14,15 @@ export async function getGroupPreferences(): Promise<string[]> {
 
   if (!user) {
     return [];
+  }
+
+  const cachedOrder = await getCachedUserPreference<string[]>(
+    user.id,
+    GROUP_ORDER_CACHE,
+  );
+
+  if (cachedOrder && cachedOrder.length > 0) {
+    return cachedOrder;
   }
 
   const { data, error } = await supabase
@@ -21,7 +36,10 @@ export async function getGroupPreferences(): Promise<string[]> {
     return [];
   }
 
-  return data?.group_order || [];
+  const groupOrder = data?.group_order || [];
+  await setCachedUserPreference(user.id, GROUP_ORDER_CACHE, groupOrder);
+
+  return groupOrder;
 }
 
 export async function recordGroupVisit(groupId: string): Promise<void> {
@@ -49,7 +67,10 @@ export async function recordGroupVisit(groupId: string): Promise<void> {
 
   if (error) {
     console.error('Error recording group visit:', error);
+    return;
   }
+
+  await setCachedUserPreference(user.id, GROUP_ORDER_CACHE, newOrder);
 }
 
 export async function cleanupGroupPreferences(
@@ -77,6 +98,8 @@ export async function cleanupGroupPreferences(
 
     if (error) {
       console.error('Error cleaning up group preferences:', error);
+    } else {
+      await setCachedUserPreference(user.id, GROUP_ORDER_CACHE, cleanedOrder);
     }
   }
 }
@@ -123,6 +146,8 @@ export async function getOrderedGroups(
           onConflict: 'user_id',
         },
       );
+
+      await setCachedUserPreference(user.id, GROUP_ORDER_CACHE, updatedOrder);
     }
   }
 
@@ -140,4 +165,23 @@ export async function getOrderedGroups(
   });
 
   return orderedGroups;
+}
+
+export async function refreshGroupPreferencesForUser(
+  userId: string,
+): Promise<string[] | null> {
+  const { data, error } = await supabase
+    .from('user_group_preferences')
+    .select('group_order')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error fetching group preferences:', error);
+    return null;
+  }
+
+  const groupOrder = data?.group_order || [];
+  await setCachedUserPreference(userId, GROUP_ORDER_CACHE, groupOrder);
+  return groupOrder;
 }

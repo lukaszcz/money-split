@@ -7,6 +7,7 @@ import {
 import { CURRENCIES } from '@/utils/currencies';
 import * as Localization from 'expo-localization';
 import * as currencyPreferenceService from '@/services/currencyPreferenceService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 jest.mock('@/lib/supabase', () => ({
   supabase: null,
@@ -18,6 +19,7 @@ jest.mock('expo-localization', () => ({
 
 let mockSupabase: MockSupabaseClient;
 let supabaseModule: any;
+const storage = AsyncStorage as jest.Mocked<typeof AsyncStorage>;
 
 const getCurrencyCodes = () => CURRENCIES.map((currency) => currency.code);
 
@@ -37,6 +39,8 @@ describe('currencyPreferenceService', () => {
     mockSupabase = createMockSupabaseClient();
     supabaseModule = require('@/lib/supabase');
     supabaseModule.supabase = mockSupabase;
+    storage.getItem.mockResolvedValue(null);
+    storage.setItem.mockResolvedValue();
   });
 
   afterEach(() => {
@@ -53,6 +57,20 @@ describe('currencyPreferenceService', () => {
     const result = await currencyPreferenceService.getUserCurrencyOrder();
 
     expect(result).toEqual(getCurrencyCodes());
+    expect(mockSupabase.from).not.toHaveBeenCalled();
+  });
+
+  it('returns cached order without fetching from the database', async () => {
+    const mockUser = createMockUser({ id: 'user-123' });
+    mockSupabase.auth.getUser.mockResolvedValue({
+      data: { user: mockUser },
+      error: null,
+    });
+    storage.getItem.mockResolvedValueOnce('["EUR"]');
+
+    const result = await currencyPreferenceService.getUserCurrencyOrder();
+
+    expect(result[0]).toBe('EUR');
     expect(mockSupabase.from).not.toHaveBeenCalled();
   });
 

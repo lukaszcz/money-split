@@ -59,3 +59,4 @@ MoneySplit is a React Native/Expo mobile app for tracking shared expenses and de
 
 - Avoid code duplication. Abstract common logic into parameterized functions.
 - Use `npm run check` to verify that no compilation, formatting or test errors were introduced.
+- Always include current date *and* time in the names of new supabase migration files.
