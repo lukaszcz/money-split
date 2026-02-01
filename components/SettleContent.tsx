@@ -217,12 +217,26 @@ export default function SettleContent({
     };
   }, []);
 
-  if (loading || !group) {
+  if (loading) {
     return (
       <View style={[styles.loadingContainer, embedded && styles.embedded]}>
         <View style={styles.skeletonCard} />
         <View style={styles.skeletonCard} />
         <View style={styles.skeletonCardTall} />
+      </View>
+    );
+  }
+
+  if (!group) {
+    return (
+      <View style={[styles.emptyState, embedded && styles.embedded]}>
+        <Text style={styles.emptyText}>Could not load settlements</Text>
+        <Text style={styles.emptySubtext}>
+          {error || 'The group is unavailable right now.'}
+        </Text>
+        <TouchableOpacity style={styles.retryButton} onPress={loadData}>
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
       </View>
     );
   }
