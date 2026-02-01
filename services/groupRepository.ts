@@ -777,9 +777,7 @@ export async function updateGroupMember(
   }
 }
 
-export async function canDeleteGroupMember(
-  memberId: string,
-): Promise<boolean> {
+export async function canDeleteGroupMember(memberId: string): Promise<boolean> {
   try {
     // Check if member has any non-zero shares
     const { data, error } = await supabase
@@ -790,7 +788,7 @@ export async function canDeleteGroupMember(
       .limit(1);
 
     if (error) throw error;
-    
+
     // Member can be deleted if they have no non-zero shares
     return data.length === 0;
   } catch (error) {
@@ -799,9 +797,7 @@ export async function canDeleteGroupMember(
   }
 }
 
-export async function deleteGroupMember(
-  memberId: string,
-): Promise<boolean> {
+export async function deleteGroupMember(memberId: string): Promise<boolean> {
   try {
     const { error } = await supabase
       .from('group_members')

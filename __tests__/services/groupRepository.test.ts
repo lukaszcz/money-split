@@ -2277,7 +2277,9 @@ describe('groupRepository', () => {
 
   describe('canDeleteGroupMember', () => {
     it('should return true when member has no non-zero shares', async () => {
-      const { canDeleteGroupMember } = require('../../services/groupRepository');
+      const {
+        canDeleteGroupMember,
+      } = require('../../services/groupRepository');
 
       mockSupabase.from.mockReturnValue({
         select: jest.fn().mockReturnThis(),
@@ -2296,7 +2298,9 @@ describe('groupRepository', () => {
     });
 
     it('should return false when member has non-zero shares', async () => {
-      const { canDeleteGroupMember } = require('../../services/groupRepository');
+      const {
+        canDeleteGroupMember,
+      } = require('../../services/groupRepository');
 
       mockSupabase.from.mockReturnValue({
         select: jest.fn().mockReturnThis(),
@@ -2314,7 +2318,9 @@ describe('groupRepository', () => {
     });
 
     it('should return false on query error', async () => {
-      const { canDeleteGroupMember } = require('../../services/groupRepository');
+      const {
+        canDeleteGroupMember,
+      } = require('../../services/groupRepository');
 
       mockSupabase.from.mockReturnValue({
         select: jest.fn().mockReturnThis(),

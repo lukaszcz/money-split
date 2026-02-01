@@ -87,7 +87,7 @@ export default function EditMemberScreen() {
       setName(member.name);
       setEmail(member.email || '');
       setOriginalEmail(member.email || '');
-      
+
       // Check if member can be deleted
       const deletable = await canDeleteGroupMember(memberId);
       setCanDelete(deletable);
