@@ -394,7 +394,7 @@ export default function EditMemberScreen() {
             </Text>
           </TouchableOpacity>
 
-          {canDelete && !checkingDelete && (
+          {(isCurrentUserMember || (canDelete && !checkingDelete)) && (
             <TouchableOpacity
               style={[
                 styles.deleteButton,
@@ -404,11 +404,13 @@ export default function EditMemberScreen() {
               disabled={loading}
             >
               <Trash2 color="#dc2626" size={20} />
-              <Text style={styles.deleteButtonText}>Remove from Group</Text>
+              <Text style={styles.deleteButtonText}>
+                {isCurrentUserMember ? 'Leave Group' : 'Remove from Group'}
+              </Text>
             </TouchableOpacity>
           )}
 
-          {!canDelete && !checkingDelete && (
+          {!isCurrentUserMember && !canDelete && !checkingDelete && (
             <Text style={styles.deleteHint}>
               This member cannot be removed. Members involved in any expenses
               cannot be deleted.
