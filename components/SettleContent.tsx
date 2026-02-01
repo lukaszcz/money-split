@@ -338,11 +338,6 @@ export default function SettleContent({
             <View style={styles.infoHeader}>
               <View style={styles.infoTextGroup}>
                 <Text style={styles.infoText}>
-                  {simplified
-                    ? 'Simplified settlements'
-                    : 'Detailed transfers'}
-                </Text>
-                <Text style={styles.infoSubtext}>
                   {transferCount} transfer{transferCount !== 1 ? 's' : ''}
                   {showLastUpdated ? ' · Updated recently' : ''}
                 </Text>
@@ -387,13 +382,19 @@ export default function SettleContent({
           ))}
 
           {simplified && (
-            <TouchableOpacity
-              style={styles.explainButton}
-              onPress={startAnimation}
-            >
-              <Play color="#059669" size={16} />
-              <Text style={styles.explainButtonText}>Explain Debts</Text>
-            </TouchableOpacity>
+            <>
+              <TouchableOpacity
+                style={styles.explainButton}
+                onPress={startAnimation}
+              >
+                <Play color="#059669" size={16} />
+                <Text style={styles.explainButtonText}>Explain Debts</Text>
+              </TouchableOpacity>
+              <Text style={styles.simplifyHint}>
+                Simplifying reduces the number of transfers, but may change who
+                pays whom.
+              </Text>
+            </>
           )}
         </>
       )}
@@ -570,6 +571,12 @@ const styles = StyleSheet.create({
     color: '#059669',
     fontSize: 16,
     fontWeight: '600',
+  },
+  simplifyHint: {
+    marginTop: 8,
+    fontSize: 12,
+    color: '#6b7280',
+    textAlign: 'center',
   },
   skeletonCard: {
     height: 56,
