@@ -259,6 +259,41 @@ describe('groupPreferenceService', () => {
     expect(mockSupabase.from).toHaveBeenCalledTimes(1);
   });
 
+  it('logs and skips cache update when cleanup update fails', async () => {
+    const mockUser = createMockUser({ id: 'user-123' });
+    mockSupabase.auth.getUser.mockResolvedValue({
+      data: { user: mockUser },
+      error: null,
+    });
+
+    const preferenceBuilder = {
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      maybeSingle: jest.fn().mockResolvedValue({
+        data: { group_order: ['group-1', 'group-2', 'group-3'] },
+        error: null,
+      }),
+    };
+
+    const updateBuilder = {
+      update: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockResolvedValue({ error: new Error('Update failed') }),
+    };
+
+    let callCount = 0;
+    mockSupabase.from.mockImplementation(() => {
+      callCount += 1;
+      if (callCount === 1) {
+        return preferenceBuilder as any;
+      }
+      return updateBuilder as any;
+    });
+
+    await groupPreferenceService.cleanupGroupPreferences(['group-1']);
+
+    expect(console.error).toHaveBeenCalled();
+  });
+
   it('orders new groups ahead of saved preferences', async () => {
     const mockUser = createMockUser({ id: 'user-123' });
     mockSupabase.auth.getUser.mockResolvedValue({
@@ -461,5 +496,23 @@ describe('groupPreferenceService', () => {
     const result = await groupPreferenceService.getOrderedGroups([]);
 
     expect(result).toEqual([]);
+  });
+
+  it('returns null when refreshGroupPreferencesForUser fails', async () => {
+    const preferenceBuilder = {
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      maybeSingle: jest
+        .fn()
+        .mockResolvedValue({ data: null, error: new Error('Fail') }),
+    };
+
+    mockSupabase.from.mockReturnValue(preferenceBuilder as any);
+
+    const result =
+      await groupPreferenceService.refreshGroupPreferencesForUser('user-123');
+
+    expect(result).toBeNull();
+    expect(console.error).toHaveBeenCalled();
   });
 });
