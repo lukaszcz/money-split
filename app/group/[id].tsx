@@ -54,7 +54,10 @@ export default function GroupDetailScreen() {
   } | null>(null);
 
   const loadData = useCallback(async () => {
-    if (!id || typeof id !== 'string') return;
+    if (!id || typeof id !== 'string') {
+      setLoading(false);
+      return;
+    }
 
     const fetchedGroup = await getGroup(id);
     const fetchedExpenses = await getGroupExpenses(id);
@@ -72,7 +75,7 @@ export default function GroupDetailScreen() {
     }, [loadData]),
   );
 
-  if (loading || !group) {
+  if (loading) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
@@ -80,6 +83,25 @@ export default function GroupDetailScreen() {
             <ArrowLeft color="#111827" size={24} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Loading...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!group) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()}>
+            <ArrowLeft color="#111827" size={24} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Group not found</Text>
+        </View>
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyText}>We could not load this group</Text>
+          <Text style={styles.emptySubtext}>
+            The group may have been deleted or you no longer have access.
+          </Text>
         </View>
       </SafeAreaView>
     );
