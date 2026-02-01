@@ -516,7 +516,7 @@ describe('groupRepository', () => {
       ]);
     });
 
-    it('should return empty array on error', async () => {
+    it('should return null on error', async () => {
       const { getGroupMembers } = require('../../services/groupRepository');
 
       mockSupabase.from.mockReturnValue({
@@ -530,7 +530,7 @@ describe('groupRepository', () => {
 
       const result = await getGroupMembers('group-trip');
 
-      expect(result).toEqual([]);
+      expect(result).toBeNull();
     });
   });
 
@@ -2272,6 +2272,102 @@ describe('groupRepository', () => {
       const result = await updateGroupMember('member-1', 'Name');
 
       expect(result).toBeNull();
+    });
+  });
+
+  describe('canDeleteGroupMember', () => {
+    it('should return true when member has no non-zero shares', async () => {
+      const {
+        canDeleteGroupMember,
+      } = require('../../services/groupRepository');
+
+      mockSupabase.from.mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        neq: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockResolvedValue({
+          data: [],
+          error: null,
+        }),
+      } as any);
+
+      const result = await canDeleteGroupMember('member-with-no-shares');
+
+      expect(result).toBe(true);
+      expect(mockSupabase.from).toHaveBeenCalledWith('expense_shares');
+    });
+
+    it('should return false when member has non-zero shares', async () => {
+      const {
+        canDeleteGroupMember,
+      } = require('../../services/groupRepository');
+
+      mockSupabase.from.mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        neq: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockResolvedValue({
+          data: [{ id: 'share-1' }],
+          error: null,
+        }),
+      } as any);
+
+      const result = await canDeleteGroupMember('member-with-shares');
+
+      expect(result).toBe(false);
+    });
+
+    it('should return false on query error', async () => {
+      const {
+        canDeleteGroupMember,
+      } = require('../../services/groupRepository');
+
+      mockSupabase.from.mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        neq: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockResolvedValue({
+          data: null,
+          error: new Error('Query failed'),
+        }),
+      } as any);
+
+      const result = await canDeleteGroupMember('member-error');
+
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('deleteGroupMember', () => {
+    it('should delete a group member successfully', async () => {
+      const { deleteGroupMember } = require('../../services/groupRepository');
+
+      mockSupabase.from.mockReturnValue({
+        delete: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockResolvedValue({
+          error: null,
+        }),
+      } as any);
+
+      const result = await deleteGroupMember('member-to-delete');
+
+      expect(result).toBe(true);
+      expect(mockSupabase.from).toHaveBeenCalledWith('group_members');
+    });
+
+    it('should return false on delete error', async () => {
+      const { deleteGroupMember } = require('../../services/groupRepository');
+
+      mockSupabase.from.mockReturnValue({
+        delete: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockResolvedValue({
+          error: new Error('Delete failed'),
+        }),
+      } as any);
+
+      const result = await deleteGroupMember('member-to-delete');
+
+      expect(result).toBe(false);
     });
   });
 

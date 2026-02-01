@@ -22,13 +22,14 @@ The MoneySplit test suite includes:
 - **Service tests** for data access layer (groupRepository, exchangeRateService)
 - **Context tests** for React state management (AuthContext)
 - **Hook tests** for client hooks (currency order, framework ready)
+- **Component tests** for reusable UI components (BottomActionBar)
 - **Screen tests** for UI business logic (auth, groups, settings)
 - **Integration tests** (optional, requires local Supabase)
 
 ### Test Statistics
 
-- **Total Tests**: 319
-- **Test Suites**: 14
+- **Total Tests**: 343
+- **Test Suites**: 17
 - **Coverage Targets**:
   - Lines: 80%
   - Functions: 80%
@@ -44,9 +45,10 @@ __tests__/
 │   └── testData.ts                # Reusable test data
 ├── utils/
 │   ├── mockSupabase.ts            # Supabase client mocking
-│   ├── mockExpoRouter.ts          # Expo Router mocking (NEW)
-│   ├── mockAuthContext.ts         # Auth context mocking (NEW)
-│   └── testHelpers.ts             # Test utilities
+│   ├── mockExpoRouter.ts          # Expo Router mocking
+│   ├── mockAuthContext.ts         # Auth context mocking
+│   ├── testHelpers.ts             # Test utilities
+│   └── ui.test.ts                 # UI utilities tests
 ├── setup/
 │   ├── docker-compose.test.yml    # Integration test environment
 │   └── integration.setup.ts       # Integration test helpers
@@ -60,14 +62,18 @@ __tests__/
 ├── hooks/
 │   ├── useCurrencyOrder.test.ts   # Currency ordering hook
 │   └── useFrameworkReady.test.ts  # Framework ready hook
+├── components/
+│   └── BottomActionBar.test.tsx   # BottomActionBar component tests
 ├── screens/
-│   ├── auth.test.tsx              # Auth screen tests (NEW)
-│   ├── groups.test.tsx            # Groups screen tests (NEW)
-│   └── settings.test.tsx          # Settings screen tests (NEW)
+│   ├── auth.test.tsx              # Auth screen tests
+│   ├── groups.test.tsx            # Groups screen tests
+│   ├── groupDetail.test.tsx       # Group detail screen tests
+│   └── settings.test.tsx          # Settings screen tests
 ├── currencies.test.ts             # Currency utilities
 ├── money.test.ts                  # Money math
 ├── settlementService.test.ts      # Settlement algorithms
 └── validation.test.ts             # Validation helpers
+
 ```
 
 ## Running Tests
@@ -130,6 +136,51 @@ describe('money utilities', () => {
 
 Money utility tests also cover share calculations via `calculateSharesForSplit`.
 Validation tests include `validateDecimalInput` coverage.
+
+### UI Utilities Test Pattern
+
+```typescript
+import { Dimensions } from 'react-native';
+import { getMenuPosition } from '../../utils/ui';
+
+// Mock React Native Dimensions
+jest.mock('react-native', () => ({
+  Dimensions: {
+    get: jest.fn(),
+  },
+}));
+
+const mockDimensions = Dimensions as jest.Mocked<typeof Dimensions>;
+
+describe('getMenuPosition', () => {
+  beforeEach(() => {
+    mockDimensions.get.mockReturnValue({
+      width: 375,
+      height: 667,
+      scale: 2,
+      fontScale: 1,
+    });
+  });
+
+  it('should prevent menu from overflowing screen edges', () => {
+    const anchor = { x: 350, y: 50, width: 40, height: 40 };
+    const insetTop = 44;
+
+    const position = getMenuPosition(anchor, insetTop, 180);
+
+    // Menu should fit within screen bounds
+    expect(position.left + 180).toBeLessThanOrEqual(375 - 16);
+  });
+});
+```
+
+UI utility tests cover menu positioning logic, including:
+
+- Basic positioning relative to anchor elements
+- Horizontal overflow prevention (left and right edges)
+- Vertical positioning with safe area insets
+- Edge cases for various screen sizes (phones, tablets)
+- Consistency and boundary conditions
 
 ### Service Test Pattern with Mocks
 
@@ -466,6 +517,83 @@ npm run test:coverage -- --coverageReporters=json-summary
 - **Remove obsolete tests**: Delete tests for removed features
 - **Review test failures**: Understand why tests fail
 
+## Component Testing
+
+### Overview
+
+Component tests verify individual UI components in isolation using `@testing-library/react-native`. These tests ensure components:
+
+- Render correctly with various props
+- Apply accessibility labels for screen readers
+- Call handlers when user interactions occur
+- Follow established patterns for testability
+
+### What to Test
+
+✅ **Do test**:
+
+- Component renders with required props
+- Accessibility labels are correctly applied
+- Event handlers (onPress, onChange) are called correctly
+- Component handles edge cases (empty strings, undefined props)
+
+❌ **Don't test**:
+
+- Styling details (colors, sizes, margins)
+- Component internal implementation
+- Third-party library behavior
+
+### Writing Component Tests
+
+Component tests follow a simple pattern:
+
+```typescript
+import React from 'react';
+import { render, fireEvent } from '@testing-library/react-native';
+import BottomActionBar from '../../components/BottomActionBar';
+
+describe('BottomActionBar', () => {
+  it('renders correctly with label', () => {
+    const { getByText } = render(
+      <BottomActionBar label="Add Item" onPress={jest.fn()} />,
+    );
+
+    expect(getByText('Add Item')).toBeTruthy();
+  });
+
+  it('applies correct accessibility label', () => {
+    const { getByLabelText } = render(
+      <BottomActionBar label="Add Group" onPress={jest.fn()} />,
+    );
+
+    expect(getByLabelText('Add Group')).toBeTruthy();
+  });
+
+  it('calls onPress handler when pressed', () => {
+    const mockOnPress = jest.fn();
+    const { getByLabelText } = render(
+      <BottomActionBar label="Add Expense" onPress={mockOnPress} />,
+    );
+
+    fireEvent.press(getByLabelText('Add Expense'));
+
+    expect(mockOnPress).toHaveBeenCalledTimes(1);
+  });
+});
+```
+
+### Example Component Tests
+
+See `__tests__/components/BottomActionBar.test.tsx` for a complete example.
+
+### Tips for Component Testing
+
+1. **Keep tests simple** - Focus on public API, not implementation
+2. **Use accessibility queries** - Prefer `getByLabelText` over `getByTestId`
+3. **Test user interactions** - Verify handlers are called correctly
+4. **Mock child components** - If needed, mock complex children (already handled in `jest.setup.js`)
+5. **Avoid snapshot tests** - They're brittle and don't test behavior
+
 ## Screen Testing
 
 ### Overview
@@ -605,6 +733,7 @@ See these files for complete examples:
 
 - `__tests__/screens/auth.test.tsx` - Authentication flows
 - `__tests__/screens/groups.test.tsx` - Groups list and navigation
+- `__tests__/screens/groupDetail.test.tsx` - Group detail screen, overflow menu, and leave group flows
 - `__tests__/screens/settings.test.tsx` - Profile, logout, delete flows
 
 ### Tips for Screen Testing

@@ -18,6 +18,9 @@ interface KnownUserSuggestionInputProps {
   emailValue: string;
   onEmailChange: (email: string) => void;
   onSelectUser: (user: KnownUser) => void;
+  hasDuplicateName?: boolean;
+  onNameBlur?: (name: string) => void;
+  onEmailBlur?: (email: string) => void;
   nameInputRef?: React.RefObject<TextInput>;
   emailInputRef?: React.RefObject<TextInput>;
 }
@@ -28,6 +31,9 @@ export function KnownUserSuggestionInput({
   emailValue,
   onEmailChange,
   onSelectUser,
+  hasDuplicateName = false,
+  onNameBlur,
+  onEmailBlur,
   nameInputRef,
   emailInputRef,
 }: KnownUserSuggestionInputProps) {
@@ -104,12 +110,13 @@ export function KnownUserSuggestionInput({
         <Text style={styles.label}>Name</Text>
         <TextInput
           ref={nameInputRef}
-          style={styles.input}
+          style={[styles.input, hasDuplicateName && styles.inputError]}
           value={nameValue}
           onChangeText={handleNameChange}
           onBlur={() => {
             // Delay hiding suggestions to allow tap to register
             setTimeout(() => setShowSuggestions(false), 200);
+            onNameBlur?.(nameValue);
           }}
           onFocus={() => {
             if (nameValue && filteredSuggestions.length > 0) {
@@ -143,6 +150,7 @@ export function KnownUserSuggestionInput({
           style={styles.input}
           value={emailValue}
           onChangeText={onEmailChange}
+          onBlur={() => onEmailBlur?.(emailValue)}
           placeholder="member@example.com"
           placeholderTextColor="#9ca3af"
           keyboardType="email-address"
@@ -178,6 +186,10 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 16,
     color: '#111827',
+  },
+  inputError: {
+    borderColor: '#ef4444',
+    borderWidth: 2,
   },
   hint: {
     fontSize: 13,

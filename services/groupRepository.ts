@@ -181,7 +181,9 @@ export async function createGroupMember(
   }
 }
 
-export async function getGroupMembers(groupId: string): Promise<GroupMember[]> {
+export async function getGroupMembers(
+  groupId: string,
+): Promise<GroupMember[] | null> {
   try {
     const { data, error } = await supabase
       .from('group_members')
@@ -189,7 +191,10 @@ export async function getGroupMembers(groupId: string): Promise<GroupMember[]> {
       .eq('group_id', groupId)
       .order('created_at', { ascending: true });
 
-    if (error) throw error;
+    if (error) {
+      console.error('Failed to get group members:', error);
+      return null;
+    }
 
     return (data || []).map((m) => ({
       id: m.id,
@@ -201,7 +206,7 @@ export async function getGroupMembers(groupId: string): Promise<GroupMember[]> {
     }));
   } catch (error) {
     console.error('Failed to get group members:', error);
-    return [];
+    return null;
   }
 }
 
@@ -375,6 +380,7 @@ export async function getGroup(
     if (!groupData) return null;
 
     const members = await getGroupMembers(groupId);
+    if (!members) return null;
 
     return {
       id: groupData.id,
@@ -789,6 +795,52 @@ export async function updateGroupMember(
   } catch (error) {
     console.error('Failed to update group member:', error);
     return null;
+  }
+}
+
+export async function canDeleteGroupMember(memberId: string): Promise<boolean> {
+  try {
+    // Check if member has any non-zero shares or is the payer on any expense.
+    const [
+      { data: shareData, error: shareError },
+      { data: payerData, error: payerError },
+    ] = await Promise.all([
+      supabase
+        .from('expense_shares')
+        .select('id')
+        .eq('member_id', memberId)
+        .neq('share_amount_scaled', 0)
+        .limit(1),
+      supabase
+        .from('expenses')
+        .select('id')
+        .eq('payer_member_id', memberId)
+        .limit(1),
+    ]);
+
+    if (shareError) throw shareError;
+    if (payerError) throw payerError;
+
+    // Member can be deleted if they have no non-zero shares and are not a payer.
+    return shareData.length === 0 && payerData.length === 0;
+  } catch (error) {
+    console.error('Failed to check if member can be deleted:', error);
+    return false;
+  }
+}
+
+export async function deleteGroupMember(memberId: string): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('group_members')
+      .delete()
+      .eq('id', memberId);
+
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Failed to delete group member:', error);
+    return false;
   }
 }
 

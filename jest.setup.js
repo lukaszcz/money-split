@@ -13,8 +13,20 @@ jest.mock('react-native', () => {
       React.createElement(name, { ...props, ref }, props.children),
     );
 
-  const FlatList = ({ data = [], renderItem, keyExtractor }) =>
-    React.createElement(
+  const FlatList = ({
+    data = [],
+    renderItem,
+    keyExtractor,
+    ListEmptyComponent,
+  }) => {
+    if (data.length === 0 && ListEmptyComponent) {
+      const emptyElement = React.isValidElement(ListEmptyComponent)
+        ? ListEmptyComponent
+        : React.createElement(ListEmptyComponent);
+      return React.createElement(React.Fragment, null, emptyElement);
+    }
+
+    return React.createElement(
       React.Fragment,
       null,
       data.map((item, index) => {
@@ -26,6 +38,7 @@ jest.mock('react-native', () => {
         return element;
       }),
     );
+  };
 
   return {
     View: createMockComponent('View'),
@@ -33,12 +46,16 @@ jest.mock('react-native', () => {
     TextInput: createMockComponent('TextInput'),
     ScrollView: createMockComponent('ScrollView'),
     TouchableOpacity: createMockComponent('TouchableOpacity'),
+    Pressable: createMockComponent('Pressable'),
     KeyboardAvoidingView: createMockComponent('KeyboardAvoidingView'),
     Image: createMockComponent('Image'),
     Switch: createMockComponent('Switch'),
     ActivityIndicator: createMockComponent('ActivityIndicator'),
     Modal: createMockComponent('Modal'),
     RefreshControl: createMockComponent('RefreshControl'),
+    Dimensions: {
+      get: jest.fn(() => ({ width: 375, height: 667 })),
+    },
     FlatList,
     StyleSheet: {
       create: (styles) => styles,
