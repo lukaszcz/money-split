@@ -390,8 +390,11 @@ export default function SettleContent({
             </View>
           </View>
 
-          {settlements.map((settlement, idx) => (
-            <View key={idx} style={styles.settlementCard}>
+          {settlements.map((settlement) => (
+            <View
+              key={`${settlement.from.id}-${settlement.to.id}`}
+              style={styles.settlementCard}
+            >
               <View style={styles.settlementContent}>
                 <View style={styles.settlementInfo}>
                   <View style={styles.settlementRow}>
