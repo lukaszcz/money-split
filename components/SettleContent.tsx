@@ -22,11 +22,13 @@ import { getExchangeRate } from '../services/exchangeRateService';
 type SettleContentProps = {
   groupId: string;
   embedded?: boolean;
+  onTransferRecorded?: () => void;
 };
 
 export default function SettleContent({
   groupId,
   embedded = false,
+  onTransferRecorded,
 }: SettleContentProps) {
   const [group, setGroup] = useState<GroupWithMembers | null>(null);
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -141,15 +143,8 @@ export default function SettleContent({
       );
 
       if (expense) {
-        setSettlements((prev) =>
-          prev.filter(
-            (s) =>
-              !(
-                s.from.id === settlement.from.id &&
-                s.to.id === settlement.to.id
-              ),
-          ),
-        );
+        await loadData();
+        onTransferRecorded?.();
       } else {
         setError('Failed to record transfer.');
       }

@@ -218,6 +218,7 @@ export default function GroupDetailScreen() {
           <SettleTab
             groupId={group.id}
             balances={balances}
+            onTransferRecorded={loadData}
           />
         )}
       </ScrollView>
@@ -417,9 +418,11 @@ function BalancesTab({
 function SettleTab({
   groupId,
   balances,
+  onTransferRecorded,
 }: {
   groupId: string;
   balances: Map<string, bigint>;
+  onTransferRecorded: () => void;
 }) {
   const hasNonZeroBalances = Array.from(balances.values()).some(
     (balance) => balance !== 0n,
@@ -436,7 +439,11 @@ function SettleTab({
 
   return (
     <View style={styles.tabContent}>
-      <SettleContent groupId={groupId} embedded />
+      <SettleContent
+        groupId={groupId}
+        embedded
+        onTransferRecorded={onTransferRecorded}
+      />
     </View>
   );
 }
