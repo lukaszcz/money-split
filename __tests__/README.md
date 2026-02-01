@@ -58,6 +58,8 @@ __tests__/
 │   ├── currencyPreferenceService.test.ts # Currency preference service
 │   ├── groupPreferenceService.test.ts # Group preference service
 │   └── settlePreferenceService.test.ts # Settle preference storage
+│   ├── userPreferenceCache.test.ts # User preference cache helpers
+│   └── userPreferenceSync.test.ts # Preference sync on login
 ├── contexts/
 │   └── AuthContext.test.tsx       # React context tests
 ├── hooks/

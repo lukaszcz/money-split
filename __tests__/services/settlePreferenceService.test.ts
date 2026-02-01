@@ -67,6 +67,7 @@ describe('settlePreferenceService', () => {
     const result = await getSettleSimplifyPreference();
 
     expect(result).toBe(false);
+    expect(mockSupabase.from).toHaveBeenCalledWith('user_settle_preferences');
   });
 
   it('reads preference from db when cache is empty', async () => {

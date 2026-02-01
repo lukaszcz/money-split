@@ -111,7 +111,9 @@ export async function getUserCurrencyOrder(): Promise<string[]> {
     return initialOrder;
   }
 
-  const normalizedOrder = normalizeCurrencyOrder(data.currency_order as string[]);
+  const normalizedOrder = normalizeCurrencyOrder(
+    data.currency_order as string[],
+  );
   await setCachedUserPreference(user.id, CURRENCY_ORDER_CACHE, normalizedOrder);
 
   return normalizedOrder;
@@ -147,10 +149,17 @@ async function saveCurrencyOrder(currencyOrder: string[]): Promise<void> {
     return;
   }
 
+  await saveCurrencyOrderForUser(user.id, currencyOrder);
+}
+
+async function saveCurrencyOrderForUser(
+  userId: string,
+  currencyOrder: string[],
+): Promise<void> {
   const { data: existing } = await supabase
     .from('user_currency_preferences')
     .select('id')
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .maybeSingle();
 
   if (existing) {
@@ -160,14 +169,14 @@ async function saveCurrencyOrder(currencyOrder: string[]): Promise<void> {
         currency_order: currencyOrder,
         updated_at: new Date().toISOString(),
       })
-      .eq('user_id', user.id);
+      .eq('user_id', userId);
 
     if (error) {
       console.error('Error updating currency preferences:', error);
     }
   } else {
     const { error } = await supabase.from('user_currency_preferences').insert({
-      user_id: user.id,
+      user_id: userId,
       currency_order: currencyOrder,
     });
 
@@ -176,7 +185,7 @@ async function saveCurrencyOrder(currencyOrder: string[]): Promise<void> {
     }
   }
 
-  await setCachedUserPreference(user.id, CURRENCY_ORDER_CACHE, currencyOrder);
+  await setCachedUserPreference(userId, CURRENCY_ORDER_CACHE, currencyOrder);
 }
 
 export async function ensureGroupCurrencyInOrder(
@@ -217,10 +226,12 @@ export async function refreshCurrencyOrderForUser(
       ...CURRENCIES.filter((c) => c.code !== localeCurrency).map((c) => c.code),
     ];
 
-    await saveCurrencyOrder(initialOrder);
+    await saveCurrencyOrderForUser(userId, initialOrder);
     return;
   }
 
-  const normalizedOrder = normalizeCurrencyOrder(data.currency_order as string[]);
+  const normalizedOrder = normalizeCurrencyOrder(
+    data.currency_order as string[],
+  );
   await setCachedUserPreference(userId, CURRENCY_ORDER_CACHE, normalizedOrder);
 }

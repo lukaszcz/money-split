@@ -40,8 +40,8 @@ describe('AuthContext', () => {
     supabaseModule.supabase = mockSupabase;
     const groupRepository = require('../../services/groupRepository');
     ensureUserProfile = groupRepository.ensureUserProfile;
-    syncUserPreferences = require('../../services/userPreferenceSync')
-      .syncUserPreferences;
+    syncUserPreferences =
+      require('../../services/userPreferenceSync').syncUserPreferences;
   });
 
   const createWrapper = () => {

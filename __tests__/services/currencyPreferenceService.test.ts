@@ -60,6 +60,20 @@ describe('currencyPreferenceService', () => {
     expect(mockSupabase.from).not.toHaveBeenCalled();
   });
 
+  it('returns cached order and refreshes in background', async () => {
+    const mockUser = createMockUser({ id: 'user-123' });
+    mockSupabase.auth.getUser.mockResolvedValue({
+      data: { user: mockUser },
+      error: null,
+    });
+    storage.getItem.mockResolvedValueOnce('["EUR"]');
+
+    const result = await currencyPreferenceService.getUserCurrencyOrder();
+
+    expect(result[0]).toBe('EUR');
+    expect(mockSupabase.from).toHaveBeenCalledWith('user_currency_preferences');
+  });
+
   it('returns default order when preference lookup fails', async () => {
     const mockUser = createMockUser({ id: 'user-123' });
     mockSupabase.auth.getUser.mockResolvedValue({
