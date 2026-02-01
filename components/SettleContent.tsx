@@ -317,7 +317,9 @@ export default function SettleContent({
                             {settlement.from.name}
                           </Text>
                           <Text style={styles.arrow}>→</Text>
-                          <Text style={styles.toUser}>{settlement.to.name}</Text>
+                          <Text style={styles.toUser}>
+                            {settlement.to.name}
+                          </Text>
                         </View>
                         <Text style={styles.amount}>
                           {currencySymbol}
