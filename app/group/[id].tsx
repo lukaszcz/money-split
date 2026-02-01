@@ -14,7 +14,7 @@ import {
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
-import { ArrowLeft, User, Mail, Link, MoreVertical } from 'lucide-react-native';
+import { ArrowLeft, MoreVertical } from 'lucide-react-native';
 import {
   getGroup,
   getGroupExpenses,
@@ -30,8 +30,9 @@ import { getExchangeRate } from '../../services/exchangeRateService';
 import { recordGroupVisit } from '../../services/groupPreferenceService';
 import { getMenuPosition } from '../../utils/ui';
 import BottomActionBar from '../../components/BottomActionBar';
+import SettleContent from '../../components/SettleContent';
 
-type Tab = 'payments' | 'balances' | 'members' | 'settle';
+type Tab = 'payments' | 'balances' | 'settle';
 
 const MENU_WIDTH = 180;
 
@@ -53,7 +54,10 @@ export default function GroupDetailScreen() {
   } | null>(null);
 
   const loadData = useCallback(async () => {
-    if (!id || typeof id !== 'string') return;
+    if (!id || typeof id !== 'string') {
+      setLoading(false);
+      return;
+    }
 
     const fetchedGroup = await getGroup(id);
     const fetchedExpenses = await getGroupExpenses(id);
@@ -71,7 +75,7 @@ export default function GroupDetailScreen() {
     }, [loadData]),
   );
 
-  if (loading || !group) {
+  if (loading) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
@@ -84,17 +88,31 @@ export default function GroupDetailScreen() {
     );
   }
 
+  if (!group) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()}>
+            <ArrowLeft color="#111827" size={24} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Group not found</Text>
+        </View>
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyText}>We could not load this group</Text>
+          <Text style={styles.emptySubtext}>
+            The group may have been deleted or you no longer have access.
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   const currencySymbol = getCurrencySymbol(group.mainCurrencyCode);
   const balances = computeBalances(expenses, group.members);
-  const showAddButton = activeTab === 'payments' || activeTab === 'members';
+  const showAddButton = activeTab === 'payments';
 
   const handleAddPress = () => {
-    if (activeTab === 'payments') {
-      router.push(`/group/${group.id}/add-expense` as any);
-      return;
-    }
-
-    router.push(`/group/${group.id}/add-member` as any);
+    router.push(`/group/${group.id}/add-expense` as any);
   };
 
   const handleLeaveGroup = () => {
@@ -190,19 +208,6 @@ export default function GroupDetailScreen() {
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'members' && styles.tabActive]}
-          onPress={() => setActiveTab('members')}
-        >
-          <Text
-            style={[
-              styles.tabText,
-              activeTab === 'members' && styles.tabTextActive,
-            ]}
-          >
-            Members
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
           style={[styles.tab, activeTab === 'settle' && styles.tabActive]}
           onPress={() => setActiveTab('settle')}
         >
@@ -231,16 +236,11 @@ export default function GroupDetailScreen() {
             currencySymbol={currencySymbol}
           />
         )}
-        {activeTab === 'members' && (
-          <MembersTab members={group.members} groupId={group.id} />
-        )}
         {activeTab === 'settle' && (
           <SettleTab
-            expenses={expenses}
-            members={group.members}
-            currencySymbol={currencySymbol}
             groupId={group.id}
             balances={balances}
+            onTransferRecorded={loadData}
           />
         )}
       </ScrollView>
@@ -270,6 +270,15 @@ export default function GroupDetailScreen() {
                 getMenuPosition(menuAnchor, insets.top, MENU_WIDTH),
               ]}
             >
+              <Pressable
+                style={styles.menuItem}
+                onPress={() => {
+                  handleMenuClose();
+                  router.push(`/group/${group.id}/members` as any);
+                }}
+              >
+                <Text style={styles.menuItemText}>Group members</Text>
+              </Pressable>
               <Pressable
                 style={styles.menuItem}
                 onPress={() => {
@@ -428,75 +437,15 @@ function BalancesTab({
   );
 }
 
-function MembersTab({
-  members,
-  groupId,
-}: {
-  members: GroupMember[];
-  groupId: string;
-}) {
-  const router = useRouter();
-
-  return (
-    <View style={styles.tabContent}>
-      {members.map((member) => (
-        <TouchableOpacity
-          key={member.id}
-          style={styles.memberCard}
-          onPress={() =>
-            router.push(
-              `/group/${groupId}/edit-member?memberId=${member.id}` as any,
-            )
-          }
-        >
-          <View style={styles.memberIcon}>
-            <User
-              color={member.connectedUserId ? '#2563eb' : '#6b7280'}
-              size={20}
-            />
-          </View>
-          <View style={styles.memberInfo}>
-            <Text style={styles.memberName}>{member.name}</Text>
-            {member.email && (
-              <View style={styles.memberEmailRow}>
-                <Mail color="#9ca3af" size={12} />
-                <Text style={styles.memberEmail}>{member.email}</Text>
-              </View>
-            )}
-          </View>
-          {member.connectedUserId && (
-            <View style={styles.connectedBadge}>
-              <Link color="#059669" size={14} />
-              <Text style={styles.connectedText}>Connected</Text>
-            </View>
-          )}
-        </TouchableOpacity>
-      ))}
-
-      {members.length === 0 && (
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyText}>No members yet</Text>
-          <Text style={styles.emptySubtext}>
-            Add members to start splitting expenses
-          </Text>
-        </View>
-      )}
-    </View>
-  );
-}
-
 function SettleTab({
   groupId,
   balances,
+  onTransferRecorded,
 }: {
-  expenses: Expense[];
-  members: GroupMember[];
-  currencySymbol: string;
   groupId: string;
   balances: Map<string, bigint>;
+  onTransferRecorded: () => void;
 }) {
-  const router = useRouter();
-
   const hasNonZeroBalances = Array.from(balances.values()).some(
     (balance) => balance !== 0n,
   );
@@ -512,23 +461,11 @@ function SettleTab({
 
   return (
     <View style={styles.tabContent}>
-      <TouchableOpacity
-        style={styles.settleButton}
-        onPress={() => {
-          router.push(`/group/${groupId}/settle` as any);
-        }}
-      >
-        <Text style={styles.settleButtonText}>Compute Settlements</Text>
-      </TouchableOpacity>
-
-      <Text style={styles.settleInfo}>
-        Tap above to see who should pay whom.
-      </Text>
-
-      <Text style={[styles.settleInfo, { marginTop: 12 }]}>
-        You{"'"}ll have the option to simplify debts. Simplifying reduces the
-        number of transfers, but may change who pays whom.
-      </Text>
+      <SettleContent
+        groupId={groupId}
+        embedded
+        onTransferRecorded={onTransferRecorded}
+      />
     </View>
   );
 }
@@ -595,6 +532,11 @@ const styles = StyleSheet.create({
   menuItem: {
     paddingVertical: 10,
     paddingHorizontal: 12,
+  },
+  menuItemText: {
+    color: '#111827',
+    fontSize: 16,
+    fontWeight: '500',
   },
   menuItemDestructive: {
     color: '#dc2626',
@@ -727,74 +669,5 @@ const styles = StyleSheet.create({
   },
   balanceNegative: {
     color: '#dc2626',
-  },
-  memberCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  memberIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#f3f4f6',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  memberInfo: {
-    flex: 1,
-  },
-  memberName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#111827',
-  },
-  memberEmailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: 4,
-  },
-  memberEmail: {
-    fontSize: 13,
-    color: '#9ca3af',
-  },
-  connectedBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#ecfdf5',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  connectedText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#059669',
-  },
-  settleButton: {
-    backgroundColor: '#2563eb',
-    padding: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  settleButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  settleInfo: {
-    fontSize: 14,
-    color: '#6b7280',
-    lineHeight: 20,
-    textAlign: 'center',
   },
 });

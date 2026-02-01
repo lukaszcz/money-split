@@ -49,9 +49,10 @@ users (public profile)
   |-- group_members.connected_user_id (optional link)
   |-- user_currency_preferences.user_id
   |-- user_group_preferences.user_id
+  |-- user_settle_preferences.user_id
 ```
 
-See also: [group_members](group_members.md), [user_currency_preferences](user_currency_preferences.md), [user_group_preferences](user_group_preferences.md)
+See also: [group_members](group_members.md), [user_currency_preferences](user_currency_preferences.md), [user_group_preferences](user_group_preferences.md), [user_settle_preferences](user_settle_preferences.md)
 
 ## Key Implementation Details
 

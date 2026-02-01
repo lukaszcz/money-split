@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { ensureUserProfile } from '@/services/groupRepository';
+import { syncUserPreferences } from '@/services/userPreferenceSync';
 
 interface AuthContextType {
   session: Session | null;
@@ -23,6 +24,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
         await ensureUserProfile();
+        await syncUserPreferences(session.user.id);
       }
       setSession(session);
       setUser(session?.user ?? null);
@@ -35,6 +37,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       (async () => {
         if (event === 'SIGNED_IN' && session?.user) {
           await ensureUserProfile();
+          await syncUserPreferences(session.user.id);
         }
         setSession(session);
         setUser(session?.user ?? null);
@@ -58,6 +61,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .from('users')
         .update({ last_login: now })
         .eq('id', userData.user.id);
+      await syncUserPreferences(userData.user.id);
     }
   };
 

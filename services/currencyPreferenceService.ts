@@ -1,6 +1,12 @@
 import { supabase } from '@/lib/supabase';
 import { CURRENCIES } from '@/utils/currencies';
 import * as Localization from 'expo-localization';
+import {
+  getCachedUserPreference,
+  setCachedUserPreference,
+} from './userPreferenceCache';
+
+const CURRENCY_ORDER_CACHE = 'currency_order';
 
 const LOCALE_TO_CURRENCY: Record<string, string> = {
   'en-US': 'USD',
@@ -73,6 +79,15 @@ export async function getUserCurrencyOrder(): Promise<string[]> {
     return CURRENCIES.map((c) => c.code);
   }
 
+  const cachedOrder = await getCachedUserPreference<string[]>(
+    user.id,
+    CURRENCY_ORDER_CACHE,
+  );
+
+  if (cachedOrder && cachedOrder.length > 0) {
+    return normalizeCurrencyOrder(cachedOrder);
+  }
+
   const { data, error } = await supabase
     .from('user_currency_preferences')
     .select('currency_order')
@@ -95,11 +110,12 @@ export async function getUserCurrencyOrder(): Promise<string[]> {
     return initialOrder;
   }
 
-  const savedCodes = data.currency_order as string[];
-  const allCodes = CURRENCIES.map((c) => c.code);
-  const missingCodes = allCodes.filter((code) => !savedCodes.includes(code));
+  const normalizedOrder = normalizeCurrencyOrder(
+    data.currency_order as string[],
+  );
+  await setCachedUserPreference(user.id, CURRENCY_ORDER_CACHE, normalizedOrder);
 
-  return [...savedCodes, ...missingCodes];
+  return normalizedOrder;
 }
 
 export async function updateCurrencyOrder(
@@ -132,10 +148,17 @@ async function saveCurrencyOrder(currencyOrder: string[]): Promise<void> {
     return;
   }
 
+  await saveCurrencyOrderForUser(user.id, currencyOrder);
+}
+
+async function saveCurrencyOrderForUser(
+  userId: string,
+  currencyOrder: string[],
+): Promise<void> {
   const { data: existing } = await supabase
     .from('user_currency_preferences')
     .select('id')
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .maybeSingle();
 
   if (existing) {
@@ -145,14 +168,14 @@ async function saveCurrencyOrder(currencyOrder: string[]): Promise<void> {
         currency_order: currencyOrder,
         updated_at: new Date().toISOString(),
       })
-      .eq('user_id', user.id);
+      .eq('user_id', userId);
 
     if (error) {
       console.error('Error updating currency preferences:', error);
     }
   } else {
     const { error } = await supabase.from('user_currency_preferences').insert({
-      user_id: user.id,
+      user_id: userId,
       currency_order: currencyOrder,
     });
 
@@ -160,6 +183,8 @@ async function saveCurrencyOrder(currencyOrder: string[]): Promise<void> {
       console.error('Error inserting currency preferences:', error);
     }
   }
+
+  await setCachedUserPreference(userId, CURRENCY_ORDER_CACHE, currencyOrder);
 }
 
 export async function ensureGroupCurrencyInOrder(
@@ -170,4 +195,42 @@ export async function ensureGroupCurrencyInOrder(
   if (currentOrder[0] !== groupCurrency) {
     await updateCurrencyOrder(groupCurrency);
   }
+}
+
+function normalizeCurrencyOrder(savedCodes: string[]): string[] {
+  const allCodes = CURRENCIES.map((c) => c.code);
+  const missingCodes = allCodes.filter((code) => !savedCodes.includes(code));
+
+  return [...savedCodes, ...missingCodes];
+}
+
+export async function refreshCurrencyOrderForUser(
+  userId: string,
+): Promise<void> {
+  const { data, error } = await supabase
+    .from('user_currency_preferences')
+    .select('currency_order')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error fetching currency preferences:', error);
+    return;
+  }
+
+  if (!data || !data.currency_order || data.currency_order.length === 0) {
+    const localeCurrency = getLocaleCurrency();
+    const initialOrder = [
+      localeCurrency,
+      ...CURRENCIES.filter((c) => c.code !== localeCurrency).map((c) => c.code),
+    ];
+
+    await saveCurrencyOrderForUser(userId, initialOrder);
+    return;
+  }
+
+  const normalizedOrder = normalizeCurrencyOrder(
+    data.currency_order as string[],
+  );
+  await setCachedUserPreference(userId, CURRENCY_ORDER_CACHE, normalizedOrder);
 }
