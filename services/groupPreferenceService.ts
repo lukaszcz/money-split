@@ -22,7 +22,6 @@ export async function getGroupPreferences(): Promise<string[]> {
   );
 
   if (cachedOrder && cachedOrder.length > 0) {
-    void refreshGroupPreferencesForUser(user.id);
     return cachedOrder;
   }
 
@@ -170,7 +169,7 @@ export async function getOrderedGroups(
 
 export async function refreshGroupPreferencesForUser(
   userId: string,
-): Promise<void> {
+): Promise<string[] | null> {
   const { data, error } = await supabase
     .from('user_group_preferences')
     .select('group_order')
@@ -179,12 +178,10 @@ export async function refreshGroupPreferencesForUser(
 
   if (error) {
     console.error('Error fetching group preferences:', error);
-    return;
+    return null;
   }
 
-  await setCachedUserPreference(
-    userId,
-    GROUP_ORDER_CACHE,
-    data?.group_order || [],
-  );
+  const groupOrder = data?.group_order || [];
+  await setCachedUserPreference(userId, GROUP_ORDER_CACHE, groupOrder);
+  return groupOrder;
 }

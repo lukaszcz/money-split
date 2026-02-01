@@ -21,7 +21,6 @@ export async function getSettleSimplifyPreference(): Promise<boolean> {
   );
 
   if (cached !== null) {
-    void refreshSettlePreferenceForUser(user.id);
     return cached;
   }
 

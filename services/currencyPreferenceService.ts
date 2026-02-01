@@ -85,7 +85,6 @@ export async function getUserCurrencyOrder(): Promise<string[]> {
   );
 
   if (cachedOrder && cachedOrder.length > 0) {
-    void refreshCurrencyOrderForUser(user.id);
     return normalizeCurrencyOrder(cachedOrder);
   }
 

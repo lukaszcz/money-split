@@ -53,7 +53,7 @@ describe('groupPreferenceService', () => {
     expect(mockSupabase.from).not.toHaveBeenCalled();
   });
 
-  it('returns cached preferences and refreshes in background', async () => {
+  it('returns cached preferences without fetching from the database', async () => {
     const mockUser = createMockUser({ id: 'user-123' });
     mockSupabase.auth.getUser.mockResolvedValue({
       data: { user: mockUser },
@@ -64,7 +64,7 @@ describe('groupPreferenceService', () => {
     const result = await groupPreferenceService.getGroupPreferences();
 
     expect(result).toEqual(['group-1', 'group-2']);
-    expect(mockSupabase.from).toHaveBeenCalledWith('user_group_preferences');
+    expect(mockSupabase.from).not.toHaveBeenCalled();
   });
 
   it('returns empty preferences on error', async () => {

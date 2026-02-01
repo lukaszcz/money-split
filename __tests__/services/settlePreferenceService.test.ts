@@ -56,7 +56,7 @@ describe('settlePreferenceService', () => {
     expect(mockSupabase.from).not.toHaveBeenCalled();
   });
 
-  it('returns cached preference when present', async () => {
+  it('returns cached preference without fetching from the database', async () => {
     const mockUser = createMockUser({ id: 'user-1' });
     mockSupabase.auth.getUser.mockResolvedValue({
       data: { user: mockUser },
@@ -67,7 +67,7 @@ describe('settlePreferenceService', () => {
     const result = await getSettleSimplifyPreference();
 
     expect(result).toBe(false);
-    expect(mockSupabase.from).toHaveBeenCalledWith('user_settle_preferences');
+    expect(mockSupabase.from).not.toHaveBeenCalled();
   });
 
   it('reads preference from db when cache is empty', async () => {
