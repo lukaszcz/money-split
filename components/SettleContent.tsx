@@ -414,11 +414,12 @@ const styles = StyleSheet.create({
     padding: 0,
   },
   loadingContainer: {
-    padding: 16,
+    paddingTop: 8,
+    paddingHorizontal: 0,
   },
   emptyState: {
     alignItems: 'center',
-    paddingTop: 40,
+    paddingTop: 32,
   },
   emptyText: {
     fontSize: 18,
@@ -435,7 +436,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#eff6ff',
     padding: 12,
     borderRadius: 8,
-    marginBottom: 16,
+    marginBottom: 12,
     borderWidth: 1,
     borderColor: '#bfdbfe',
   },
