@@ -10,6 +10,7 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { X, Plus, Check, Trash2, User, Mail } from 'lucide-react-native';
@@ -201,176 +202,186 @@ export default function CreateGroupScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
-        <ScrollView
-          style={styles.content}
-          contentContainerStyle={styles.contentContainer}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={true}
-        >
-          <View style={styles.section}>
-            <Text style={styles.label}>Group Name *</Text>
-            <TextInput
-              style={styles.input}
-              value={groupName}
-              onChangeText={setGroupName}
-              onBlur={() => setGroupName((name) => name.trim())}
-              placeholder="e.g., Trip to Paris"
-              placeholderTextColor="#9ca3af"
-            />
-          </View>
+        <View style={styles.scrollContainer}>
+          <ScrollView
+            style={styles.content}
+            contentContainerStyle={styles.contentContainer}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={true}
+          >
+            <View style={styles.section}>
+              <Text style={styles.label}>Group Name *</Text>
+              <TextInput
+                style={styles.input}
+                value={groupName}
+                onChangeText={setGroupName}
+                onBlur={() => setGroupName((name) => name.trim())}
+                placeholder="e.g., Trip to Paris"
+                placeholderTextColor="#9ca3af"
+              />
+            </View>
 
-          <View style={styles.section}>
-            <Text style={styles.label}>Main Currency *</Text>
-            <TouchableOpacity
-              style={styles.currencyButton}
-              onPress={() => setShowCurrencyPicker(!showCurrencyPicker)}
-            >
-              <Text style={styles.currencyButtonText}>
-                {mainCurrency || 'Loading...'}
-              </Text>
-            </TouchableOpacity>
-
-            {showCurrencyPicker && (
-              <ScrollView style={styles.currencyList} nestedScrollEnabled>
-                {orderedCurrencies.map((currency) => (
-                  <TouchableOpacity
-                    key={currency.code}
-                    style={styles.currencyItem}
-                    onPress={() => {
-                      setMainCurrency(currency.code);
-                      selectCurrency(currency.code);
-                      setShowCurrencyPicker(false);
-                    }}
-                  >
-                    <Text style={styles.currencyCode}>{currency.code}</Text>
-                    <Text style={styles.currencyName}>{currency.name}</Text>
-                    {mainCurrency === currency.code && (
-                      <Check color="#2563eb" size={20} />
-                    )}
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            )}
-          </View>
-
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.label}>Members</Text>
+            <View style={styles.section}>
+              <Text style={styles.label}>Main Currency *</Text>
               <TouchableOpacity
-                style={[
-                  styles.addMemberToggle,
-                  currentUserLoading && styles.addMemberToggleDisabled,
-                ]}
-                disabled={currentUserLoading}
-                onPress={() => setShowAddMember(!showAddMember)}
+                style={styles.currencyButton}
+                onPress={() => setShowCurrencyPicker(!showCurrencyPicker)}
               >
-                <Plus color="#2563eb" size={20} />
-                <Text style={styles.addMemberToggleText}>Add</Text>
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.memberCard}>
-              <View style={styles.memberIcon}>
-                <User color="#2563eb" size={16} />
-              </View>
-              <View style={styles.memberInfo}>
-                <Text style={styles.memberName}>
-                  {currentUserName || 'You'}
+                <Text style={styles.currencyButtonText}>
+                  {mainCurrency || 'Loading...'}
                 </Text>
-                <Text style={styles.memberLabel}>You (creator)</Text>
-              </View>
+              </TouchableOpacity>
+
+              {showCurrencyPicker && (
+                <ScrollView style={styles.currencyList} nestedScrollEnabled>
+                  {orderedCurrencies.map((currency) => (
+                    <TouchableOpacity
+                      key={currency.code}
+                      style={styles.currencyItem}
+                      onPress={() => {
+                        setMainCurrency(currency.code);
+                        selectCurrency(currency.code);
+                        setShowCurrencyPicker(false);
+                      }}
+                    >
+                      <Text style={styles.currencyCode}>{currency.code}</Text>
+                      <Text style={styles.currencyName}>{currency.name}</Text>
+                      {mainCurrency === currency.code && (
+                        <Check color="#2563eb" size={20} />
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              )}
             </View>
 
-            {pendingMembers.map((member) => (
-              <View key={member.id} style={styles.memberCard}>
-                <View style={styles.memberIcon}>
-                  <User color="#6b7280" size={16} />
-                </View>
-                <View style={styles.memberInfo}>
-                  <Text style={styles.memberName}>{member.name}</Text>
-                  {member.email && (
-                    <View style={styles.emailRow}>
-                      <Mail color="#9ca3af" size={12} />
-                      <Text style={styles.memberEmail}>{member.email}</Text>
-                    </View>
-                  )}
-                </View>
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.label}>Members</Text>
                 <TouchableOpacity
-                  onPress={() => removeMember(member.id)}
-                  style={styles.removeButton}
+                  style={[
+                    styles.addMemberToggle,
+                    currentUserLoading && styles.addMemberToggleDisabled,
+                  ]}
+                  disabled={currentUserLoading}
+                  onPress={() => setShowAddMember(!showAddMember)}
                 >
-                  <Trash2 color="#ef4444" size={18} />
+                  <Plus color="#2563eb" size={20} />
+                  <Text style={styles.addMemberToggleText}>Add</Text>
                 </TouchableOpacity>
               </View>
-            ))}
 
-            {showAddMember && (
-              <View style={styles.addMemberForm}>
-                <Text style={styles.formLabel}>Name</Text>
-                <TextInput
-                  style={[styles.input, hasDuplicateName && styles.inputError]}
-                  value={newMemberName}
-                  onChangeText={(text) => {
-                    setNewMemberName(text);
-                    checkForDuplicateName(text);
-                  }}
-                  onBlur={() => setNewMemberName((name) => name.trim())}
-                  placeholder="Member name"
-                  placeholderTextColor="#9ca3af"
-                />
-
-                <Text style={[styles.formLabel, styles.formLabelSpaced]}>
-                  Email (optional)
-                </Text>
-                <TextInput
-                  style={styles.input}
-                  value={newMemberEmail}
-                  onChangeText={setNewMemberEmail}
-                  onBlur={() => setNewMemberEmail((email) => email.trim())}
-                  placeholder="member@example.com"
-                  placeholderTextColor="#9ca3af"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                />
-
-                <Text style={styles.formHint}>
-                  If only email is provided, the name will be taken from the
-                  user&#39;s account or derived from the email.
-                </Text>
-
-                <View style={styles.formButtons}>
-                  <TouchableOpacity
-                    style={styles.formCancelButton}
-                    onPress={() => {
-                      setShowAddMember(false);
-                      setNewMemberName('');
-                      setNewMemberEmail('');
-                    }}
-                  >
-                    <Text style={styles.formCancelButtonText}>Cancel</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[
-                      styles.formAddButton,
-                      currentUserLoading && styles.formAddButtonDisabled,
-                    ]}
-                    disabled={currentUserLoading}
-                    onPress={handleAddMember}
-                  >
-                    <Text style={styles.formAddButtonText}>Add Member</Text>
-                  </TouchableOpacity>
+              <View style={styles.memberCard}>
+                <View style={styles.memberIcon}>
+                  <User color="#2563eb" size={16} />
+                </View>
+                <View style={styles.memberInfo}>
+                  <Text style={styles.memberName}>
+                    {currentUserName || 'You'}
+                  </Text>
+                  <Text style={styles.memberLabel}>You (creator)</Text>
                 </View>
               </View>
-            )}
 
-            {pendingMembers.length === 0 && !showAddMember && (
-              <Text style={styles.noMembersText}>
-                Add members to split expenses with. You can also add members
-                later.
-              </Text>
-            )}
-          </View>
-        </ScrollView>
+              {pendingMembers.map((member) => (
+                <View key={member.id} style={styles.memberCard}>
+                  <View style={styles.memberIcon}>
+                    <User color="#6b7280" size={16} />
+                  </View>
+                  <View style={styles.memberInfo}>
+                    <Text style={styles.memberName}>{member.name}</Text>
+                    {member.email && (
+                      <View style={styles.emailRow}>
+                        <Mail color="#9ca3af" size={12} />
+                        <Text style={styles.memberEmail}>{member.email}</Text>
+                      </View>
+                    )}
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => removeMember(member.id)}
+                    style={styles.removeButton}
+                  >
+                    <Trash2 color="#ef4444" size={18} />
+                  </TouchableOpacity>
+                </View>
+              ))}
+
+              {showAddMember && (
+                <View style={styles.addMemberForm}>
+                  <Text style={styles.formLabel}>Name</Text>
+                  <TextInput
+                    style={[
+                      styles.input,
+                      hasDuplicateName && styles.inputError,
+                    ]}
+                    value={newMemberName}
+                    onChangeText={(text) => {
+                      setNewMemberName(text);
+                      checkForDuplicateName(text);
+                    }}
+                    onBlur={() => setNewMemberName((name) => name.trim())}
+                    placeholder="Member name"
+                    placeholderTextColor="#9ca3af"
+                  />
+
+                  <Text style={[styles.formLabel, styles.formLabelSpaced]}>
+                    Email (optional)
+                  </Text>
+                  <TextInput
+                    style={styles.input}
+                    value={newMemberEmail}
+                    onChangeText={setNewMemberEmail}
+                    onBlur={() => setNewMemberEmail((email) => email.trim())}
+                    placeholder="member@example.com"
+                    placeholderTextColor="#9ca3af"
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                  />
+
+                  <Text style={styles.formHint}>
+                    If only email is provided, the name will be taken from the
+                    user&#39;s account or derived from the email.
+                  </Text>
+
+                  <View style={styles.formButtons}>
+                    <TouchableOpacity
+                      style={styles.formCancelButton}
+                      onPress={() => {
+                        setShowAddMember(false);
+                        setNewMemberName('');
+                        setNewMemberEmail('');
+                      }}
+                    >
+                      <Text style={styles.formCancelButtonText}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.formAddButton,
+                        currentUserLoading && styles.formAddButtonDisabled,
+                      ]}
+                      disabled={currentUserLoading}
+                      onPress={handleAddMember}
+                    >
+                      <Text style={styles.formAddButtonText}>Add Member</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
+
+              {pendingMembers.length === 0 && !showAddMember && (
+                <Text style={styles.noMembersText}>
+                  Add members to split expenses with. You can also add members
+                  later.
+                </Text>
+              )}
+            </View>
+          </ScrollView>
+          <LinearGradient
+            colors={['transparent', '#f9fafb']}
+            style={styles.fadeOverlay}
+            pointerEvents="none"
+          />
+        </View>
 
         <View style={styles.footer}>
           <TouchableOpacity style={styles.createButton} onPress={handleCreate}>
@@ -410,11 +421,22 @@ const styles = StyleSheet.create({
   keyboardAvoidingView: {
     flex: 1,
   },
+  scrollContainer: {
+    flex: 1,
+    position: 'relative',
+  },
   content: {
     flex: 1,
   },
   contentContainer: {
     paddingBottom: 100,
+  },
+  fadeOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 48,
   },
   section: {
     padding: 16,
@@ -607,6 +629,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderTopWidth: 1,
     borderTopColor: '#e5e7eb',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -3 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 8,
   },
   createButton: {
     backgroundColor: '#2563eb',
