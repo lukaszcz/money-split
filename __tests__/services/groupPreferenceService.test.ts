@@ -6,6 +6,7 @@ import {
 } from '@/__tests__/utils/mockSupabase';
 import * as groupPreferenceService from '@/services/groupPreferenceService';
 import type { GroupWithMembers } from '@/services/groupRepository';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 jest.mock('@/lib/supabase', () => ({
   supabase: null,
@@ -13,6 +14,7 @@ jest.mock('@/lib/supabase', () => ({
 
 let mockSupabase: MockSupabaseClient;
 let supabaseModule: any;
+const storage = AsyncStorage as jest.Mocked<typeof AsyncStorage>;
 
 describe('groupPreferenceService', () => {
   const originalConsoleError = console.error;
@@ -30,6 +32,8 @@ describe('groupPreferenceService', () => {
     mockSupabase = createMockSupabaseClient();
     supabaseModule = require('@/lib/supabase');
     supabaseModule.supabase = mockSupabase;
+    storage.getItem.mockResolvedValue(null);
+    storage.setItem.mockResolvedValue();
   });
 
   afterEach(() => {

@@ -7,6 +7,7 @@ import {
 import { CURRENCIES } from '@/utils/currencies';
 import * as Localization from 'expo-localization';
 import * as currencyPreferenceService from '@/services/currencyPreferenceService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 jest.mock('@/lib/supabase', () => ({
   supabase: null,
@@ -18,6 +19,7 @@ jest.mock('expo-localization', () => ({
 
 let mockSupabase: MockSupabaseClient;
 let supabaseModule: any;
+const storage = AsyncStorage as jest.Mocked<typeof AsyncStorage>;
 
 const getCurrencyCodes = () => CURRENCIES.map((currency) => currency.code);
 
@@ -37,6 +39,8 @@ describe('currencyPreferenceService', () => {
     mockSupabase = createMockSupabaseClient();
     supabaseModule = require('@/lib/supabase');
     supabaseModule.supabase = mockSupabase;
+    storage.getItem.mockResolvedValue(null);
+    storage.setItem.mockResolvedValue();
   });
 
   afterEach(() => {

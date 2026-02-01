@@ -56,7 +56,8 @@ __tests__/
 │   ├── groupRepository.test.ts    # Service layer tests
 │   ├── exchangeRateService.test.ts # Exchange rate tests
 │   ├── currencyPreferenceService.test.ts # Currency preference service
-│   └── groupPreferenceService.test.ts # Group preference service
+│   ├── groupPreferenceService.test.ts # Group preference service
+│   └── settlePreferenceService.test.ts # Settle preference storage
 ├── contexts/
 │   └── AuthContext.test.tsx       # React context tests
 ├── hooks/

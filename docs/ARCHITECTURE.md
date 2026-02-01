@@ -17,7 +17,7 @@ This document describes the architecture of the MoneySplit application (React Na
 - Client-side money math and settlement logic (`utils/money.ts`, `services/settlementService.ts`).
 - Exchange rate fetch + caching logic (API call + Supabase write) (`services/exchangeRateService.ts`).
 - Data access via Supabase JS SDK (`lib/supabase.ts`, `services/*.ts`).
-- Preference ordering and UX state (group order, currency order) (`services/groupPreferenceService.ts`, `services/currencyPreferenceService.ts`, `hooks/useCurrencyOrder.ts`).
+- Preference ordering and UX state (group order, currency order, settle defaults) stored in Supabase and cached in AsyncStorage (`services/groupPreferenceService.ts`, `services/currencyPreferenceService.ts`, `services/settlePreferenceService.ts`).
 
 ### Runs on the server (Supabase)
 
@@ -32,9 +32,10 @@ This document describes the architecture of the MoneySplit application (React Na
 ## App initialization and auth flow
 
 - The app bootstraps in `app/_layout.tsx`. `AuthProvider` from `contexts/AuthContext.tsx` wraps the app and subscribes to Supabase auth events.
-- On startup, `AuthProvider` calls `supabase.auth.getSession()` and, if signed in, calls `ensureUserProfile()` to provision a local user record in the public `users` table (`services/groupRepository.ts`).
+- On startup, `AuthProvider` calls `supabase.auth.getSession()` and, if signed in, calls `ensureUserProfile()` to provision a local user record in the public `users` table (`services/groupRepository.ts`). It also syncs user preferences from the database to the local AsyncStorage cache (`services/userPreferenceSync.ts`).
 - Routing is guarded by `useSegments()` in `app/_layout.tsx`: unauthenticated users are forced to `app/auth.tsx`, authenticated users are redirected to the Groups tab.
 - Sign in and sign up are handled in `app/auth.tsx` by `useAuth().signIn()` / `signUp()`. On successful sign-in, the app updates `users.last_login` in `contexts/AuthContext.tsx`.
+- Sign-in also triggers a preference sync to refresh cached user preferences for currency order, group order, and settle defaults.
 
 ## Client-server communication
 
@@ -108,6 +109,13 @@ The canonical schema is defined by the SQL migrations under `supabase/migrations
 - Columns: `user_id`, `group_order`, `updated_at`.
 - Managed in `services/groupPreferenceService.ts` for recency-ordered group lists.
 
+### user_settle_preferences
+
+- Description: Per-user defaults for settle behavior (simplify debts toggle).
+- Table: `public.user_settle_preferences`
+- Columns: `user_id`, `simplify_debts`, `updated_at`.
+- Managed in `services/settlePreferenceService.ts` with AsyncStorage caching.
+
 ## Row-level security (RLS) summary
 
 The RLS policies have evolved through multiple migrations. The most recent policies enforce membership-based access using helper functions `user_is_group_member()` and `group_has_connected_members()` with immutable search paths. The intent of the latest policies is:
@@ -134,7 +142,7 @@ The RLS policies have evolved through multiple migrations. The most recent polic
 - `exchange_rates`
   - Policies allow read access to cached rates; writes occur from the client and are subject to RLS.
 
-- `user_currency_preferences` and `user_group_preferences`
+- `user_currency_preferences`, `user_group_preferences`, and `user_settle_preferences`
   - User can read/insert/update their own preferences.
 
 For the exact SQL definitions and helper functions, see:

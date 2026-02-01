@@ -23,9 +23,14 @@ jest.mock('../../services/groupRepository', () => ({
   }),
 }));
 
+jest.mock('../../services/userPreferenceSync', () => ({
+  syncUserPreferences: jest.fn(),
+}));
+
 let mockSupabase: MockSupabaseClient;
 let supabaseModule: any;
 let ensureUserProfile: jest.Mock;
+let syncUserPreferences: jest.Mock;
 
 describe('AuthContext', () => {
   beforeEach(() => {
@@ -35,6 +40,8 @@ describe('AuthContext', () => {
     supabaseModule.supabase = mockSupabase;
     const groupRepository = require('../../services/groupRepository');
     ensureUserProfile = groupRepository.ensureUserProfile;
+    syncUserPreferences = require('../../services/userPreferenceSync')
+      .syncUserPreferences;
   });
 
   const createWrapper = () => {
@@ -97,6 +104,7 @@ describe('AuthContext', () => {
         }),
       });
       expect(ensureUserProfile).toHaveBeenCalled();
+      expect(syncUserPreferences).toHaveBeenCalledWith(mockUser.id);
     });
 
     it('should set loading false with no session', async () => {
@@ -171,6 +179,7 @@ describe('AuthContext', () => {
       expect(updateBuilder.update).toHaveBeenCalledWith(
         expect.objectContaining({ last_login: expect.any(String) }),
       );
+      expect(syncUserPreferences).toHaveBeenCalledWith(mockUser.id);
     });
 
     it('should throw error on failed sign in', async () => {

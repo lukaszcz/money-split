@@ -18,6 +18,10 @@ import {
 import { formatNumber } from '../utils/money';
 import { getCurrencySymbol } from '../utils/currencies';
 import { getExchangeRate } from '../services/exchangeRateService';
+import {
+  getSettleSimplifyPreference,
+  setSettleSimplifyPreference,
+} from '../services/settlePreferenceService';
 
 type SettleContentProps = {
   groupId: string;
@@ -44,6 +48,7 @@ export default function SettleContent({
   const animationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const simplifiedRef = useRef(true);
   const [lastUpdated, setLastUpdated] = useState<number | null>(null);
+  const preferenceLoadedRef = useRef(false);
 
   const loadData = useCallback(async () => {
     if (!groupId) return;
@@ -60,7 +65,17 @@ export default function SettleContent({
       }
 
       const fetchedExpenses = await getGroupExpenses(groupId);
-      const computedSettlements = simplifiedRef.current
+      let resolvedSimplified = simplifiedRef.current;
+
+      if (!preferenceLoadedRef.current) {
+        const storedPreference = await getSettleSimplifyPreference();
+        resolvedSimplified = storedPreference;
+        simplifiedRef.current = storedPreference;
+        setSimplified(storedPreference);
+        preferenceLoadedRef.current = true;
+      }
+
+      const computedSettlements = resolvedSimplified
         ? computeSettlementsSimplified(fetchedExpenses, fetchedGroup.members)
         : computeSettlementsNoSimplify(fetchedExpenses, fetchedGroup.members);
 
@@ -102,6 +117,7 @@ export default function SettleContent({
     simplifiedRef.current = newSimplified;
     setSimplified(newSimplified);
     setLastUpdated(Date.now());
+    setSettleSimplifyPreference(newSimplified);
   };
 
   const handleAddTransfer = async (settlement: Settlement) => {
