@@ -243,9 +243,16 @@ The UI uses a light, card-based aesthetic with consistent spacing and neutral gr
 - Tabs:
   - Payments: list of expenses and transfers with conversion previews.
   - Balances: per-member net balance via `computeBalances()`.
-  - Members: list of members; route to edit.
-  - Settle: opens settle screen if balances are non-zero.
-- Leaving a group uses `leaveGroup()` and triggers cleanup function.
+  - Settle: shortcut into settle flow if balances are non-zero.
+- Group actions (overflow menu):
+  - Group members: opens member management screen.
+  - Leave group uses `leaveGroup()` and triggers cleanup function.
+
+### Group members (`app/group/[id]/members.tsx`)
+
+- Dedicated screen for viewing and editing group members.
+- Shows member list, connection status, and navigates to edit.
+- Adds members via `add-member` flow.
 
 ### Add Expense / Transfer (`app/group/[id]/add-expense.tsx`)
 
