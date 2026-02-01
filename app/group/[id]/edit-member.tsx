@@ -22,6 +22,8 @@ import {
   canDeleteGroupMember,
   deleteGroupMember,
   getGroupMembers,
+  getCurrentUserMemberInGroup,
+  leaveGroup,
 } from '../../../services/groupRepository';
 import { isValidEmail, isDuplicateMemberName } from '../../../utils/validation';
 
@@ -40,6 +42,7 @@ export default function EditMemberScreen() {
   const [otherMembersLoading, setOtherMembersLoading] = useState(false);
   const [otherMembersLoaded, setOtherMembersLoaded] = useState(false);
   const [otherMembersLoadError, setOtherMembersLoadError] = useState(false);
+  const [isCurrentUserMember, setIsCurrentUserMember] = useState(false);
 
   const loadOtherMembers = useCallback(async () => {
     if (
@@ -92,6 +95,9 @@ export default function EditMemberScreen() {
       const deletable = await canDeleteGroupMember(memberId);
       setCanDelete(deletable);
       setCheckingDelete(false);
+
+      const currentMember = await getCurrentUserMemberInGroup(id);
+      setIsCurrentUserMember(currentMember?.id === member.id);
 
       await loadOtherMembers();
     } else {
@@ -238,32 +244,52 @@ export default function EditMemberScreen() {
       return;
     }
 
+    if (!id || typeof id !== 'string') {
+      Alert.alert('Error', 'Invalid group');
+      return;
+    }
+
     Alert.alert(
-      'Delete Member',
-      'Are you sure you want to remove this member from the group? This action cannot be undone.',
+      isCurrentUserMember ? 'Leave Group' : 'Delete Member',
+      isCurrentUserMember
+        ? 'Are you sure you want to leave this group? If you are the last member, the group will be deleted.'
+        : 'Are you sure you want to remove this member from the group? This action cannot be undone.',
       [
         {
           text: 'Cancel',
           style: 'cancel',
         },
         {
-          text: 'Delete',
+          text: isCurrentUserMember ? 'Leave' : 'Delete',
           style: 'destructive',
           onPress: async () => {
             setLoading(true);
             try {
-              const success = await deleteGroupMember(memberId);
+              const success = isCurrentUserMember
+                ? await leaveGroup(id)
+                : await deleteGroupMember(memberId);
               if (success) {
-                router.back();
+                if (isCurrentUserMember) {
+                  router.replace('/(tabs)/groups' as any);
+                } else {
+                  router.back();
+                }
               } else {
                 Alert.alert(
                   'Error',
-                  'Failed to delete member. Please try again.',
+                  isCurrentUserMember
+                    ? 'Failed to leave group. Please try again.'
+                    : 'Failed to delete member. Please try again.',
                 );
               }
             } catch (error) {
               console.error('Error deleting member:', error);
-              Alert.alert('Error', 'Failed to delete member');
+              Alert.alert(
+                'Error',
+                isCurrentUserMember
+                  ? 'Failed to leave group'
+                  : 'Failed to delete member',
+              );
             } finally {
               setLoading(false);
             }
