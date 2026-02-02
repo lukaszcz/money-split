@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -42,31 +42,40 @@ export function KnownUserSuggestionInput({
   );
   const [showSuggestions, setShowSuggestions] = useState(false);
 
+  const filterSuggestions = useCallback(
+    (text: string) => {
+      if (!text || text.length < 2) {
+        setFilteredSuggestions([]);
+        setShowSuggestions(false);
+        return;
+      }
+
+      const searchText = text.toLowerCase().trim();
+      const filtered = knownUsers.filter(
+        (user) =>
+          user.name.toLowerCase().includes(searchText) ||
+          (user.email && user.email.toLowerCase().includes(searchText)),
+      );
+
+      setFilteredSuggestions(filtered);
+      setShowSuggestions(filtered.length > 0);
+    },
+    [knownUsers],
+  );
+
   useEffect(() => {
     loadKnownUsers();
   }, []);
 
+  useEffect(() => {
+    if (nameValue) {
+      filterSuggestions(nameValue);
+    }
+  }, [filterSuggestions, nameValue]);
+
   const loadKnownUsers = async () => {
     const users = await getKnownUsers();
     setKnownUsers(users);
-  };
-
-  const filterSuggestions = (text: string) => {
-    if (!text || text.length < 2) {
-      setFilteredSuggestions([]);
-      setShowSuggestions(false);
-      return;
-    }
-
-    const searchText = text.toLowerCase().trim();
-    const filtered = knownUsers.filter(
-      (user) =>
-        user.name.toLowerCase().includes(searchText) ||
-        (user.email && user.email.toLowerCase().includes(searchText)),
-    );
-
-    setFilteredSuggestions(filtered);
-    setShowSuggestions(filtered.length > 0);
   };
 
   const handleNameChange = (text: string) => {
