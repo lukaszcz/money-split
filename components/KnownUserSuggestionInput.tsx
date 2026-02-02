@@ -5,7 +5,7 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  FlatList,
+  ScrollView,
   Keyboard,
 } from 'react-native';
 import { User } from 'lucide-react-native';
@@ -83,17 +83,17 @@ export function KnownUserSuggestionInput({
     Keyboard.dismiss();
   };
 
-  const renderSuggestion = ({ item }: { item: KnownUser }) => (
+  const renderSuggestion = (user: KnownUser) => (
     <TouchableOpacity
       style={styles.suggestionItem}
-      onPress={() => handleSelectSuggestion(item)}
+      onPress={() => handleSelectSuggestion(user)}
     >
       <View style={styles.suggestionContent}>
         <User size={18} color="#6b7280" style={styles.suggestionIcon} />
         <View style={styles.suggestionText}>
-          <Text style={styles.suggestionName}>{item.name}</Text>
-          {item.email && (
-            <Text style={styles.suggestionEmail}>{item.email}</Text>
+          <Text style={styles.suggestionName}>{user.name}</Text>
+          {user.email && (
+            <Text style={styles.suggestionEmail}>{user.email}</Text>
           )}
         </View>
       </View>
@@ -124,13 +124,17 @@ export function KnownUserSuggestionInput({
         />
         {showSuggestions && filteredSuggestions.length > 0 && (
           <View style={styles.suggestionsContainer}>
-            <FlatList
-              data={filteredSuggestions}
-              renderItem={renderSuggestion}
-              keyExtractor={(item) => item.id}
+            <ScrollView
               style={styles.suggestionsList}
               keyboardShouldPersistTaps="handled"
-            />
+              nestedScrollEnabled
+            >
+              {filteredSuggestions.map((user) => (
+                <React.Fragment key={user.id}>
+                  {renderSuggestion(user)}
+                </React.Fragment>
+              ))}
+            </ScrollView>
           </View>
         )}
         <Text style={styles.hint}>

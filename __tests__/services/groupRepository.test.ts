@@ -1,6 +1,7 @@
 import {
   createMockSupabaseClient,
   createMockUser,
+  createMockSession,
   resetAllMocks,
   MockSupabaseClient,
 } from '../utils/mockSupabase';
@@ -38,6 +39,10 @@ describe('groupRepository', () => {
     mockSupabase = createMockSupabaseClient();
     supabaseModule = require('../../lib/supabase');
     supabaseModule.supabase = mockSupabase;
+    mockSupabase.auth.getSession.mockResolvedValue({
+      data: { session: createMockSession() },
+      error: null,
+    });
   });
 
   afterEach(() => {
