@@ -332,7 +332,22 @@ export default function EditMemberScreen() {
           <ArrowLeft color="#111827" size={24} />
         </TouchableOpacity>
         <Text style={styles.title}>Edit Member</Text>
-        <View style={styles.placeholder} />
+        {(isCurrentUserMember || (canDelete && !checkingDelete)) && (
+          <TouchableOpacity
+            onPress={handleDeleteMember}
+            style={[
+              styles.deleteIconButton,
+              loading && styles.deleteIconButtonDisabled,
+            ]}
+            disabled={loading}
+          >
+            <Trash2 color="#dc2626" size={20} />
+          </TouchableOpacity>
+        )}
+        {!isCurrentUserMember && !canDelete && !checkingDelete && (
+          <View style={styles.placeholder} />
+        )}
+        {checkingDelete && <View style={styles.placeholder} />}
       </View>
 
       <KeyboardAvoidingView
@@ -378,29 +393,6 @@ export default function EditMemberScreen() {
                   : 'Update Member'}
             </Text>
           </TouchableOpacity>
-
-          {(isCurrentUserMember || (canDelete && !checkingDelete)) && (
-            <TouchableOpacity
-              style={[
-                styles.deleteButton,
-                loading && styles.deleteButtonDisabled,
-              ]}
-              onPress={handleDeleteMember}
-              disabled={loading}
-            >
-              <Trash2 color="#dc2626" size={20} />
-              <Text style={styles.deleteButtonText}>
-                {isCurrentUserMember ? 'Leave Group' : 'Remove from Group'}
-              </Text>
-            </TouchableOpacity>
-          )}
-
-          {!isCurrentUserMember && !canDelete && !checkingDelete && (
-            <Text style={styles.deleteHint}>
-              This member cannot be removed. Members involved in any expenses
-              cannot be deleted.
-            </Text>
-          )}
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -423,6 +415,12 @@ const styles = StyleSheet.create({
   },
   backButton: {
     padding: 4,
+  },
+  deleteIconButton: {
+    padding: 4,
+  },
+  deleteIconButtonDisabled: {
+    opacity: 0.4,
   },
   title: {
     fontSize: 20,
@@ -489,32 +487,5 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '600',
-  },
-  deleteButton: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
-    padding: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#dc2626',
-    marginTop: 12,
-    gap: 8,
-  },
-  deleteButtonDisabled: {
-    opacity: 0.5,
-  },
-  deleteButtonText: {
-    color: '#dc2626',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  deleteHint: {
-    fontSize: 13,
-    color: '#6b7280',
-    marginTop: 12,
-    textAlign: 'center',
-    lineHeight: 18,
   },
 });
