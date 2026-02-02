@@ -6,10 +6,9 @@ import {
   TouchableOpacity,
   StyleSheet,
   FlatList,
-  Modal,
   Keyboard,
 } from 'react-native';
-import { User, Mail } from 'lucide-react-native';
+import { User } from 'lucide-react-native';
 import { getKnownUsers, KnownUser } from '../services/groupRepository';
 
 interface KnownUserSuggestionInputProps {
@@ -42,17 +41,14 @@ export function KnownUserSuggestionInput({
     [],
   );
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     loadKnownUsers();
   }, []);
 
   const loadKnownUsers = async () => {
-    setLoading(true);
     const users = await getKnownUsers();
     setKnownUsers(users);
-    setLoading(false);
   };
 
   const filterSuggestions = (text: string) => {

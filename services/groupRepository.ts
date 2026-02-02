@@ -996,6 +996,14 @@ export interface KnownUser {
   email?: string;
 }
 
+type KnownUserRow = {
+  users: {
+    id: string;
+    name: string;
+    email: string | null;
+  } | null;
+};
+
 export async function getKnownUsers(): Promise<KnownUser[]> {
   try {
     const {
@@ -1026,13 +1034,13 @@ export async function getKnownUsers(): Promise<KnownUser[]> {
     }
 
     return (data || [])
-      .map((item: any) => {
+      .map((item: KnownUserRow): KnownUser | null => {
         const knownUser = item.users;
         if (!knownUser) return null;
         return {
           id: knownUser.id,
           name: knownUser.name,
-          email: knownUser.email || undefined,
+          email: knownUser.email ?? undefined,
         };
       })
       .filter((u): u is KnownUser => u !== null);
