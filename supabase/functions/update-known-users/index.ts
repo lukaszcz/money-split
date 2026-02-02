@@ -38,21 +38,35 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // Create Supabase client with the user's auth token
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-      global: {
-        headers: { Authorization: authHeader },
-      },
-    });
+    if (!supabaseUrl || !supabaseServiceKey) {
+      return new Response(
+        JSON.stringify({ error: 'Missing Supabase configuration' }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      );
+    }
+
+    const bearerToken = authHeader.replace(/^Bearer\s+/i, '').trim();
+    if (!bearerToken) {
+      return new Response(JSON.stringify({ error: 'Invalid authorization' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Admin client for DB operations (bypasses RLS)
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Verify the user is authenticated
     const {
       data: { user },
       error: authError,
-    } = await supabase.auth.getUser();
+    } = await supabase.auth.getUser(bearerToken);
 
     if (authError || !user) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
@@ -103,6 +117,32 @@ Deno.serve(async (req: Request) => {
     }
 
     const newUserId = newMember.connected_user_id;
+
+    // Ensure the caller is connected to this group
+    const { data: callerMembership, error: membershipError } = await supabase
+      .from('group_members')
+      .select('id')
+      .eq('group_id', groupId)
+      .eq('connected_user_id', user.id)
+      .maybeSingle();
+
+    if (membershipError) {
+      console.error('Error verifying caller membership:', membershipError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to verify membership' }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      );
+    }
+
+    if (!callerMembership) {
+      return new Response(JSON.stringify({ error: 'Forbidden' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     // Get all members of the group with connected users
     const { data: groupMembers, error: groupMembersError } = await supabase

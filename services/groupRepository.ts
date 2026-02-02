@@ -1065,15 +1065,35 @@ export async function updateKnownUsersForMember(
       return false;
     }
 
-    const { error } = await supabase.functions.invoke('update-known-users', {
-      body: { groupId, newMemberId: memberId },
-      headers: {
-        Authorization: `Bearer ${token}`,
+    const { data, error } = await supabase.functions.invoke(
+      'update-known-users',
+      {
+        body: { groupId, newMemberId: memberId },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       },
-    });
+    );
 
     if (error) {
-      console.error('Error updating known users:', error);
+      let errorDetails = '';
+      if (error instanceof Error && 'context' in error) {
+        try {
+          const response = (error as { context?: Response }).context;
+          if (response) {
+            const payload = await response.json();
+            errorDetails = JSON.stringify(payload);
+          }
+        } catch {
+          errorDetails = '';
+        }
+      }
+      console.error('Error updating known users:', error, errorDetails);
+      return false;
+    }
+
+    if (data?.error) {
+      console.error('Error updating known users:', data.error);
       return false;
     }
 
