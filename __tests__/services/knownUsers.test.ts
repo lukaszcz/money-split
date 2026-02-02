@@ -142,8 +142,9 @@ describe('Known Users functionality', () => {
 
   describe('updateKnownUsersForMember', () => {
     it('should return false if no session token', async () => {
-      const { updateKnownUsersForMember } =
-        require('../../services/groupRepository');
+      const {
+        updateKnownUsersForMember,
+      } = require('../../services/groupRepository');
 
       mockSupabase.auth.getSession.mockResolvedValue({
         data: { session: null },
@@ -157,8 +158,9 @@ describe('Known Users functionality', () => {
     });
 
     it('should invoke edge function with correct parameters', async () => {
-      const { updateKnownUsersForMember } =
-        require('../../services/groupRepository');
+      const {
+        updateKnownUsersForMember,
+      } = require('../../services/groupRepository');
 
       mockSupabase.auth.getSession.mockResolvedValue({
         data: {
@@ -189,8 +191,9 @@ describe('Known Users functionality', () => {
     });
 
     it('should return false on edge function error', async () => {
-      const { updateKnownUsersForMember } =
-        require('../../services/groupRepository');
+      const {
+        updateKnownUsersForMember,
+      } = require('../../services/groupRepository');
 
       mockSupabase.auth.getSession.mockResolvedValue({
         data: {

@@ -350,60 +350,63 @@ export default function CreateGroupScreen() {
                 </View>
               ))}
 
-            {showAddMember && (
-              <View style={styles.addMemberForm}>
-                <Text style={styles.formLabel}>Name</Text>
-                <TextInput
-                  style={[styles.input, hasDuplicateName && styles.inputError]}
-                  value={newMemberName}
-                  onChangeText={handleMemberNameChange}
-                  onBlur={() => {
-                    setNewMemberName((name) => name.trim());
-                    setTimeout(() => setShowSuggestions(false), 200);
-                  }}
-                  onFocus={() => {
-                    if (newMemberName && filteredSuggestions.length > 0) {
-                      setShowSuggestions(true);
-                    }
-                  }}
-                  placeholder="Member name"
-                  placeholderTextColor="#9ca3af"
-                />
-                {showSuggestions && filteredSuggestions.length > 0 && (
-                  <View style={styles.suggestionsContainer}>
-                    <ScrollView
-                      style={styles.suggestionsList}
-                      keyboardShouldPersistTaps="handled"
-                      nestedScrollEnabled
-                    >
-                      {filteredSuggestions.map((user) => (
-                        <TouchableOpacity
-                          key={user.id}
-                          style={styles.suggestionItem}
-                          onPress={() => handleSelectSuggestion(user)}
-                        >
-                          <View style={styles.suggestionContent}>
-                            <User
-                              size={16}
-                              color="#6b7280"
-                              style={styles.suggestionIcon}
-                            />
-                            <View style={styles.suggestionText}>
-                              <Text style={styles.suggestionName}>
-                                {user.name}
-                              </Text>
-                              {user.email && (
-                                <Text style={styles.suggestionEmail}>
-                                  {user.email}
+              {showAddMember && (
+                <View style={styles.addMemberForm}>
+                  <Text style={styles.formLabel}>Name</Text>
+                  <TextInput
+                    style={[
+                      styles.input,
+                      hasDuplicateName && styles.inputError,
+                    ]}
+                    value={newMemberName}
+                    onChangeText={handleMemberNameChange}
+                    onBlur={() => {
+                      setNewMemberName((name) => name.trim());
+                      setTimeout(() => setShowSuggestions(false), 200);
+                    }}
+                    onFocus={() => {
+                      if (newMemberName && filteredSuggestions.length > 0) {
+                        setShowSuggestions(true);
+                      }
+                    }}
+                    placeholder="Member name"
+                    placeholderTextColor="#9ca3af"
+                  />
+                  {showSuggestions && filteredSuggestions.length > 0 && (
+                    <View style={styles.suggestionsContainer}>
+                      <ScrollView
+                        style={styles.suggestionsList}
+                        keyboardShouldPersistTaps="handled"
+                        nestedScrollEnabled
+                      >
+                        {filteredSuggestions.map((user) => (
+                          <TouchableOpacity
+                            key={user.id}
+                            style={styles.suggestionItem}
+                            onPress={() => handleSelectSuggestion(user)}
+                          >
+                            <View style={styles.suggestionContent}>
+                              <User
+                                size={16}
+                                color="#6b7280"
+                                style={styles.suggestionIcon}
+                              />
+                              <View style={styles.suggestionText}>
+                                <Text style={styles.suggestionName}>
+                                  {user.name}
                                 </Text>
-                              )}
+                                {user.email && (
+                                  <Text style={styles.suggestionEmail}>
+                                    {user.email}
+                                  </Text>
+                                )}
+                              </View>
                             </View>
-                          </View>
-                        </TouchableOpacity>
-                      ))}
-                    </ScrollView>
-                  </View>
-                )}
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
+                    </View>
+                  )}
 
                   <Text style={[styles.formLabel, styles.formLabelSpaced]}>
                     Email (optional)
@@ -419,10 +422,10 @@ export default function CreateGroupScreen() {
                     autoCapitalize="none"
                   />
 
-                <Text style={styles.formHint}>
-                  Start typing to see suggestions from users you&#39;ve shared
-                  groups with
-                </Text>
+                  <Text style={styles.formHint}>
+                    Start typing to see suggestions from users you&#39;ve shared
+                    groups with
+                  </Text>
 
                   <View style={styles.formButtons}>
                     <TouchableOpacity
@@ -432,8 +435,8 @@ export default function CreateGroupScreen() {
                         setNewMemberName('');
                         setNewMemberEmail('');
                         setShowSuggestions(false);
-                      setFilteredSuggestions([]);
-                    }}
+                        setFilteredSuggestions([]);
+                      }}
                     >
                       <Text style={styles.formCancelButtonText}>Cancel</Text>
                     </TouchableOpacity>

@@ -41,7 +41,7 @@ Deno.serve(async (req: Request) => {
     // Create Supabase client with the user's auth token
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    
+
     const supabase = createClient(supabaseUrl, supabaseServiceKey, {
       global: {
         headers: { Authorization: authHeader },
@@ -82,13 +82,10 @@ Deno.serve(async (req: Request) => {
 
     if (memberError) {
       console.error('Error fetching new member:', memberError);
-      return new Response(
-        JSON.stringify({ error: 'Failed to fetch member' }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        },
-      );
+      return new Response(JSON.stringify({ error: 'Failed to fetch member' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     if (!newMember || !newMember.connected_user_id) {
