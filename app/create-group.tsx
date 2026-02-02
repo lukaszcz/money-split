@@ -48,6 +48,7 @@ export default function CreateGroupScreen() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [currentUserLoading, setCurrentUserLoading] = useState(true);
   const [hasDuplicateName, setHasDuplicateName] = useState(false);
+  const [creating, setCreating] = useState(false);
 
   const {
     currencies: orderedCurrencies,
@@ -199,32 +200,38 @@ export default function CreateGroupScreen() {
       return;
     }
 
-    const initialMembers = pendingMembers.map((m) => ({
-      name: m.name,
-      email: m.email,
-    }));
+    setCreating(true);
 
-    const group = await createGroup(
-      groupName.trim(),
-      mainCurrency,
-      initialMembers,
-    );
+    try {
+      const initialMembers = pendingMembers.map((m) => ({
+        name: m.name,
+        email: m.email,
+      }));
 
-    if (group) {
-      for (const member of pendingMembers) {
-        if (member.email) {
-          const existingUser = await getUserByEmail(member.email);
-          if (!existingUser) {
-            sendInvitationEmail(member.email, groupName.trim());
+      const group = await createGroup(
+        groupName.trim(),
+        mainCurrency,
+        initialMembers,
+      );
+
+      if (group) {
+        for (const member of pendingMembers) {
+          if (member.email) {
+            const existingUser = await getUserByEmail(member.email);
+            if (!existingUser) {
+              sendInvitationEmail(member.email, groupName.trim());
+            }
           }
         }
+        router.back();
+      } else {
+        Alert.alert(
+          'Error',
+          'Failed to create group. Check console for details.',
+        );
       }
-      router.back();
-    } else {
-      Alert.alert(
-        'Error',
-        'Failed to create group. Check console for details.',
-      );
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -470,8 +477,17 @@ export default function CreateGroupScreen() {
         </View>
 
         <View style={styles.footer}>
-          <TouchableOpacity style={styles.createButton} onPress={handleCreate}>
-            <Text style={styles.createButtonText}>Create Group</Text>
+          <TouchableOpacity
+            style={[
+              styles.createButton,
+              creating && styles.createButtonDisabled,
+            ]}
+            onPress={handleCreate}
+            disabled={creating}
+          >
+            <Text style={styles.createButtonText}>
+              {creating ? 'Creating...' : 'Create Group'}
+            </Text>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -766,6 +782,9 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 8,
     alignItems: 'center',
+  },
+  createButtonDisabled: {
+    backgroundColor: '#9ca3af',
   },
   createButtonText: {
     color: '#ffffff',
