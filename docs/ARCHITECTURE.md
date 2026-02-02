@@ -24,10 +24,11 @@ This document describes the architecture of the MoneySplit application (React Na
 - Auth: user identity and sessions (Supabase Auth).
 - Database: persistence, constraints, and RLS (migrations in `supabase/migrations/*.sql`).
 - Row-level security policies enforce membership-based access.
-- Edge Functions for delete-user, cleanup, invitations, and known users tracking (Deno runtime):
+- Edge Functions for delete-user, cleanup, invitations, user connection, and known users tracking (Deno runtime):
   - `supabase/functions/delete-user/index.ts`
   - `supabase/functions/cleanup-orphaned-groups/index.ts`
   - `supabase/functions/send-invitation/index.ts`
+  - `supabase/functions/connect-user-to-groups/index.ts`
   - `supabase/functions/update-known-users/index.ts`
 
 ## App initialization and auth flow
@@ -46,6 +47,7 @@ This document describes the architecture of the MoneySplit application (React Na
   - `services/groupRepository.ts` calls `/functions/v1/cleanup-orphaned-groups` when a user leaves a group.
   - `services/groupRepository.ts` calls `/functions/v1/delete-user` when deleting an account.
   - `services/groupRepository.ts` calls `/functions/v1/send-invitation` when inviting members by email.
+  - `services/groupRepository.ts` calls `/functions/v1/connect-user-to-groups` when a user signs up to connect them to existing group members with matching email.
 - Exchange rates are fetched from `https://api.exchangerate-api.com` in `services/exchangeRateService.ts` and cached in Supabase.
 
 ## Data model (current schema + notes)
@@ -72,7 +74,7 @@ The canonical schema is defined by the SQL migrations under `supabase/migrations
 - Table: `public.group_members`
 - Columns: `id`, `group_id`, `name`, `email`, `connected_user_id`, `created_at`.
 - Supports members that are not yet connected to an auth user (email-based invitations).
-- Connection and reconnection logic is handled in `ensureUserProfile()` and `reconnectGroupMembers()` (`services/groupRepository.ts`).
+- Connection logic is handled in `ensureUserProfile()` which calls the `connect-user-to-groups` edge function to bypass RLS policies (`services/groupRepository.ts`).
 
 ### expenses
 
@@ -210,10 +212,18 @@ Relevant files:
 - Triggered from `deleteUserAccount()` in `services/groupRepository.ts`.
 - Disconnects the user from all `group_members`, deletes the public `users` row, runs cleanup, then deletes the auth user.
 
+### connect-user-to-groups
+
+- File: `supabase/functions/connect-user-to-groups/index.ts`.
+- Triggered from `ensureUserProfile()` in `services/groupRepository.ts` when a user signs up or signs in for the first time.
+- Uses the service role key to bypass RLS policies and connect the user to all `group_members` rows with matching email and NULL `connected_user_id`.
+- Calls the `update-known-users` edge function for each connected member to maintain bidirectional known user relationships.
+- Returns the count of groups the user was connected to.
+
 ### update-known-users
 
 - File: `supabase/functions/update-known-users/index.ts`.
-- Triggered when a member is added to a group or when a member's connection changes (`createGroupMember()`, `updateGroupMember()`, `reconnectGroupMembers()` in `services/groupRepository.ts`).
+- Triggered when a member is added to a group, when a member's connection changes, or when a user is connected to groups (`createGroupMember()`, `updateGroupMember()`, `connectUserToGroups()` in `services/groupRepository.ts`).
 - Updates the `user_known_users` table bidirectionally: adds the new member to existing members' known users lists and adds existing members to the new member's known users list.
 - Only processes members that are connected to authenticated users (have a `connected_user_id`).
 
@@ -337,8 +347,8 @@ The UI uses a light, card-based aesthetic with consistent spacing and neutral gr
 ## General workflow (end-to-end)
 
 1. User signs up or signs in (`app/auth.tsx` → `contexts/AuthContext.tsx`).
-2. `ensureUserProfile()` creates a `users` row and reconnects matching members.
-3. When reconnecting, `reconnectGroupMembers()` calls `update-known-users` edge function to update known users lists.
+2. `ensureUserProfile()` creates a `users` row and calls the `connect-user-to-groups` edge function to connect the user to any existing group members with matching email.
+3. The `connect-user-to-groups` edge function calls `update-known-users` for each connected member to update known users lists bidirectionally.
 4. User creates a group (`app/create-group.tsx` → `createGroup()` → `group_members`).
 5. When adding members, `createGroupMember()` calls `update-known-users` edge function to track user relationships bidirectionally.
 6. User adds expenses or transfers (`app/group/[id]/add-expense.tsx` → `createExpense()` + `expense_shares`).
