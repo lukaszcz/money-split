@@ -15,7 +15,7 @@ This document describes the architecture of the MoneySplit application (React Na
 - Navigation, screens, and UI logic (`app/*.tsx`).
 - Authentication state handling (`contexts/AuthContext.tsx`).
 - Client-side money math and settlement logic (`utils/money.ts`, `services/settlementService.ts`).
-- Exchange rate fetch + caching logic (API call + Supabase write) (`services/exchangeRateService.ts`).
+- Exchange rate fetching via edge function call (`services/exchangeRateService.ts`).
 - Data access via Supabase JS SDK (`lib/supabase.ts`, `services/*.ts`).
 - Preference ordering and UX state (group order, currency order, settle defaults) stored in Supabase and cached in AsyncStorage (`services/groupPreferenceService.ts`, `services/currencyPreferenceService.ts`, `services/settlePreferenceService.ts`).
 
@@ -24,11 +24,12 @@ This document describes the architecture of the MoneySplit application (React Na
 - Auth: user identity and sessions (Supabase Auth).
 - Database: persistence, constraints, and RLS (migrations in `supabase/migrations/*.sql`).
 - Row-level security policies enforce membership-based access.
-- Edge Functions for delete-user, cleanup, invitations, and known users tracking (Deno runtime):
+- Edge Functions for delete-user, cleanup, invitations, known users tracking, and exchange rates (Deno runtime):
   - `supabase/functions/delete-user/index.ts`
   - `supabase/functions/cleanup-orphaned-groups/index.ts`
   - `supabase/functions/send-invitation/index.ts`
   - `supabase/functions/update-known-users/index.ts`
+  - `supabase/functions/get-exchange-rate/index.ts`
 
 ## App initialization and auth flow
 
@@ -46,7 +47,7 @@ This document describes the architecture of the MoneySplit application (React Na
   - `services/groupRepository.ts` calls `/functions/v1/cleanup-orphaned-groups` when a user leaves a group.
   - `services/groupRepository.ts` calls `/functions/v1/delete-user` when deleting an account.
   - `services/groupRepository.ts` calls `/functions/v1/send-invitation` when inviting members by email.
-- Exchange rates are fetched from `https://api.exchangerate-api.com` in `services/exchangeRateService.ts` and cached in Supabase.
+  - `services/exchangeRateService.ts` calls `/functions/v1/get-exchange-rate` to fetch and cache exchange rates from `https://api.exchangerate-api.com`.
 
 ## Data model (current schema + notes)
 
@@ -94,7 +95,8 @@ The canonical schema is defined by the SQL migrations under `supabase/migrations
 - Description: Cached FX rates used to convert expenses to a group's main currency.
 - Table: `public.exchange_rates`
 - Columns: `id`, `base_currency_code`, `quote_currency_code`, `rate_scaled`, `fetched_at`.
-- Cached rates are read/written in `services/exchangeRateService.ts`.
+- Cached rates are managed by the `get-exchange-rate` edge function.
+- Clients can read cached rates but cannot insert or update them directly (RLS policies restrict write access).
 
 ### user_currency_preferences
 
@@ -184,10 +186,12 @@ Relevant files:
 
 ## Exchange rate workflow
 
-- `services/exchangeRateService.ts` first tries to read a cached rate from `exchange_rates`.
+- `services/exchangeRateService.ts` calls the `get-exchange-rate` edge function to fetch exchange rates.
+- The edge function first tries to read a cached rate from `exchange_rates`.
 - Cached rates expire after 12 hours (`CACHE_DURATION_MS`).
-- If missing or stale, the client fetches from `https://api.exchangerate-api.com/v4/latest/{base}`.
-- The rate is scaled (4dp) and upserted into `exchange_rates`.
+- If missing or stale, the edge function fetches from `https://api.exchangerate-api.com/v4/latest/{base}`.
+- The rate is scaled (4dp) and upserted into `exchange_rates` by the edge function using service role permissions.
+- Clients cannot write to `exchange_rates` directly (RLS policies restrict insert/update access).
 - All expenses store a snapshot of the rate in `exchange_rate_to_main_scaled` to keep historical accuracy.
 
 ## Edge functions
@@ -216,6 +220,14 @@ Relevant files:
 - Triggered when a member is added to a group or when a member's connection changes (`createGroupMember()`, `updateGroupMember()`, `reconnectGroupMembers()` in `services/groupRepository.ts`).
 - Updates the `user_known_users` table bidirectionally: adds the new member to existing members' known users lists and adds existing members to the new member's known users list.
 - Only processes members that are connected to authenticated users (have a `connected_user_id`).
+
+### get-exchange-rate
+
+- File: `supabase/functions/get-exchange-rate/index.ts`.
+- Triggered from `getExchangeRate()` in `services/exchangeRateService.ts`.
+- Fetches exchange rates from `https://api.exchangerate-api.com` and caches them in the `exchange_rates` table.
+- First checks for cached rates (valid for 12 hours), then fetches fresh rates if needed.
+- Uses service role permissions to write to `exchange_rates`, which clients cannot modify directly.
 
 ## UI design and screen-by-screen behavior
 
