@@ -1,7 +1,6 @@
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   StyleSheet,
   Alert,
@@ -19,8 +18,10 @@ import {
   sendInvitationEmail,
   getGroup,
   getGroupMembers,
+  KnownUser,
 } from '../../../services/groupRepository';
 import { isValidEmail, isDuplicateMemberName } from '../../../utils/validation';
+import { KnownUserSuggestionInput } from '../../../components/KnownUserSuggestionInput';
 
 export default function AddMemberScreen() {
   const { id } = useLocalSearchParams();
@@ -191,6 +192,11 @@ export default function AddMemberScreen() {
     }
   };
 
+  const handleSelectKnownUser = (user: KnownUser) => {
+    setName(user.name);
+    setEmail(user.email || '');
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -215,43 +221,19 @@ export default function AddMemberScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={true}
         >
-          <View style={styles.section}>
-            <Text style={styles.label}>Name</Text>
-            <TextInput
-              style={[styles.input, hasDuplicateName && styles.inputError]}
-              value={name}
-              onChangeText={(text) => {
-                setName(text);
-                checkForDuplicateName(text);
-              }}
-              onBlur={() => setName((nm) => nm.trim())}
-              placeholder="Member name"
-              placeholderTextColor="#9ca3af"
-            />
-            <Text style={styles.hint}>
-              Required if email is not provided. If email matches an existing
-              user, their name will be used if you leave this blank.
-            </Text>
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.label}>Email (optional)</Text>
-            <TextInput
-              style={styles.input}
-              value={email}
-              onChangeText={setEmail}
-              onBlur={() => setEmail((em) => em.trim())}
-              placeholder="member@example.com"
-              placeholderTextColor="#9ca3af"
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-            <Text style={styles.hint}>
-              If provided, the member will be connected to their account when
-              they register. An invitation email will be sent if they don{"'"}t
-              have an account yet.
-            </Text>
-          </View>
+          <KnownUserSuggestionInput
+            nameValue={name}
+            onNameChange={(text) => {
+              setName(text);
+              checkForDuplicateName(text);
+            }}
+            emailValue={email}
+            onEmailChange={setEmail}
+            onSelectUser={handleSelectKnownUser}
+            hasDuplicateName={hasDuplicateName}
+            onNameBlur={(value) => setName(value.trim())}
+            onEmailBlur={(value) => setEmail(value.trim())}
+          />
         </ScrollView>
 
         <View style={styles.footer}>

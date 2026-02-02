@@ -277,6 +277,42 @@ export type Database = {
           },
         ];
       };
+      user_known_users: {
+        Row: {
+          user_id: string;
+          known_user_id: string;
+          first_shared_at: string;
+          last_shared_at: string;
+        };
+        Insert: {
+          user_id: string;
+          known_user_id: string;
+          first_shared_at?: string;
+          last_shared_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          known_user_id?: string;
+          first_shared_at?: string;
+          last_shared_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'user_known_users_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'user_known_users_known_user_id_fkey';
+            columns: ['known_user_id'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       user_settle_preferences: {
         Row: {
           user_id: string;
