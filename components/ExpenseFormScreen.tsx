@@ -10,6 +10,7 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { X, Check, Trash2 } from 'lucide-react-native';
 import type { GroupWithMembers } from '../services/groupRepository';
 import {
@@ -560,15 +561,22 @@ export default function ExpenseFormScreen(props: ExpenseFormScreenProps) {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
-        <ScrollView
-          style={styles.content}
-          contentContainerStyle={styles.contentContainer}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={true}
-        >
-          {renderExpenseForm()}
-          {renderTransferForm()}
-        </ScrollView>
+        <View style={styles.scrollContainer}>
+          <ScrollView
+            style={styles.content}
+            contentContainerStyle={styles.contentContainer}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={true}
+          >
+            {renderExpenseForm()}
+            {renderTransferForm()}
+          </ScrollView>
+          <LinearGradient
+            colors={['transparent', '#f9fafb']}
+            style={styles.fadeOverlay}
+            pointerEvents="none"
+          />
+        </View>
 
         <View style={styles.footer}>
           <TouchableOpacity
@@ -646,11 +654,22 @@ const styles = StyleSheet.create({
   keyboardAvoidingView: {
     flex: 1,
   },
+  scrollContainer: {
+    flex: 1,
+    position: 'relative',
+  },
   content: {
     flex: 1,
   },
   contentContainer: {
     paddingBottom: 100,
+  },
+  fadeOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 48,
   },
   section: {
     padding: 16,
@@ -800,6 +819,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderTopWidth: 1,
     borderTopColor: '#e5e7eb',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -3 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 8,
   },
   saveButton: {
     backgroundColor: '#2563eb',
