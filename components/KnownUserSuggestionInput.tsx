@@ -44,9 +44,10 @@ export function KnownUserSuggestionInput({
 
   const filterSuggestions = useCallback(
     (text: string) => {
-      if (!text || text.length < 2) {
-        setFilteredSuggestions([]);
-        setShowSuggestions(false);
+      // If no text, show all known users
+      if (!text) {
+        setFilteredSuggestions(knownUsers);
+        setShowSuggestions(knownUsers.length > 0);
         return;
       }
 
@@ -124,9 +125,7 @@ export function KnownUserSuggestionInput({
             onNameBlur?.(nameValue);
           }}
           onFocus={() => {
-            if (nameValue && filteredSuggestions.length > 0) {
-              setShowSuggestions(true);
-            }
+            filterSuggestions(nameValue);
           }}
           placeholder="Member name"
           placeholderTextColor="#9ca3af"
@@ -147,8 +146,8 @@ export function KnownUserSuggestionInput({
           </View>
         )}
         <Text style={styles.hint}>
-          Start typing to see suggestions from users you{"'"}ve shared groups
-          with
+          Suggestions from users you{"'"}ve shared groups with will appear as
+          you type
         </Text>
       </View>
 
