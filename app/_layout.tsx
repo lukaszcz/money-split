@@ -5,25 +5,47 @@ import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 
 function RootLayoutNav() {
-  const { user, loading } = useAuth();
+  const { user, loading, requiresRecoveryPasswordChange } = useAuth();
   const segments = useSegments();
   const router = useRouter();
 
   useEffect(() => {
     if (loading) return;
 
-    const inAuthGroup = segments[0] === 'auth';
+    const currentSegment = segments[0];
+    const inPublicAuthFlow =
+      currentSegment === 'auth' || currentSegment === 'password-recovery';
+    const inRecoveryPasswordChangeScreen =
+      currentSegment === 'recovery-password-change';
 
-    if (!user && !inAuthGroup) {
+    if (!user && !inPublicAuthFlow) {
       router.replace('/auth');
-    } else if (user && inAuthGroup) {
+      return;
+    }
+
+    if (
+      user &&
+      requiresRecoveryPasswordChange &&
+      !inRecoveryPasswordChangeScreen
+    ) {
+      router.replace('/recovery-password-change');
+      return;
+    }
+
+    if (
+      user &&
+      !requiresRecoveryPasswordChange &&
+      (inPublicAuthFlow || inRecoveryPasswordChangeScreen)
+    ) {
       router.replace('/(tabs)/groups');
     }
-  }, [user, loading, segments, router]);
+  }, [user, loading, segments, router, requiresRecoveryPasswordChange]);
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="auth" />
+      <Stack.Screen name="password-recovery" />
+      <Stack.Screen name="recovery-password-change" />
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="+not-found" />
     </Stack>

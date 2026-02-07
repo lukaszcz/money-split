@@ -8,17 +8,34 @@ interface AuthContextType {
   session: Session | null;
   user: User | null;
   loading: boolean;
+  requiresRecoveryPasswordChange: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
+  completeRecoveryPasswordChange: (newPassword: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const RECOVERY_PASSWORD_EXPIRES_AT_KEY = 'recoveryPasswordExpiresAt';
+const RECOVERY_PASSWORD_MUST_CHANGE_KEY = 'recoveryPasswordMustChange';
+
+function generateInvalidatedRecoveryPassword() {
+  const randomChunk = () => Math.random().toString(36).slice(2, 10);
+  return `msr-${Date.now().toString(36)}-${randomChunk()}-${randomChunk()}`;
+}
+
+function requiresRecoveryPasswordChange(user: User | null): boolean {
+  return user?.user_metadata?.[RECOVERY_PASSWORD_MUST_CHANGE_KEY] === true;
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [
+    requiresRecoveryPasswordChangeState,
+    setRequiresRecoveryPasswordChange,
+  ] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
@@ -28,6 +45,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       setSession(session);
       setUser(session?.user ?? null);
+      setRequiresRecoveryPasswordChange(
+        requiresRecoveryPasswordChange(session?.user ?? null),
+      );
       setLoading(false);
     });
 
@@ -41,6 +61,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         setSession(session);
         setUser(session?.user ?? null);
+        setRequiresRecoveryPasswordChange(
+          requiresRecoveryPasswordChange(session?.user ?? null),
+        );
       })();
     });
 
@@ -56,8 +79,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const { data: userData } = await supabase.auth.getUser();
     if (userData.user?.id) {
-      const recoveryExpiry = userData.user.user_metadata
-        ?.recoveryPasswordExpiresAt as string | undefined;
+      const recoveryExpiry = userData.user.user_metadata?.[
+        RECOVERY_PASSWORD_EXPIRES_AT_KEY
+      ] as string | undefined;
+      let shouldRequireRecoveryPasswordChange = requiresRecoveryPasswordChange(
+        userData.user,
+      );
+
       if (recoveryExpiry) {
         const expiresAtMs = Date.parse(recoveryExpiry);
         if (Number.isNaN(expiresAtMs) || expiresAtMs <= Date.now()) {
@@ -66,15 +94,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         const { error: updateError } = await supabase.auth.updateUser({
-          data: { recoveryPasswordExpiresAt: null },
+          password: generateInvalidatedRecoveryPassword(),
+          data: {
+            [RECOVERY_PASSWORD_EXPIRES_AT_KEY]: null,
+            [RECOVERY_PASSWORD_MUST_CHANGE_KEY]: true,
+          },
         });
         if (updateError) {
-          console.warn(
-            'Failed to clear recovery password metadata',
-            updateError,
+          console.warn('Failed to invalidate recovery password', updateError);
+          await supabase.auth.signOut();
+          throw new Error(
+            'Unable to finalize recovery sign-in. Request a new recovery password.',
           );
         }
+        shouldRequireRecoveryPasswordChange = true;
       }
+      setRequiresRecoveryPasswordChange(shouldRequireRecoveryPasswordChange);
 
       const now = new Date().toISOString();
       await supabase
@@ -82,6 +117,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .update({ last_login: now })
         .eq('id', userData.user.id);
       await syncUserPreferences(userData.user.id);
+    }
+  };
+
+  const completeRecoveryPasswordChange = async (newPassword: string) => {
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword,
+      data: {
+        [RECOVERY_PASSWORD_EXPIRES_AT_KEY]: null,
+        [RECOVERY_PASSWORD_MUST_CHANGE_KEY]: null,
+      },
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    setRequiresRecoveryPasswordChange(false);
+
+    const { data: refreshedUserData, error: refreshedUserError } =
+      await supabase.auth.getUser();
+    if (refreshedUserError) {
+      console.warn(
+        'Password changed but failed to refresh auth user metadata',
+        refreshedUserError,
+      );
+      return;
+    }
+
+    if (refreshedUserData.user) {
+      setUser(refreshedUserData.user);
     }
   };
 
@@ -96,6 +161,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
+    setRequiresRecoveryPasswordChange(false);
   };
 
   return (
@@ -104,8 +170,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         session,
         user,
         loading,
+        requiresRecoveryPasswordChange: requiresRecoveryPasswordChangeState,
         signIn,
         signUp,
+        completeRecoveryPasswordChange,
         signOut,
       }}
     >

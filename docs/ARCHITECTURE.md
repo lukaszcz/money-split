@@ -35,10 +35,11 @@ This document describes the architecture of the MoneySplit application (React Na
 
 - The app bootstraps in `app/_layout.tsx`. `AuthProvider` from `contexts/AuthContext.tsx` wraps the app and subscribes to Supabase auth events.
 - On startup, `AuthProvider` calls `supabase.auth.getSession()` and, if signed in, calls `ensureUserProfile()` to provision a local user record in the public `users` table (`services/groupRepository.ts`). It also syncs user preferences from the database to the local AsyncStorage cache (`services/userPreferenceSync.ts`).
-- Routing is guarded by `useSegments()` in `app/_layout.tsx`: unauthenticated users are forced to `app/auth.tsx`, authenticated users are redirected to the Groups tab.
+- Routing is guarded by `useSegments()` in `app/_layout.tsx`: unauthenticated users are forced to `app/auth.tsx` (with `app/password-recovery.tsx` available as a public route), authenticated users are redirected to the Groups tab.
 - Sign in and sign up are handled in `app/auth.tsx` by `useAuth().signIn()` / `signUp()`. On successful sign-in, the app updates `users.last_login` in `contexts/AuthContext.tsx`.
 - Sign-in also triggers a preference sync to refresh cached user preferences for currency order, group order, and settle defaults.
 - Password recovery is handled by `app/password-recovery.tsx`, which requests a one-time recovery password from the `password-recovery` edge function.
+- If a user signs in with a recovery password, `contexts/AuthContext.tsx` immediately rotates the temporary password to a random internal value, marks `user_metadata.recoveryPasswordMustChange = true`, and forces navigation to `app/recovery-password-change.tsx` until a new permanent password is set.
 
 ## Client-server communication
 
@@ -224,7 +225,8 @@ Relevant files:
 
 - File: `supabase/functions/password-recovery/index.ts`.
 - Triggered from `requestPasswordRecovery()` in `services/authService.ts`.
-- Generates a one-time password, updates the auth user metadata with a 5-minute expiry, and sends the password via Resend.
+- Generates a one-time password, updates the auth user metadata with a 5-minute expiry (`recoveryPasswordExpiresAt`), and sends the password via Resend.
+- The client consumes this metadata in `contexts/AuthContext.tsx` to enforce a required password change flow after recovery sign-in.
 
 ## UI design and screen-by-screen behavior
 
@@ -237,13 +239,20 @@ The UI uses a light, card-based aesthetic with consistent spacing and neutral gr
 ### Auth (`app/auth.tsx`)
 
 - Email/password sign-in and sign-up.
-- On success, navigates to `/(tabs)/groups`.
+- On success, navigates to `/(tabs)/groups` unless `useAuth()` marks `requiresRecoveryPasswordChange`, in which case routing is redirected to `app/recovery-password-change.tsx`.
 - Uses `useAuth()` methods from `contexts/AuthContext.tsx`.
 
 ### Password recovery (`app/password-recovery.tsx`)
 
 - Explains the recovery flow and requests a recovery email.
 - Calls `requestPasswordRecovery()` in `services/authService.ts` to send a one-time password.
+- Informs the user that they must set a permanent password after signing in with the recovery password.
+
+### Recovery password change (`app/recovery-password-change.tsx`)
+
+- Forced screen shown after a successful recovery-password login.
+- Collects and validates a new permanent password, then calls `completeRecoveryPasswordChange()` from `contexts/AuthContext.tsx`.
+- Clears recovery metadata and unblocks access to the main tabs once the permanent password is saved.
 
 ### Tabs layout (`app/(tabs)/_layout.tsx`)
 
