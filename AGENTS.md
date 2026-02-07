@@ -57,6 +57,7 @@ MoneySplit is a React Native/Expo mobile app for tracking shared expenses and de
 
 ## Instructions
 
+- **IMPORTANT**: Keep docs/ARCHITECTURE.md in sync with the codebase. Update it whenever the architecture changes and/or major new features are introduced.
 - Avoid code duplication. Abstract common logic into parameterized functions.
-- Use `npm run check` to verify that no compilation, formatting or test errors were introduced.
-- Always include current date *and* time in the names of new supabase migration files.
+- Always include current date _and_ time in the names of new supabase migration files.
+- When finished, verify with `npm run check` that there are no compilation, formatting or test errors.
