@@ -36,7 +36,8 @@ This document describes the architecture of the MoneySplit application (React Na
 - Auth: user identity and sessions (Supabase Auth).
 - Database: persistence, constraints, and RLS (migrations in `supabase/migrations/*.sql`).
 - Row-level security policies enforce membership-based access.
-- Edge Functions for delete-user, cleanup, invitations, and known users tracking (Deno runtime):
+- Edge Functions for group creation, delete-user, cleanup, invitations, and known users tracking (Deno runtime):
+  - `supabase/functions/create-group/index.ts`
   - `supabase/functions/delete-user/index.ts`
   - `supabase/functions/cleanup-orphaned-groups/index.ts`
   - `supabase/functions/send-invitation/index.ts`
@@ -55,6 +56,7 @@ This document describes the architecture of the MoneySplit application (React Na
 - Data access uses the Supabase JS client (`lib/supabase.ts`) from service modules in `services/`.
 - All CRUD operations are executed on the device via Supabase REST endpoints with RLS enforcement on the server.
 - Edge function calls are made with `supabase.functions.invoke()` from `services/groupRepository.ts`:
+  - `create-group` is invoked when creating a new group (with bearer token).
   - `cleanup-orphaned-groups` is invoked when a user leaves a group.
   - `delete-user` is invoked when deleting an account (with bearer token).
   - `send-invitation` is invoked when inviting members by email.
@@ -150,13 +152,14 @@ The RLS policies have evolved through multiple migrations. The most recent polic
 - `groups`
   - Select: users can view groups they are members of, plus groups with no connected members (required for group creation and orphan cleanup windows).
   - Update: only members can update their groups (`user_is_group_member((select auth.uid()), id)`).
-  - Insert: any authenticated user can create a group.
+  - Insert: no authenticated client insert policy exists, so direct `INSERT` from client sessions is denied by RLS.
+  - Group creation is performed only via the `create-group` edge function using the service role key.
   - Delete: only allowed when no connected members remain (`NOT group_has_connected_members(id)`).
-  - Policies established or refined in `supabase/migrations/20251225175535_fix_groups_insert_policy.sql` and `supabase/migrations/20251225180300_fix_groups_insert_select_policy.sql`.
+  - Policies established or refined in `supabase/migrations/20260204120000_fix_group_members_delete_policy_performance.sql` and `supabase/migrations/20260207212748_disable_direct_groups_insert.sql`.
 
 - `group_members`
   - Select: members can view members of their groups; users can also view unconnected members with matching email (needed for reconnection).
-  - Insert: user can add themselves (`connected_user_id = (select auth.uid())`) or existing members can add others.
+  - Insert: only existing group members can add new members (`user_is_group_member((select auth.uid()), group_id)`). The first member is added by the `create-group` edge function using the service role key to bypass RLS.
   - Update: members can update member details within groups they belong to; updates are also used for connect/disconnect flows.
   - Delete: any group member can delete another member only if that member is not involved in expenses (no non-zero shares and not referenced as `payer_member_id`).
 
@@ -171,19 +174,6 @@ The RLS policies have evolved through multiple migrations. The most recent polic
 
 - `user_known_users`
   - User can read/insert/update/delete their own known-users rows only (`user_id = (select auth.uid())`).
-
-For the exact SQL definitions and helper functions, see:
-
-- `supabase/migrations/20251225090146_remove_unused_indexes_and_fix_function.sql`
-- `supabase/migrations/20251225132228_remove_group_ownership_implement_soft_delete.sql`
-- `supabase/migrations/20251225181452_fix_group_members_insert_allow_self.sql`
-- `supabase/migrations/20251225180300_fix_groups_insert_select_policy.sql`
-- `supabase/migrations/20260110000000_enable_remove_member_with_no_shares.sql`
-- `supabase/migrations/20260201000000_update_member_delete_rls_for_payers.sql`
-- `supabase/migrations/20260202220730_create_user_known_users_table.sql`
-- `supabase/migrations/20260203000104_add_with_check_to_user_known_users_update_policy.sql`
-- `supabase/migrations/20260203000904_update_user_known_users_policies_select_auth_uid.sql`
-- `supabase/migrations/20260204120000_fix_group_members_delete_policy_performance.sql`
 
 ## Money math and settlement algorithms
 
@@ -213,6 +203,14 @@ Relevant files:
 - All expenses store a snapshot of the rate in `exchange_rate_to_main_scaled` to keep historical accuracy.
 
 ## Edge functions
+
+### create-group
+
+- File: `supabase/functions/create-group/index.ts`.
+- Triggered from `createGroup()` in `services/groupRepository.ts`.
+- Creates a new group with the creator as the first member using service role (bypasses RLS).
+- Also adds any additional initial members provided.
+- This edge function is required because direct client `INSERT` into `groups` is disallowed and `group_members` INSERT RLS only allows existing members to add new members.
 
 ### send-invitation
 
@@ -361,7 +359,7 @@ The UI uses a light, card-based aesthetic with consistent spacing and neutral gr
 1. User signs up or signs in (`app/auth.tsx` → `contexts/AuthContext.tsx`).
 2. `ensureUserProfile()` creates a `users` row and reconnects matching members.
 3. When reconnecting, `reconnectGroupMembers()` calls `update-known-users` edge function to update known users lists.
-4. User creates a group (`app/create-group.tsx` → `createGroup()` → `group_members`).
+4. User creates a group (`app/create-group.tsx` → `createGroup()` → `create-group` edge function → `groups` + initial `group_members`).
 5. When adding members, `createGroupMember()` calls `update-known-users` edge function to track user relationships bidirectionally.
 6. User adds expenses or transfers (`app/group/[id]/add-expense.tsx` → `createExpense()` + `expense_shares`).
 7. Balances and settlements are computed locally (`services/settlementService.ts`).
