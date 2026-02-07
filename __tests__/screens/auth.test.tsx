@@ -72,9 +72,7 @@ describe('Auth Screen', () => {
     });
   });
 
-  it('switches to sign up and creates an account', async () => {
-    mockSignUpSuccess(mockAuthContext);
-
+  it('shows an error when name is missing on sign up', () => {
     const { getByPlaceholderText, getByText, getByLabelText } = render(
       <AuthScreen />,
     );
@@ -85,10 +83,29 @@ describe('Auth Screen', () => {
     fireEvent.changeText(getByPlaceholderText('Password'), 'password123');
     fireEvent.press(getByText('Sign Up'));
 
+    expect(getByText('Please enter your name')).toBeTruthy();
+    expect(mockAuthContext.signUp).not.toHaveBeenCalled();
+  });
+
+  it('switches to sign up and creates an account', async () => {
+    mockSignUpSuccess(mockAuthContext);
+
+    const { getByPlaceholderText, getByText, getByLabelText } = render(
+      <AuthScreen />,
+    );
+
+    fireEvent.press(getByLabelText('Switch to sign up'));
+
+    fireEvent.changeText(getByPlaceholderText('Name'), 'New User');
+    fireEvent.changeText(getByPlaceholderText('Email'), 'new@example.com');
+    fireEvent.changeText(getByPlaceholderText('Password'), 'password123');
+    fireEvent.press(getByText('Sign Up'));
+
     await waitFor(() => {
       expect(mockAuthContext.signUp).toHaveBeenCalledWith(
         'new@example.com',
         'password123',
+        'New User',
       );
     });
 

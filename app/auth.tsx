@@ -17,6 +17,7 @@ import { isValidEmail } from '@/utils/validation';
 
 export default function AuthScreen() {
   const [isLogin, setIsLogin] = useState(true);
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -25,6 +26,7 @@ export default function AuthScreen() {
 
   const handleSubmit = async () => {
     const trimmedEmail = email.trim();
+    const trimmedName = name.trim();
 
     if (!trimmedEmail || !password) {
       setError('Please enter both email and password');
@@ -36,6 +38,11 @@ export default function AuthScreen() {
       return;
     }
 
+    if (!isLogin && !trimmedName) {
+      setError('Please enter your name');
+      return;
+    }
+
     setLoading(true);
     setError('');
 
@@ -43,7 +50,7 @@ export default function AuthScreen() {
       if (isLogin) {
         await signIn(trimmedEmail, password);
       } else {
-        await signUp(trimmedEmail, password);
+        await signUp(trimmedEmail, password, trimmedName);
       }
       router.replace('/(tabs)/groups');
     } catch (err: any) {
@@ -75,6 +82,18 @@ export default function AuthScreen() {
           </Text>
 
           <View style={styles.form}>
+            {!isLogin ? (
+              <TextInput
+                style={styles.input}
+                placeholder="Name"
+                placeholderTextColor="#999"
+                value={name}
+                onChangeText={setName}
+                onBlur={() => setName((currentName) => currentName.trim())}
+                autoCapitalize="words"
+                autoComplete="name"
+              />
+            ) : null}
             <TextInput
               style={styles.input}
               placeholder="Email"
