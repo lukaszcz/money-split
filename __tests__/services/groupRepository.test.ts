@@ -727,120 +727,88 @@ describe('groupRepository', () => {
   });
 
   describe('createGroup', () => {
-    it('should create group with creator as first member', async () => {
+    it('should create group via edge function', async () => {
       const { createGroup } = require('../../services/groupRepository');
-      const mockUser = createMockUser(mockUsers.alice);
 
-      mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: mockUser },
+      mockSupabase.auth.getSession.mockResolvedValue({
+        data: { session: { access_token: 'mock-token' } },
         error: null,
       });
 
-      const mockDbUser = createMockDatabaseRow(mockUsers.alice);
-      const mockDbGroup = createMockDatabaseRow(mockGroups.trip);
-
-      const getUserBuilder = {
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        maybeSingle: jest
-          .fn()
-          .mockResolvedValue({ data: mockDbUser, error: null }),
-      };
-
-      const insertGroupBuilder = {
-        insert: jest.fn().mockReturnThis(),
-        select: jest.fn().mockReturnThis(),
-        single: jest.fn().mockResolvedValue({ data: mockDbGroup, error: null }),
-      };
-
-      const insertMemberBuilder = {
-        insert: jest.fn().mockReturnThis(),
-        select: jest.fn().mockReturnThis(),
-        single: jest.fn().mockResolvedValue({
-          data: createMockDatabaseRow(mockMembers.aliceInTrip),
-          error: null,
-        }),
-      };
-
-      let callCount = 0;
-      mockSupabase.from.mockImplementation((table: string) => {
-        callCount++;
-        if (table === 'users') return getUserBuilder as any;
-        if (table === 'groups') return insertGroupBuilder as any;
-        if (table === 'group_members') return insertMemberBuilder as any;
-        return {} as any;
+      mockSupabase.functions.invoke.mockResolvedValue({
+        data: {
+          success: true,
+          group: {
+            id: mockGroups.trip.id,
+            name: mockGroups.trip.name,
+            mainCurrencyCode: mockGroups.trip.mainCurrencyCode,
+            createdAt: mockGroups.trip.createdAt,
+            members: [mockMembers.aliceInTrip],
+          },
+        },
+        error: null,
       });
 
       const result = await createGroup('Weekend Trip', 'USD', []);
 
       expect(result).toEqual(mockGroups.trip);
-      expect(insertGroupBuilder.insert).toHaveBeenCalledWith({
-        name: 'Weekend Trip',
-        main_currency_code: 'USD',
-      });
-      expect(insertMemberBuilder.insert).toHaveBeenCalled();
+      expect(mockSupabase.functions.invoke).toHaveBeenCalledWith(
+        'create-group',
+        {
+          body: {
+            name: 'Weekend Trip',
+            mainCurrencyCode: 'USD',
+            initialMembers: [],
+          },
+          headers: { Authorization: 'Bearer mock-token' },
+        },
+      );
     });
 
-    it('should add initial members to the group', async () => {
+    it('should pass initial members to edge function', async () => {
       const { createGroup } = require('../../services/groupRepository');
-      const mockUser = createMockUser(mockUsers.alice);
 
-      mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: mockUser },
+      mockSupabase.auth.getSession.mockResolvedValue({
+        data: { session: { access_token: 'mock-token' } },
         error: null,
       });
 
-      const mockDbUser = createMockDatabaseRow(mockUsers.alice);
-      const mockDbGroup = createMockDatabaseRow(mockGroups.trip);
-      const mockDbBob = createMockDatabaseRow(mockUsers.bob);
-
-      const getUserBuilder = {
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        maybeSingle: jest
-          .fn()
-          .mockResolvedValueOnce({ data: mockDbUser, error: null })
-          .mockResolvedValueOnce({ data: mockDbBob, error: null }),
-      };
-
-      const insertGroupBuilder = {
-        insert: jest.fn().mockReturnThis(),
-        select: jest.fn().mockReturnThis(),
-        single: jest.fn().mockResolvedValue({ data: mockDbGroup, error: null }),
-      };
-
-      const insertMemberBuilder = {
-        insert: jest.fn().mockReturnThis(),
-        select: jest.fn().mockReturnThis(),
-        single: jest.fn().mockResolvedValue({
-          data: createMockDatabaseRow(mockMembers.bobInTrip),
-          error: null,
-        }),
-      };
-
-      let memberInsertCount = 0;
-      mockSupabase.from.mockImplementation((table: string) => {
-        if (table === 'users') return getUserBuilder as any;
-        if (table === 'groups') return insertGroupBuilder as any;
-        if (table === 'group_members') {
-          memberInsertCount++;
-          return insertMemberBuilder as any;
-        }
-        return {} as any;
+      mockSupabase.functions.invoke.mockResolvedValue({
+        data: {
+          success: true,
+          group: {
+            id: mockGroups.trip.id,
+            name: mockGroups.trip.name,
+            mainCurrencyCode: mockGroups.trip.mainCurrencyCode,
+            createdAt: mockGroups.trip.createdAt,
+            members: [mockMembers.aliceInTrip, mockMembers.bobInTrip],
+          },
+        },
+        error: null,
       });
 
       await createGroup('Weekend Trip', 'USD', [
         { name: 'Bob', email: 'bob@example.com' },
       ]);
 
-      expect(memberInsertCount).toBe(2);
+      expect(mockSupabase.functions.invoke).toHaveBeenCalledWith(
+        'create-group',
+        {
+          body: {
+            name: 'Weekend Trip',
+            mainCurrencyCode: 'USD',
+            initialMembers: [{ name: 'Bob', email: 'bob@example.com' }],
+          },
+          headers: { Authorization: 'Bearer mock-token' },
+        },
+      );
     });
 
-    it('should return null when no authenticated user', async () => {
+    it('should return null when no session token', async () => {
       const { createGroup } = require('../../services/groupRepository');
 
-      mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: null },
+      mockSupabase.auth.getSession.mockResolvedValue({
+        data: { session: null },
         error: null,
       });
 
@@ -849,187 +817,35 @@ describe('groupRepository', () => {
       expect(result).toBeNull();
     });
 
-    it('uses email prefix or Unknown when member names are missing', async () => {
+    it('should return null when edge function returns error', async () => {
       const { createGroup } = require('../../services/groupRepository');
-      const mockUser = createMockUser(mockUsers.alice);
 
-      mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: mockUser },
+      mockSupabase.auth.getSession.mockResolvedValue({
+        data: { session: { access_token: 'mock-token' } },
         error: null,
       });
 
-      const mockDbUser = createMockDatabaseRow(mockUsers.alice);
-      const mockDbGroup = createMockDatabaseRow(mockGroups.trip);
-
-      const getUserBuilder = {
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        maybeSingle: jest
-          .fn()
-          .mockResolvedValueOnce({ data: mockDbUser, error: null })
-          .mockResolvedValueOnce({ data: null, error: null }),
-      };
-
-      const insertGroupBuilder = {
-        insert: jest.fn().mockReturnThis(),
-        select: jest.fn().mockReturnThis(),
-        single: jest.fn().mockResolvedValue({ data: mockDbGroup, error: null }),
-      };
-
-      const insertMemberBuilder = {
-        insert: jest.fn().mockReturnThis(),
-        select: jest.fn().mockReturnThis(),
-        single: jest.fn().mockResolvedValue({
-          data: createMockDatabaseRow(mockMembers.aliceInTrip),
-          error: null,
-        }),
-      };
-
-      mockSupabase.from.mockImplementation((table: string) => {
-        if (table === 'users') return getUserBuilder as any;
-        if (table === 'groups') return insertGroupBuilder as any;
-        if (table === 'group_members') return insertMemberBuilder as any;
-        return {} as any;
-      });
-
-      const result = await createGroup('Weekend Trip', 'USD', [
-        { name: '', email: 'bob@example.com' },
-        { name: '' },
-      ]);
-
-      expect(result).toEqual(mockGroups.trip);
-
-      const insertedMembers = insertMemberBuilder.insert.mock.calls.map(
-        (call) => call[0],
-      );
-
-      expect(insertedMembers).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({
-            name: 'bob',
-            email: 'bob@example.com',
-            connected_user_id: null,
-          }),
-          expect.objectContaining({
-            name: 'Unknown',
-            email: null,
-            connected_user_id: null,
-          }),
-        ]),
-      );
-    });
-
-    it('returns the group even if creator member creation fails', async () => {
-      const { createGroup } = require('../../services/groupRepository');
-      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
-      const mockUser = createMockUser(mockUsers.alice);
-
-      mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: mockUser },
-        error: null,
-      });
-
-      const mockDbUser = createMockDatabaseRow(mockUsers.alice);
-      const mockDbGroup = createMockDatabaseRow(mockGroups.trip);
-
-      const getUserBuilder = {
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        maybeSingle: jest
-          .fn()
-          .mockResolvedValue({ data: mockDbUser, error: null }),
-      };
-
-      const insertGroupBuilder = {
-        insert: jest.fn().mockReturnThis(),
-        select: jest.fn().mockReturnThis(),
-        single: jest.fn().mockResolvedValue({ data: mockDbGroup, error: null }),
-      };
-
-      const insertMemberBuilder = {
-        insert: jest.fn().mockReturnThis(),
-        select: jest.fn().mockReturnThis(),
-        single: jest.fn().mockResolvedValue({
-          data: null,
-          error: new Error('Insert failed'),
-        }),
-      };
-
-      mockSupabase.from.mockImplementation((table: string) => {
-        if (table === 'users') return getUserBuilder as any;
-        if (table === 'groups') return insertGroupBuilder as any;
-        if (table === 'group_members') return insertMemberBuilder as any;
-        return {} as any;
+      mockSupabase.functions.invoke.mockResolvedValue({
+        data: null,
+        error: { message: 'Edge function failed' },
       });
 
       const result = await createGroup('Weekend Trip', 'USD', []);
 
-      expect(result).toEqual(mockGroups.trip);
-      expect(warnSpy).toHaveBeenCalled();
-
-      warnSpy.mockRestore();
-    });
-
-    it('should return null when ensuring user profile fails', async () => {
-      const { createGroup } = require('../../services/groupRepository');
-      const mockUser = createMockUser(mockUsers.alice);
-
-      mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: mockUser },
-        error: null,
-      });
-
-      const getUserBuilder = {
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        maybeSingle: jest.fn().mockResolvedValue({
-          data: null,
-          error: new Error('Lookup failed'),
-        }),
-      };
-
-      mockSupabase.from.mockImplementation((table: string) => {
-        if (table === 'users') return getUserBuilder as any;
-        return {} as any;
-      });
-
-      const result = await createGroup('Test Group', 'USD', []);
-
       expect(result).toBeNull();
     });
 
-    it('should return null when group creation fails', async () => {
+    it('should return null when edge function returns unsuccessful response', async () => {
       const { createGroup } = require('../../services/groupRepository');
-      const mockUser = createMockUser(mockUsers.alice);
 
-      mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: mockUser },
+      mockSupabase.auth.getSession.mockResolvedValue({
+        data: { session: { access_token: 'mock-token' } },
         error: null,
       });
 
-      const mockDbUser = createMockDatabaseRow(mockUsers.alice);
-
-      const getUserBuilder = {
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        maybeSingle: jest
-          .fn()
-          .mockResolvedValue({ data: mockDbUser, error: null }),
-      };
-
-      const insertGroupBuilder = {
-        insert: jest.fn().mockReturnThis(),
-        select: jest.fn().mockReturnThis(),
-        single: jest.fn().mockResolvedValue({
-          data: null,
-          error: new Error('Insert failed'),
-        }),
-      };
-
-      mockSupabase.from.mockImplementation((table: string) => {
-        if (table === 'users') return getUserBuilder as any;
-        if (table === 'groups') return insertGroupBuilder as any;
-        return {} as any;
+      mockSupabase.functions.invoke.mockResolvedValue({
+        data: { success: false, error: 'Failed to create group' },
+        error: null,
       });
 
       const result = await createGroup('Weekend Trip', 'USD', []);
