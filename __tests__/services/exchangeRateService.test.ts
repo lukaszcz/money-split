@@ -4,6 +4,7 @@ import {
   resetAllMocks,
 } from '../utils/mockSupabase';
 import { getExchangeRate } from '../../services/exchangeRateService';
+import { toScaled } from '../../utils/money';
 
 jest.mock('../../lib/supabase', () => ({
   supabase: null,
@@ -39,6 +40,18 @@ describe('exchangeRateService', () => {
   });
 
   describe('getExchangeRate', () => {
+    it('returns 1:1 locally for same-currency conversion without invoking edge function', async () => {
+      const result = await getExchangeRate('USD', 'USD');
+
+      expect(result).toEqual({
+        baseCurrencyCode: 'USD',
+        quoteCurrencyCode: 'USD',
+        rateScaled: toScaled(1),
+        fetchedAt: expect.any(String),
+      });
+      expect(mockSupabase.functions.invoke).not.toHaveBeenCalled();
+    });
+
     it('invokes the edge function and maps a successful response', async () => {
       mockSupabase.functions.invoke.mockResolvedValue({
         data: {

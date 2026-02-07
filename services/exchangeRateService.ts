@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { toScaled } from '../utils/money';
 
 export interface ExchangeRate {
   baseCurrencyCode: string;
@@ -11,6 +12,15 @@ export async function getExchangeRate(
   baseCurrency: string,
   quoteCurrency: string,
 ): Promise<ExchangeRate | null> {
+  if (baseCurrency === quoteCurrency) {
+    return {
+      baseCurrencyCode: baseCurrency,
+      quoteCurrencyCode: quoteCurrency,
+      rateScaled: toScaled(1),
+      fetchedAt: new Date().toISOString(),
+    };
+  }
+
   try {
     const { data, error } = await supabase.functions.invoke(
       'get-exchange-rate',
