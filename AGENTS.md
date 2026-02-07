@@ -43,6 +43,7 @@ MoneySplit is a React Native/Expo mobile app for tracking shared expenses and de
 
 - RLS and schema changes live in `supabase/migrations/`.
 - Edge functions run under `supabase/functions/` and should be referenced in `docs/ARCHITECTURE.md` when changed.
+- When adding an edge function, make sure it performs appropriate user authorization.
 
 ## Instructions
 
@@ -50,5 +51,4 @@ MoneySplit is a React Native/Expo mobile app for tracking shared expenses and de
 - Avoid code duplication. Abstract common logic into parameterized functions.
 - Always include current date _and_ time in the names of new supabase migration files.
 - In database migrations, always use `(select auth.<function>())` instead of bare `auth.<function>()` to avoid re-evaluating `auth.<function>()` for each row.
-- When adding an edge function, make sure it performs appropriate user authorization.
 - When finished, verify with `npm run check` that there are no compilation, formatting or test errors.

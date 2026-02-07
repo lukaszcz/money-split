@@ -20,7 +20,13 @@ const RECOVERY_PASSWORD_EXPIRES_AT_KEY = 'recoveryPasswordExpiresAt';
 const RECOVERY_PASSWORD_MUST_CHANGE_KEY = 'recoveryPasswordMustChange';
 
 function generateInvalidatedRecoveryPassword() {
-  const randomChunk = () => Math.random().toString(36).slice(2, 10);
+  const randomChunk = () => {
+    const bytes = new Uint8Array(8);
+    crypto.getRandomValues(bytes);
+    return Array.from(bytes, (value) =>
+      value.toString(16).padStart(2, '0'),
+    ).join('');
+  };
   return `msr-${Date.now().toString(36)}-${randomChunk()}-${randomChunk()}`;
 }
 
