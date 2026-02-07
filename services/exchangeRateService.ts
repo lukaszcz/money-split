@@ -19,7 +19,7 @@ type SerializedExchangeRate = Omit<ExchangeRate, 'rateScaled'> & {
 };
 
 const EXCHANGE_RATE_CACHE_KEY = 'exchange_rate_cache_v1';
-const CACHE_DURATION_MS = 12 * 60 * 60 * 1000;
+const CACHE_DURATION_MS = 4 * 60 * 60 * 1000;
 
 let exchangeRateCache: Map<string, ExchangeRate> | null = null;
 const inFlightRequests = new Map<string, Promise<ExchangeRate | null>>();
