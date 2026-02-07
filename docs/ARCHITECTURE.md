@@ -24,11 +24,12 @@ This document describes the architecture of the MoneySplit application (React Na
 - Auth: user identity and sessions (Supabase Auth).
 - Database: persistence, constraints, and RLS (migrations in `supabase/migrations/*.sql`).
 - Row-level security policies enforce membership-based access.
-- Edge Functions for delete-user, cleanup, invitations, and known users tracking (Deno runtime):
+- Edge Functions for delete-user, cleanup, invitations, known users tracking, and password recovery (Deno runtime):
   - `supabase/functions/delete-user/index.ts`
   - `supabase/functions/cleanup-orphaned-groups/index.ts`
   - `supabase/functions/send-invitation/index.ts`
   - `supabase/functions/update-known-users/index.ts`
+  - `supabase/functions/password-recovery/index.ts`
 
 ## App initialization and auth flow
 
@@ -37,6 +38,7 @@ This document describes the architecture of the MoneySplit application (React Na
 - Routing is guarded by `useSegments()` in `app/_layout.tsx`: unauthenticated users are forced to `app/auth.tsx`, authenticated users are redirected to the Groups tab.
 - Sign in and sign up are handled in `app/auth.tsx` by `useAuth().signIn()` / `signUp()`. On successful sign-in, the app updates `users.last_login` in `contexts/AuthContext.tsx`.
 - Sign-in also triggers a preference sync to refresh cached user preferences for currency order, group order, and settle defaults.
+- Password recovery is handled by `app/password-recovery.tsx`, which requests a one-time recovery password from the `password-recovery` edge function.
 
 ## Client-server communication
 
@@ -46,6 +48,7 @@ This document describes the architecture of the MoneySplit application (React Na
   - `services/groupRepository.ts` calls `/functions/v1/cleanup-orphaned-groups` when a user leaves a group.
   - `services/groupRepository.ts` calls `/functions/v1/delete-user` when deleting an account.
   - `services/groupRepository.ts` calls `/functions/v1/send-invitation` when inviting members by email.
+  - `services/authService.ts` calls `/functions/v1/password-recovery` to issue one-time recovery passwords by email.
 - Exchange rates are fetched from `https://api.exchangerate-api.com` in `services/exchangeRateService.ts` and cached in Supabase.
 
 ## Data model (current schema + notes)
@@ -217,6 +220,12 @@ Relevant files:
 - Updates the `user_known_users` table bidirectionally: adds the new member to existing members' known users lists and adds existing members to the new member's known users list.
 - Only processes members that are connected to authenticated users (have a `connected_user_id`).
 
+### password-recovery
+
+- File: `supabase/functions/password-recovery/index.ts`.
+- Triggered from `requestPasswordRecovery()` in `services/authService.ts`.
+- Generates a one-time password, updates the auth user metadata with a 5-minute expiry, and sends the password via Resend.
+
 ## UI design and screen-by-screen behavior
 
 The UI uses a light, card-based aesthetic with consistent spacing and neutral grays, accent blue (`#2563eb`), and iconography via `lucide-react-native`. Common patterns include:
@@ -230,6 +239,11 @@ The UI uses a light, card-based aesthetic with consistent spacing and neutral gr
 - Email/password sign-in and sign-up.
 - On success, navigates to `/(tabs)/groups`.
 - Uses `useAuth()` methods from `contexts/AuthContext.tsx`.
+
+### Password recovery (`app/password-recovery.tsx`)
+
+- Explains the recovery flow and requests a recovery email.
+- Calls `requestPasswordRecovery()` in `services/authService.ts` to send a one-time password.
 
 ### Tabs layout (`app/(tabs)/_layout.tsx`)
 

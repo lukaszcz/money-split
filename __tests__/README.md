@@ -28,8 +28,8 @@ The MoneySplit test suite includes:
 
 ### Test Statistics
 
-- **Total Tests**: 343
-- **Test Suites**: 17
+- **Total Tests**: 380
+- **Test Suites**: 22
 - **Coverage Targets**:
   - Lines: 80%
   - Functions: 80%
@@ -69,6 +69,7 @@ __tests__/
 │   └── BottomActionBar.test.tsx   # BottomActionBar component tests
 ├── screens/
 │   ├── auth.test.tsx              # Auth screen tests
+│   ├── passwordRecovery.test.tsx  # Password recovery screen tests
 │   ├── groups.test.tsx            # Groups screen tests
 │   ├── groupDetail.test.tsx       # Group detail screen tests
 │   └── settings.test.tsx          # Settings screen tests

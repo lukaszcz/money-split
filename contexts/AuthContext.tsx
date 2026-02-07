@@ -56,6 +56,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const { data: userData } = await supabase.auth.getUser();
     if (userData.user?.id) {
+      const recoveryExpiry = userData.user.user_metadata
+        ?.recoveryPasswordExpiresAt as string | undefined;
+      if (recoveryExpiry) {
+        const expiresAtMs = Date.parse(recoveryExpiry);
+        if (Number.isNaN(expiresAtMs) || expiresAtMs <= Date.now()) {
+          await supabase.auth.signOut();
+          throw new Error('Recovery password expired. Request a new one.');
+        }
+
+        const { error: updateError } = await supabase.auth.updateUser({
+          data: { recoveryPasswordExpiresAt: null },
+        });
+        if (updateError) {
+          console.warn(
+            'Failed to clear recovery password metadata',
+            updateError,
+          );
+        }
+      }
+
       const now = new Date().toISOString();
       await supabase
         .from('users')
