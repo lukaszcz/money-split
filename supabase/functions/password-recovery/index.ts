@@ -14,6 +14,14 @@ interface PasswordRecoveryRequest {
 }
 
 const PASSWORD_TTL_MS = 5 * 60 * 1000;
+const PASSWORD_RECOVERY_GENERIC_RESPONSE = JSON.stringify({ success: true });
+
+function createGenericSuccessResponse() {
+  return new Response(PASSWORD_RECOVERY_GENERIC_RESPONSE, {
+    status: 200,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+}
 
 function generatePassword(length = 12): string {
   const charset =
@@ -76,10 +84,16 @@ Deno.serve(async (req: Request) => {
       await supabaseClient.auth.admin.getUserByEmail(email);
 
     if (userError || !userData?.user) {
-      return new Response(JSON.stringify({ error: 'User not found' }), {
-        status: 404,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      if (userError) {
+        console.error(
+          'Failed to fetch user by email during password recovery:',
+          {
+            message: userError.message,
+            status: userError.status,
+          },
+        );
+      }
+      return createGenericSuccessResponse();
     }
 
     const recoveryPassword = generatePassword();
@@ -180,10 +194,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    return new Response(JSON.stringify({ success: true, expiresAt }), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return createGenericSuccessResponse();
   } catch (error) {
     console.error('Password recovery error:', error);
     return new Response(
