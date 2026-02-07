@@ -99,27 +99,6 @@ Deno.serve(async (req: Request) => {
     const recoveryPassword = generatePassword();
     const expiresAt = new Date(Date.now() + PASSWORD_TTL_MS).toISOString();
     const existingMetadata = userData.user.user_metadata ?? {};
-
-    const { error: updateError } =
-      await supabaseClient.auth.admin.updateUserById(userData.user.id, {
-        password: recoveryPassword,
-        user_metadata: {
-          ...existingMetadata,
-          recoveryPasswordExpiresAt: expiresAt,
-        },
-      });
-
-    if (updateError) {
-      console.error('Failed to update recovery password:', updateError);
-      return new Response(
-        JSON.stringify({ error: 'Failed to set recovery password' }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        },
-      );
-    }
-
     const resend = new Resend(resendApiKey);
 
     const emailHtml = `
@@ -187,6 +166,30 @@ Deno.serve(async (req: Request) => {
       console.error('Failed to send recovery email:', emailError);
       return new Response(
         JSON.stringify({ error: 'Failed to send recovery email' }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      );
+    }
+
+    const { error: updateError } =
+      await supabaseClient.auth.admin.updateUserById(userData.user.id, {
+        password: recoveryPassword,
+        user_metadata: {
+          ...existingMetadata,
+          recoveryPasswordExpiresAt: expiresAt,
+        },
+      });
+
+    if (updateError) {
+      console.error('Failed to activate recovery password after email send:', {
+        userId: userData.user.id,
+        message: updateError.message,
+        status: updateError.status,
+      });
+      return new Response(
+        JSON.stringify({ error: 'Failed to set recovery password' }),
         {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
