@@ -155,6 +155,27 @@ Deno.serve(async (req: Request) => {
       </html>
     `;
 
+    const { error: emailError } = await resend.emails.send({
+      from: 'moneysplit@moneysplit.polapp.pl',
+      to: email,
+      subject: 'Your MoneySplit recovery password',
+      html: emailHtml,
+    });
+
+    if (emailError) {
+      console.error(
+        'Failed to send recovery email before password update:',
+        emailError,
+      );
+      return new Response(
+        JSON.stringify({ error: 'Failed to send recovery email' }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      );
+    }
+
     const { error: updateError } =
       await supabaseClient.auth.admin.updateUserById(userData.user.id, {
         password: recoveryPassword,
@@ -165,34 +186,16 @@ Deno.serve(async (req: Request) => {
       });
 
     if (updateError) {
-      console.error('Failed to set recovery password before email send:', {
-        userId: userData.user.id,
-        message: updateError.message,
-        status: updateError.status,
-      });
-      return new Response(
-        JSON.stringify({ error: 'Failed to set recovery password' }),
+      console.error(
+        'Failed to set recovery password after email send; recovery password may be invalid:',
         {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          userId: userData.user.id,
+          message: updateError.message,
+          status: updateError.status,
         },
       );
-    }
-
-    const { error: emailError } = await resend.emails.send({
-      from: 'moneysplit@moneysplit.polapp.pl',
-      to: email,
-      subject: 'Your MoneySplit recovery password',
-      html: emailHtml,
-    });
-
-    if (emailError) {
-      console.error(
-        'Failed to send recovery email after password update:',
-        emailError,
-      );
       return new Response(
-        JSON.stringify({ error: 'Failed to send recovery email' }),
+        JSON.stringify({ error: 'Failed to activate recovery password' }),
         {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
