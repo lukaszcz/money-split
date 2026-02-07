@@ -157,7 +157,7 @@ The RLS policies have evolved through multiple migrations. The most recent polic
 
 - `group_members`
   - Select: members can view members of their groups; users can also view unconnected members with matching email (needed for reconnection).
-  - Insert: only existing group members can add new members (`user_is_group_member(auth.uid(), group_id)`). The first member is added by the `create-group` edge function using the service role key to bypass RLS.
+  - Insert: only existing group members can add new members (`user_is_group_member((select auth.uid()), group_id)`). The first member is added by the `create-group` edge function using the service role key to bypass RLS.
   - Update: members can update member details within groups they belong to; updates are also used for connect/disconnect flows.
   - Delete: any group member can delete another member only if that member is not involved in expenses (no non-zero shares and not referenced as `payer_member_id`).
 
