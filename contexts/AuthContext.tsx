@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
+import * as Crypto from 'expo-crypto';
 import { supabase } from '@/lib/supabase';
 import { ensureUserProfile } from '@/services/groupRepository';
 import { syncUserPreferences } from '@/services/userPreferenceSync';
@@ -21,8 +22,7 @@ const RECOVERY_PASSWORD_MUST_CHANGE_KEY = 'recoveryPasswordMustChange';
 
 function generateInvalidatedRecoveryPassword() {
   const randomChunk = () => {
-    const bytes = new Uint8Array(8);
-    crypto.getRandomValues(bytes);
+    const bytes = Crypto.getRandomBytes(8);
     return Array.from(bytes, (value) =>
       value.toString(16).padStart(2, '0'),
     ).join('');
