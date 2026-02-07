@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Stack, type Href, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
@@ -12,7 +12,7 @@ function RootLayoutNav() {
   useEffect(() => {
     if (loading) return;
 
-    const currentSegment = segments[0];
+    const currentSegment = segments[0] as string | undefined;
     const inPublicAuthFlow =
       currentSegment === 'auth' || currentSegment === 'password-recovery';
     const inRecoveryPasswordChangeScreen =
@@ -28,7 +28,7 @@ function RootLayoutNav() {
       requiresRecoveryPasswordChange &&
       !inRecoveryPasswordChangeScreen
     ) {
-      router.replace('/recovery-password-change');
+      router.replace('/recovery-password-change' as Href);
       return;
     }
 

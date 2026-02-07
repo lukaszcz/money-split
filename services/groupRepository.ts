@@ -298,67 +298,35 @@ export async function createGroup(
 ): Promise<Group | null> {
   try {
     const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      throw new Error('No authenticated user');
+      data: { session },
+    } = await supabase.auth.getSession();
+    const token = session?.access_token;
+
+    if (!token) {
+      throw new Error('No session token available');
     }
 
-    const userProfile = await ensureUserProfile();
-    if (!userProfile) {
-      throw new Error('Failed to ensure user profile');
+    const { data, error } = await supabase.functions.invoke('create-group', {
+      body: { name, mainCurrencyCode, initialMembers },
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (error) {
+      console.error('Create group function error:', error);
+      throw new Error(error.message || 'Failed to create group');
     }
 
-    const { data: groupData, error: groupError } = await supabase
-      .from('groups')
-      .insert({ name, main_currency_code: mainCurrencyCode })
-      .select()
-      .single();
-
-    if (groupError) {
-      console.error('Group creation error details:', groupError);
-      throw groupError;
-    }
-
-    const groupId = groupData.id;
-
-    const creatorMember = await createGroupMember(
-      groupId,
-      userProfile.name,
-      userProfile.email,
-      user.id,
-    );
-
-    if (!creatorMember) {
-      console.warn('Failed to add creator as group member');
-    }
-
-    for (const member of initialMembers) {
-      let connectedUserId: string | undefined;
-
-      if (member.email) {
-        const existingUser = await getUserByEmail(member.email);
-        if (existingUser) {
-          connectedUserId = existingUser.id;
-        }
-      }
-
-      const memberName =
-        member.name || (member.email ? member.email.split('@')[0] : 'Unknown');
-
-      await createGroupMember(
-        groupId,
-        memberName,
-        member.email,
-        connectedUserId,
-      );
+    if (!data?.success || !data?.group) {
+      throw new Error(data?.error || 'Failed to create group');
     }
 
     return {
-      id: groupData.id,
-      name: groupData.name,
-      mainCurrencyCode: groupData.main_currency_code,
-      createdAt: groupData.created_at,
+      id: data.group.id,
+      name: data.group.name,
+      mainCurrencyCode: data.group.mainCurrencyCode,
+      createdAt: data.group.createdAt,
     };
   } catch (error) {
     console.error('Failed to create group:', error);

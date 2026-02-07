@@ -6,7 +6,19 @@ This document describes the architecture of the MoneySplit application (React Na
 
 - Mobile client: Expo Router app under `app/` with shared UI and domain logic in `components/`, `services/`, `utils/`, `hooks/`, and `contexts/`.
 - Backend: Supabase Postgres (tables + RLS), Supabase Auth, and Edge Functions in `supabase/functions/`.
-- External services: Exchange rate API (`https://api.exchangerate-api.com`) and Resend email API for invitations.
+- External services: Exchange rate API (`https://api.exchangerate-api.com/v4/latest/{base}`) and Resend email API for invitations.
+
+### Project & Module Organization
+
+- `app/`: Expo Router screens and navigation (e.g., `app/(tabs)/groups.tsx`).
+- `components/`: UI components.
+- `services/`: data access and business logic (Supabase queries, settlements).
+- `utils/`: money math and currency definitions.
+- `contexts/`: shared providers (auth state).
+- `hooks/`: client hooks (currency ordering, framework ready).
+- `supabase/`: migrations and edge functions.
+- `assets/`: icons and branding images.
+- `docs/`: architecture and database documentation.
 
 ## Runtime split: device vs server
 
@@ -15,7 +27,7 @@ This document describes the architecture of the MoneySplit application (React Na
 - Navigation, screens, and UI logic (`app/*.tsx`).
 - Authentication state handling (`contexts/AuthContext.tsx`).
 - Client-side money math and settlement logic (`utils/money.ts`, `services/settlementService.ts`).
-- Exchange rate fetch + caching logic (API call + Supabase write) (`services/exchangeRateService.ts`).
+- Exchange rate caching and lookup in AsyncStorage + in-memory map, with edge-function fallback (`services/exchangeRateService.ts`).
 - Data access via Supabase JS SDK (`lib/supabase.ts`, `services/*.ts`).
 - Preference ordering and UX state (group order, currency order, settle defaults) stored in Supabase and cached in AsyncStorage (`services/groupPreferenceService.ts`, `services/currencyPreferenceService.ts`, `services/settlePreferenceService.ts`).
 
@@ -24,10 +36,12 @@ This document describes the architecture of the MoneySplit application (React Na
 - Auth: user identity and sessions (Supabase Auth).
 - Database: persistence, constraints, and RLS (migrations in `supabase/migrations/*.sql`).
 - Row-level security policies enforce membership-based access.
-- Edge Functions for delete-user, cleanup, invitations, known users tracking, and password recovery (Deno runtime):
+- Edge Functions for group creation, delete-user, cleanup, invitations, exchange rates, known users tracking, and password recovery (Deno runtime):
+  - `supabase/functions/create-group/index.ts`
   - `supabase/functions/delete-user/index.ts`
   - `supabase/functions/cleanup-orphaned-groups/index.ts`
   - `supabase/functions/send-invitation/index.ts`
+  - `supabase/functions/get-exchange-rate/index.ts`
   - `supabase/functions/update-known-users/index.ts`
   - `supabase/functions/password-recovery/index.ts`
 
@@ -38,6 +52,7 @@ This document describes the architecture of the MoneySplit application (React Na
 - Routing is guarded by `useSegments()` in `app/_layout.tsx`: unauthenticated users are forced to `app/auth.tsx` (with `app/password-recovery.tsx` available as a public route), authenticated users are redirected to the Groups tab.
 - Sign in and sign up are handled in `app/auth.tsx` by `useAuth().signIn()` / `signUp()`. On successful sign-in, the app updates `users.last_login` in `contexts/AuthContext.tsx`.
 - Sign-in also triggers a preference sync to refresh cached user preferences for currency order, group order, and settle defaults.
+- Sign-in also warms the exchange-rate cache for currency pairs seen in the user's expenses.
 - Password recovery is handled by `app/password-recovery.tsx`, which requests a one-time recovery password from the `password-recovery` edge function.
 - If a user signs in with a recovery password, `contexts/AuthContext.tsx` immediately rotates the temporary password to a random internal value, marks `user_metadata.recoveryPasswordMustChange = true`, and forces navigation to `app/recovery-password-change.tsx` until a new permanent password is set.
 
@@ -45,12 +60,14 @@ This document describes the architecture of the MoneySplit application (React Na
 
 - Data access uses the Supabase JS client (`lib/supabase.ts`) from service modules in `services/`.
 - All CRUD operations are executed on the device via Supabase REST endpoints with RLS enforcement on the server.
-- Edge function calls are direct `fetch()` requests to the Supabase Functions endpoint:
-  - `services/groupRepository.ts` calls `/functions/v1/cleanup-orphaned-groups` when a user leaves a group.
-  - `services/groupRepository.ts` calls `/functions/v1/delete-user` when deleting an account.
-  - `services/groupRepository.ts` calls `/functions/v1/send-invitation` when inviting members by email.
-  - `services/authService.ts` calls `/functions/v1/password-recovery` to issue one-time recovery passwords by email.
-- Exchange rates are fetched from `https://api.exchangerate-api.com` in `services/exchangeRateService.ts` and cached in Supabase.
+- Edge function calls are made with `supabase.functions.invoke()` from `services/groupRepository.ts`:
+  - `create-group` is invoked when creating a new group (with bearer token).
+  - `cleanup-orphaned-groups` is invoked when a user leaves a group.
+  - `delete-user` is invoked when deleting an account (with bearer token).
+  - `send-invitation` is invoked when inviting members by email.
+  - `update-known-users` is invoked when a member is connected to an authenticated user (with bearer token).
+- `services/exchangeRateService.ts` invokes `get-exchange-rate` on local cache miss/staleness and prewarms local rates at login for known currency pairs.
+- `services/authService.ts` invokes `password-recovery` to issue one-time recovery passwords by email.
 
 ## Data model (current schema + notes)
 
@@ -98,7 +115,8 @@ The canonical schema is defined by the SQL migrations under `supabase/migrations
 - Description: Cached FX rates used to convert expenses to a group's main currency.
 - Table: `public.exchange_rates`
 - Columns: `id`, `base_currency_code`, `quote_currency_code`, `rate_scaled`, `fetched_at`.
-- Cached rates are read/written in `services/exchangeRateService.ts`.
+- Cached rates are managed by the `get-exchange-rate` edge function.
+- Clients can read cached rates but cannot insert or update them directly (RLS policies restrict write access).
 
 ### user_currency_preferences
 
@@ -132,40 +150,37 @@ The canonical schema is defined by the SQL migrations under `supabase/migrations
 
 ## Row-level security (RLS) summary
 
-The RLS policies have evolved through multiple migrations. The most recent policies enforce membership-based access using helper functions `user_is_group_member()` and `group_has_connected_members()` with immutable search paths. The intent of the latest policies is:
+The RLS policies have evolved through multiple migrations. The most recent policies enforce membership-based access using helper functions such as `user_is_group_member()`, `group_has_connected_members()`, and `member_is_involved_in_expenses()`, and use `(select auth.uid())` in policy predicates to avoid per-row re-evaluation. The intent of the latest policies is:
 
 - `users`
   - Authenticated users can read all users.
-  - Insert/update/delete is restricted to the authenticated user (`auth.uid() = id`).
+  - Insert/update/delete is restricted to the authenticated user (`(select auth.uid()) = id`).
 
 - `groups`
-  - Select/update: only members can view/update their groups (`user_is_group_member(auth.uid(), id)`).
-  - Insert: any authenticated user can create a group.
+  - Select: users can view groups they are members of, plus groups with no connected members (required for group creation and orphan cleanup windows).
+  - Update: only members can update their groups (`user_is_group_member((select auth.uid()), id)`).
+  - Insert: no authenticated client insert policy exists, so direct `INSERT` from client sessions is denied by RLS.
+  - Group creation is performed only via the `create-group` edge function using the service role key.
   - Delete: only allowed when no connected members remain (`NOT group_has_connected_members(id)`).
-  - Policies established or refined in `supabase/migrations/20251225175535_fix_groups_insert_policy.sql` and `supabase/migrations/20251225180300_fix_groups_insert_select_policy.sql`.
+  - Policies established or refined in `supabase/migrations/20260204120000_fix_group_members_delete_policy_performance.sql` and `supabase/migrations/20260207212748_disable_direct_groups_insert.sql`.
 
 - `group_members`
   - Select: members can view members of their groups; users can also view unconnected members with matching email (needed for reconnection).
-  - Insert: user can add themselves (`connected_user_id = auth.uid()`) or existing members can add others.
+  - Insert: only existing group members can add new members (`user_is_group_member((select auth.uid()), group_id)`). The first member is added by the `create-group` edge function using the service role key to bypass RLS.
   - Update: members can update member details within groups they belong to; updates are also used for connect/disconnect flows.
-  - Delete: any group member can delete another member if that member has no non-zero expense shares (prevents deletion of members involved in expenses).
+  - Delete: any group member can delete another member only if that member is not involved in expenses (no non-zero shares and not referenced as `payer_member_id`).
 
 - `expenses` and `expense_shares`
   - All CRUD access is scoped to group membership (member of the group that owns the expense).
 
 - `exchange_rates`
-  - Policies allow read access to cached rates; writes occur from the client and are subject to RLS.
+  - Policies allow read access to cached rates; writes are performed by the `get-exchange-rate` edge function using service role permissions.
 
 - `user_currency_preferences`, `user_group_preferences`, and `user_settle_preferences`
   - User can read/insert/update their own preferences.
 
-For the exact SQL definitions and helper functions, see:
-
-- `supabase/migrations/20251225090146_remove_unused_indexes_and_fix_function.sql`
-- `supabase/migrations/20251225132228_remove_group_ownership_implement_soft_delete.sql`
-- `supabase/migrations/20251225181452_fix_group_members_insert_allow_self.sql`
-- `supabase/migrations/20251225180300_fix_groups_insert_select_policy.sql`
-- `supabase/migrations/20260110000000_enable_remove_member_with_no_shares.sql`
+- `user_known_users`
+  - User can read/insert/update/delete their own known-users rows only (`user_id = (select auth.uid())`).
 
 ## Money math and settlement algorithms
 
@@ -188,13 +203,25 @@ Relevant files:
 
 ## Exchange rate workflow
 
-- `services/exchangeRateService.ts` first tries to read a cached rate from `exchange_rates`.
+- `services/exchangeRateService.ts` first checks an in-memory cache, then AsyncStorage (`exchange_rate_cache_v1`), before calling `get-exchange-rate`.
+- On login, `syncUserPreferences()` calls `prefetchExchangeRatesOnLogin()` to prewarm local rates for currency pairs derived from existing expenses and group main currencies.
+- The edge function first tries to read a cached rate from `exchange_rates`.
 - Cached rates expire after 12 hours (`CACHE_DURATION_MS`).
-- If missing or stale, the client fetches from `https://api.exchangerate-api.com/v4/latest/{base}`.
-- The rate is scaled (4dp) and upserted into `exchange_rates`.
+- If missing or stale, the edge function fetches from `https://api.exchangerate-api.com/v4/latest/{base}`.
+- The rate is scaled (4dp) and upserted into `exchange_rates` by the edge function using service role permissions.
+- Clients cannot write to `exchange_rates` directly (RLS policies restrict insert/update access).
 - All expenses store a snapshot of the rate in `exchange_rate_to_main_scaled` to keep historical accuracy.
+- Group payments UI uses `expense.total_in_main_scaled` for conversion previews, avoiding any runtime FX fetch when opening the Payments tab.
 
 ## Edge functions
+
+### create-group
+
+- File: `supabase/functions/create-group/index.ts`.
+- Triggered from `createGroup()` in `services/groupRepository.ts`.
+- Creates a new group with the creator as the first member using service role (bypasses RLS).
+- Also adds any additional initial members provided.
+- This edge function is required because direct client `INSERT` into `groups` is disallowed and `group_members` INSERT RLS only allows existing members to add new members.
 
 ### send-invitation
 
@@ -220,6 +247,14 @@ Relevant files:
 - Triggered when a member is added to a group or when a member's connection changes (`createGroupMember()`, `updateGroupMember()`, `reconnectGroupMembers()` in `services/groupRepository.ts`).
 - Updates the `user_known_users` table bidirectionally: adds the new member to existing members' known users lists and adds existing members to the new member's known users list.
 - Only processes members that are connected to authenticated users (have a `connected_user_id`).
+
+### get-exchange-rate
+
+- File: `supabase/functions/get-exchange-rate/index.ts`.
+- Triggered from `getExchangeRate()` in `services/exchangeRateService.ts`.
+- Fetches exchange rates from `https://api.exchangerate-api.com` and caches them in the `exchange_rates` table.
+- First checks for cached rates (valid for 12 hours), then fetches fresh rates if needed.
+- Uses service role permissions to write to `exchange_rates`, which clients cannot modify directly.
 
 ### password-recovery
 
@@ -292,9 +327,9 @@ The UI uses a light, card-based aesthetic with consistent spacing and neutral gr
 
 - Loads group, members, and expenses (`getGroup()`, `getGroupExpenses()`).
 - Tabs:
-  - Payments: list of expenses and transfers with conversion previews.
+  - Payments: list of expenses and transfers with conversion previews rendered from stored `total_in_main_scaled`.
   - Balances: per-member net balance via `computeBalances()`.
-  - Settle: shortcut into settle flow if balances are non-zero.
+  - Settle: embedded settle view powered by `SettleContent`, with transfer recording and debt simplification controls.
 - Group actions (overflow menu):
   - Group members: opens member management screen.
   - Leave group uses `leaveGroup()` and triggers cleanup function.
@@ -317,6 +352,7 @@ The UI uses a light, card-based aesthetic with consistent spacing and neutral gr
 ### Edit Expense (`app/group/[id]/edit-expense.tsx`)
 
 - Loads expense and group, pre-fills form and split method.
+- Preserves the original FX snapshot rate when the edited currency is unchanged; fetches a new rate only if currency changes.
 - Recomputes shares on save and updates via `updateExpense()`.
 - Can delete via `deleteExpense()`.
 - UI rendering is shared via `components/ExpenseFormScreen.tsx`.
@@ -324,6 +360,7 @@ The UI uses a light, card-based aesthetic with consistent spacing and neutral gr
 ### Edit Transfer (`app/group/[id]/edit-transfer.tsx`)
 
 - Specialized edit form for transfers (single recipient).
+- Preserves the original FX snapshot rate when the edited currency is unchanged; fetches a new rate only if currency changes.
 - Updates expense using `updateExpense()` .
 - Can delete via `deleteExpense()`.
 - UI rendering is shared via `components/ExpenseFormScreen.tsx`.
@@ -344,7 +381,7 @@ The UI uses a light, card-based aesthetic with consistent spacing and neutral gr
 - Uses `updateGroupMember()`.
 - Uses `KnownUserSuggestionInput` component for autocomplete suggestions.
 - When email changes and connects to a different user, the known users lists are updated via the edge function.
-- Shows a delete button if the member can be removed (has no non-zero expense shares).
+- Shows a delete button if the member can be removed (is not involved in expenses as payer or non-zero share), and always shows a leave action when editing the current user’s own member row.
 - Uses `canDeleteGroupMember()` to check if deletion is allowed.
 - Uses `deleteGroupMember()` to remove the member from the group.
 
@@ -363,7 +400,7 @@ The UI uses a light, card-based aesthetic with consistent spacing and neutral gr
 1. User signs up or signs in (`app/auth.tsx` → `contexts/AuthContext.tsx`).
 2. `ensureUserProfile()` creates a `users` row and reconnects matching members.
 3. When reconnecting, `reconnectGroupMembers()` calls `update-known-users` edge function to update known users lists.
-4. User creates a group (`app/create-group.tsx` → `createGroup()` → `group_members`).
+4. User creates a group (`app/create-group.tsx` → `createGroup()` → `create-group` edge function → `groups` + initial `group_members`).
 5. When adding members, `createGroupMember()` calls `update-known-users` edge function to track user relationships bidirectionally.
 6. User adds expenses or transfers (`app/group/[id]/add-expense.tsx` → `createExpense()` + `expense_shares`).
 7. Balances and settlements are computed locally (`services/settlementService.ts`).
@@ -376,11 +413,12 @@ The UI uses a light, card-based aesthetic with consistent spacing and neutral gr
 - App entry + routing: `app/_layout.tsx`, `app/(tabs)/_layout.tsx`.
 - Auth state: `contexts/AuthContext.tsx`.
 - Data access: `services/groupRepository.ts`, `services/exchangeRateService.ts`.
-- Preferences: `services/currencyPreferenceService.ts`, `services/groupPreferenceService.ts`, `hooks/useCurrencyOrder.ts`.
+- Preferences: `services/currencyPreferenceService.ts`, `services/groupPreferenceService.ts`, `services/settlePreferenceService.ts`, `services/userPreferenceSync.ts`, `services/userPreferenceCache.ts`, `hooks/useCurrencyOrder.ts`.
 - Money math: `utils/money.ts`, `utils/currencies.ts`.
 - Input validation logic: `utils/validation.ts` (decimal, integer, percentage, and exact-amount input helpers).
 - Shared expense/transfer form UI: `components/ExpenseFormScreen.tsx`.
 - Known user autocomplete UI: `components/KnownUserSuggestionInput.tsx`.
+- Shared settle UI: `components/SettleContent.tsx`.
 - Settlement logic: `services/settlementService.ts`.
 - Edge functions: `supabase/functions/*`.
 - RLS and schema: `supabase/migrations/*.sql`.

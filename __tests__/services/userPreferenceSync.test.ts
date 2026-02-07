@@ -12,11 +12,16 @@ jest.mock('@/services/settlePreferenceService', () => ({
   refreshSettlePreferenceForUser: jest.fn(),
 }));
 
+jest.mock('@/services/exchangeRateService', () => ({
+  prefetchExchangeRatesOnLogin: jest.fn(),
+}));
+
 describe('userPreferenceSync', () => {
   it('refreshes all user preferences in parallel', async () => {
     const currencyService = require('@/services/currencyPreferenceService');
     const groupService = require('@/services/groupPreferenceService');
     const settleService = require('@/services/settlePreferenceService');
+    const exchangeRateService = require('@/services/exchangeRateService');
 
     await syncUserPreferences('user-123');
 
@@ -29,5 +34,6 @@ describe('userPreferenceSync', () => {
     expect(settleService.refreshSettlePreferenceForUser).toHaveBeenCalledWith(
       'user-123',
     );
+    expect(exchangeRateService.prefetchExchangeRatesOnLogin).toHaveBeenCalled();
   });
 });

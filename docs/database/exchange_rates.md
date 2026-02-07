@@ -1,59 +1,41 @@
 # The exchange_rates Table
 
-The `exchange_rates` table caches currency conversion rates used for multi-currency expenses.
+The `exchange_rates` table stores cached FX rates used to convert expense values into a group's main currency.
 
 ## Purpose and Role
 
-**Primary Function:** Provide cached FX rates so the app can:
-
-- Convert expenses into a group's main currency
-- Avoid repeated API calls
-- Support offline or low-connectivity scenarios
+**Primary Function:** Reduce external API calls and keep conversion behavior consistent by caching currency pairs.
 
 ## Table Structure
 
 The table contains these key columns:
 
-- **id** - Unique identifier for the cached rate
-- **base_currency_code** - The base currency
-- **quote_currency_code** - The target currency
-- **rate_scaled** - Conversion rate (scaled integer)
-- **fetched_at** - Timestamp when the rate was retrieved
+- **id** - Unique identifier for the cached rate row
+- **base_currency_code** - Source currency
+- **quote_currency_code** - Target currency
+- **rate_scaled** - Conversion rate stored as scaled integer
+- **fetched_at** - Timestamp when the rate was fetched
 
 ## RLS Policies
 
-Row-level security allows authenticated clients to read and refresh cached rates:
+Current policies allow authenticated users to manage the cache:
 
-- **SELECT** is allowed for authenticated users so rates can be reused across groups.
-- **INSERT** is allowed for authenticated users to cache newly fetched rates.
-- **UPDATE** is allowed for authenticated users to refresh stale rates.
-- **DELETE** is not enabled by policy in the current migrations.
+- **SELECT** - Allowed (`USING (true)`)
+- **INSERT** - Allowed (`WITH CHECK (true)`)
+- **UPDATE** - Allowed (`USING (true) WITH CHECK (true)`)
+- **DELETE** - No delete policy
 
 ## How It Works in Practice
 
-**Example scenario:**
-
-1. A user adds an expense in USD to a EUR group
-2. The app checks the cache for USD -> EUR
-3. If stale or missing, it fetches from the external API
-4. The new rate is stored and used to compute the expense total
+1. The client checks for `base -> quote` in `exchange_rates`.
+2. If the cached row is fresh (12-hour TTL), it is reused.
+3. If stale/missing, the client fetches from `https://api.exchangerate-api.com/v4/latest/{base}`.
+4. The row is upserted and then used for conversion.
 
 ## Relationship to Other Tables
 
-```
-exchange_rates (standalone cache)
-```
-
-See also: [expenses](expenses.md), [groups](groups.md)
-
-## Key Implementation Details
-
-**Cache Duration:** Rates are treated as valid for 12 hours.
-
-**Scaled Integers:** Rates are stored as scaled integers for precise math.
-
-**Client-Side Fetch:** The client calls the external API and upserts into Supabase.
+`exchange_rates` is a standalone cache table. It is read when creating/updating values in [expenses](expenses.md).
 
 ## Usage in Code
 
-The application uses this table in the function `getExchangeRate` in `services/exchangeRateService.ts`.
+- `services/exchangeRateService.ts` (`getExchangeRate`)

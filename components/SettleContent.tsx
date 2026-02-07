@@ -44,6 +44,7 @@ export default function SettleContent({
   const [animationSteps, setAnimationSteps] = useState<SimplificationStep[]>(
     [],
   );
+  const [animationNotice, setAnimationNotice] = useState<string | null>(null);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const animationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const simplifiedRef = useRef(true);
@@ -55,6 +56,7 @@ export default function SettleContent({
 
     setLoading(true);
     setError(null);
+    setAnimationNotice(null);
 
     try {
       const fetchedGroup = await getGroup(groupId);
@@ -117,6 +119,7 @@ export default function SettleContent({
     simplifiedRef.current = newSimplified;
     setSimplified(newSimplified);
     setLastUpdated(Date.now());
+    setAnimationNotice(null);
     setSettleSimplifyPreference(newSimplified);
   };
 
@@ -176,10 +179,14 @@ export default function SettleContent({
     const steps = computeSimplificationSteps(expenses, group.members);
 
     if (steps.length <= 1) {
-      setError('There are no simplification steps to show.');
+      setAnimationNotice('No simplification steps to show.');
+      setIsAnimating(false);
+      setAnimationSteps([]);
+      setCurrentStepIndex(0);
       return;
     }
 
+    setAnimationNotice(null);
     setAnimationSteps(steps);
     setCurrentStepIndex(0);
     setIsAnimating(true);
@@ -366,6 +373,11 @@ export default function SettleContent({
 
       {!error && !isAnimating && settlements.length > 0 && (
         <>
+          {animationNotice && (
+            <View style={styles.noticeBox}>
+              <Text style={styles.noticeText}>{animationNotice}</Text>
+            </View>
+          )}
           <View style={styles.infoBox}>
             <View style={styles.infoHeader}>
               <View style={styles.infoTextGroup}>
@@ -487,6 +499,19 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6b7280',
     marginTop: 2,
+  },
+  noticeBox: {
+    backgroundColor: '#f0fdf4',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#bbf7d0',
+  },
+  noticeText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#166534',
   },
   infoHeader: {
     flexDirection: 'row',

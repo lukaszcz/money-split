@@ -10,13 +10,13 @@ import {
   Expense,
 } from '../../../services/groupRepository';
 import {
-  toScaled,
   applyExchangeRate,
   calculateSharesForSplit,
   formatCurrency,
+  toScaled,
   type SplitMethod,
 } from '../../../utils/money';
-import { getExchangeRate } from '../../../services/exchangeRateService';
+import { resolveExchangeRateForEdit } from '../../../services/exchangeRateService';
 import ExpenseFormScreen from '../../../components/ExpenseFormScreen';
 
 export default function EditExpenseScreen() {
@@ -39,6 +39,7 @@ export default function EditExpenseScreen() {
 
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(false);
 
   const loadData = useCallback(async () => {
     if (
@@ -106,11 +107,16 @@ export default function EditExpenseScreen() {
           onPress: async () => {
             if (!expenseId || typeof expenseId !== 'string') return;
 
-            const success = await deleteExpense(expenseId);
-            if (success) {
-              router.back();
-            } else {
-              Alert.alert('Error', 'Failed to delete expense');
+            setDeleting(true);
+            try {
+              const success = await deleteExpense(expenseId);
+              if (success) {
+                router.back();
+              } else {
+                Alert.alert('Error', 'Failed to delete expense');
+              }
+            } finally {
+              setDeleting(false);
             }
           },
         },
@@ -153,29 +159,34 @@ export default function EditExpenseScreen() {
   };
 
   const saveExpense = async (shares: bigint[]) => {
-    if (!group || !expenseId || typeof expenseId !== 'string') return;
+    if (!group || !expense || !expenseId || typeof expenseId !== 'string')
+      return;
 
     setSaving(true);
 
     try {
-      const rate = await getExchangeRate(currency, group.mainCurrencyCode);
+      const rateScaled = await resolveExchangeRateForEdit(
+        expense.currencyCode,
+        currency,
+        group.mainCurrencyCode,
+        expense.exchangeRateToMainScaled,
+      );
 
-      if (!rate) {
+      if (rateScaled === null) {
         Alert.alert(
           'Error',
           'Could not fetch exchange rate. Please try again.',
         );
-        setSaving(false);
         return;
       }
 
       const totalScaled = toScaled(parseFloat(amount));
-      const totalInMainScaled = applyExchangeRate(totalScaled, rate.rateScaled);
+      const totalInMainScaled = applyExchangeRate(totalScaled, rateScaled);
 
       const shareData = selectedParticipants.map((memberId, idx) => ({
         memberId,
         shareAmountScaled: shares[idx],
-        shareInMainScaled: applyExchangeRate(shares[idx], rate.rateScaled),
+        shareInMainScaled: applyExchangeRate(shares[idx], rateScaled),
       }));
 
       const updatedExpense = await updateExpense(
@@ -185,7 +196,7 @@ export default function EditExpenseScreen() {
         currency,
         totalScaled,
         payerId,
-        rate.rateScaled,
+        rateScaled,
         totalInMainScaled,
         shareData,
         splitMethod,
@@ -232,7 +243,7 @@ export default function EditExpenseScreen() {
       setPercentages={setPercentages}
       exactAmounts={exactAmounts}
       setExactAmounts={setExactAmounts}
-      saving={saving}
+      saving={saving || deleting}
       onClose={() => router.back()}
       onDelete={handleDelete}
       onSaveExpense={handleSave}
