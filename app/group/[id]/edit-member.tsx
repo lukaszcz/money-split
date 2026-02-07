@@ -255,6 +255,11 @@ export default function EditMemberScreen() {
       return;
     }
 
+    // Prevent deleting if already loading
+    if (loading) {
+      return;
+    }
+
     Alert.alert(
       isCurrentUserMember ? 'Leave Group' : 'Delete Member',
       isCurrentUserMember

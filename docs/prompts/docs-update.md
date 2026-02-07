@@ -1,0 +1,1 @@
+Analyze the codebase and check if `docs/ARCHITECTURE.md` is up-to-date. Update it wherever it deviates from the state of the codebase or some major component descriptions are missing. Update the files in `docs/database/` to match current database schemas and RLS policies.

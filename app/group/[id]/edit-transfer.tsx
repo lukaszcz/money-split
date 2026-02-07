@@ -10,11 +10,11 @@ import {
   Expense,
 } from '../../../services/groupRepository';
 import {
-  toScaled,
   applyExchangeRate,
   formatCurrency,
+  toScaled,
 } from '../../../utils/money';
-import { getExchangeRate } from '../../../services/exchangeRateService';
+import { resolveExchangeRateForEdit } from '../../../services/exchangeRateService';
 import ExpenseFormScreen from '../../../components/ExpenseFormScreen';
 
 export default function EditTransferScreen() {
@@ -31,6 +31,7 @@ export default function EditTransferScreen() {
 
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(false);
 
   const loadData = useCallback(async () => {
     if (
@@ -91,19 +92,23 @@ export default function EditTransferScreen() {
     setSaving(true);
 
     try {
-      const rate = await getExchangeRate(currency, group.mainCurrencyCode);
+      const rateScaled = await resolveExchangeRateForEdit(
+        expense.currencyCode,
+        currency,
+        group.mainCurrencyCode,
+        expense.exchangeRateToMainScaled,
+      );
 
-      if (!rate) {
+      if (rateScaled === null) {
         Alert.alert(
           'Error',
           'Could not fetch exchange rate. Please try again.',
         );
-        setSaving(false);
         return;
       }
 
       const totalScaled = toScaled(parseFloat(amount));
-      const totalInMainScaled = applyExchangeRate(totalScaled, rate.rateScaled);
+      const totalInMainScaled = applyExchangeRate(totalScaled, rateScaled);
 
       const payer = group.members.find((m) => m.id === payerId);
       const recipient = group.members.find((m) => m.id === recipientId);
@@ -127,7 +132,7 @@ export default function EditTransferScreen() {
         currency,
         totalScaled,
         payerId,
-        rate.rateScaled,
+        rateScaled,
         totalInMainScaled,
         shareData,
         'equal',
@@ -158,11 +163,16 @@ export default function EditTransferScreen() {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
-            const success = await deleteExpense(expense.id);
-            if (success) {
-              router.back();
-            } else {
-              Alert.alert('Error', 'Failed to delete transfer');
+            setDeleting(true);
+            try {
+              const success = await deleteExpense(expense.id);
+              if (success) {
+                router.back();
+              } else {
+                Alert.alert('Error', 'Failed to delete transfer');
+              }
+            } finally {
+              setDeleting(false);
             }
           },
         },
@@ -192,7 +202,7 @@ export default function EditTransferScreen() {
       setPayerId={setPayerId}
       recipientId={recipientId}
       setRecipientId={setRecipientId}
-      saving={saving}
+      saving={saving || deleting}
       onClose={() => router.back()}
       onDelete={handleDelete}
       onSaveTransfer={handleSave}

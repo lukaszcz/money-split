@@ -2,25 +2,43 @@
 
 The `user_settle_preferences` table stores per-user defaults for the settle flow, such as whether to simplify debts by default.
 
-## Purpose
+## Purpose and Role
 
-- Persist settle preferences across devices
-- Provide a default for the Simplify debts toggle
+**Primary Function:** Persist settle behavior defaults across sessions/devices.
 
-## Columns
+- Store whether "Simplify debts" should be enabled by default
+- Keep settle behavior consistent in both embedded and dedicated settle screens
 
-- **user_id** (uuid, primary key)
-  - References `auth.users.id`
-- **simplify_debts** (boolean, default true)
-  - Whether the user prefers simplified settlements by default
-- **updated_at** (timestamptz)
-  - Last time the preference was updated
+## Table Structure
+
+The table contains these key columns:
+
+- **user_id** - Primary key identifying the user
+- **simplify_debts** - Boolean toggle (default `true`)
+- **updated_at** - Last update timestamp
 
 ## RLS Policies
 
-- Users can read their own preferences
-- Users can insert their own preferences
-- Users can update their own preferences
+- **SELECT** is allowed only when `(select auth.uid()) = user_id`
+- **INSERT** is allowed only when `(select auth.uid()) = user_id`
+- **UPDATE** is allowed only when `(select auth.uid()) = user_id`
+- **DELETE** is not enabled by policy in current migrations
+
+## Relationship to Other Tables
+
+```
+users
+  |
+  |-- user_settle_preferences
+```
+
+See also: [users](users.md)
+
+## Usage in Code
+
+- `services/settlePreferenceService.ts` (`getSettleSimplifyPreference`, `setSettleSimplifyPreference`, `refreshSettlePreferenceForUser`)
+- `services/userPreferenceSync.ts` (refresh on sign-in/app bootstrap)
+- `components/SettleContent.tsx` (reads and writes toggle state)
 
 ## Related Docs
 
