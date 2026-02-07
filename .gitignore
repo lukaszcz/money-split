@@ -45,3 +45,7 @@ supabase/.branches/
 coverage
 *.lcov
 .nyc_output
+
+# AI assistants
+.codex/
+.claude/settings.local.json

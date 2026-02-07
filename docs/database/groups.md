@@ -23,9 +23,9 @@ The table contains these key columns:
 
 Row-level security scopes access to group membership and allows safe creation:
 
-- **SELECT** is allowed when the authenticated user is a member of the group via `user_is_group_member(auth.uid(), id)`. A special case also allows selecting a newly created group before any members are connected (when `group_has_connected_members(id)` is false).
+- **SELECT** is allowed when the authenticated user is a member of the group via `user_is_group_member((select auth.uid()), id)`. A special case also allows selecting groups with no connected members yet (`NOT group_has_connected_members(id)`), which is required during create/cleanup windows.
 - **INSERT** is allowed for any authenticated user (`WITH CHECK (true)`).
-- **UPDATE** is allowed only for group members (`user_is_group_member(auth.uid(), id)`).
+- **UPDATE** is allowed only for group members (`user_is_group_member((select auth.uid()), id)`).
 - **DELETE** is allowed only when the group has no connected members (`NOT group_has_connected_members(id)`), enabling cleanup of orphaned groups.
 
 ## How It Works in Practice
