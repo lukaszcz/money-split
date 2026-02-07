@@ -27,7 +27,7 @@ This document describes the architecture of the MoneySplit application (React Na
 - Navigation, screens, and UI logic (`app/*.tsx`).
 - Authentication state handling (`contexts/AuthContext.tsx`).
 - Client-side money math and settlement logic (`utils/money.ts`, `services/settlementService.ts`).
-- Exchange rate fetch + caching logic (API call + Supabase write) (`services/exchangeRateService.ts`).
+- Exchange rate caching and lookup in AsyncStorage + in-memory map, with edge-function fallback (`services/exchangeRateService.ts`).
 - Data access via Supabase JS SDK (`lib/supabase.ts`, `services/*.ts`).
 - Preference ordering and UX state (group order, currency order, settle defaults) stored in Supabase and cached in AsyncStorage (`services/groupPreferenceService.ts`, `services/currencyPreferenceService.ts`, `services/settlePreferenceService.ts`).
 
@@ -36,11 +36,12 @@ This document describes the architecture of the MoneySplit application (React Na
 - Auth: user identity and sessions (Supabase Auth).
 - Database: persistence, constraints, and RLS (migrations in `supabase/migrations/*.sql`).
 - Row-level security policies enforce membership-based access.
-- Edge Functions for group creation, delete-user, cleanup, invitations, and known users tracking (Deno runtime):
+- Edge Functions for group creation, delete-user, cleanup, invitations, exchange rates, and known users tracking (Deno runtime):
   - `supabase/functions/create-group/index.ts`
   - `supabase/functions/delete-user/index.ts`
   - `supabase/functions/cleanup-orphaned-groups/index.ts`
   - `supabase/functions/send-invitation/index.ts`
+  - `supabase/functions/get-exchange-rate/index.ts`
   - `supabase/functions/update-known-users/index.ts`
 
 ## App initialization and auth flow
@@ -49,7 +50,7 @@ This document describes the architecture of the MoneySplit application (React Na
 - On startup, `AuthProvider` calls `supabase.auth.getSession()` and, if signed in, calls `ensureUserProfile()` to provision a local user record in the public `users` table (`services/groupRepository.ts`). It also syncs user preferences from the database to the local AsyncStorage cache (`services/userPreferenceSync.ts`).
 - Routing is guarded by `useSegments()` in `app/_layout.tsx`: unauthenticated users are forced to `app/auth.tsx`, authenticated users are redirected to the Groups tab.
 - Sign in and sign up are handled in `app/auth.tsx` by `useAuth().signIn()` / `signUp()`. On successful sign-in, the app updates `users.last_login` in `contexts/AuthContext.tsx`.
-- Sign-in also triggers a preference sync to refresh cached user preferences for currency order, group order, and settle defaults.
+- Sign-in also triggers a preference sync to refresh cached user preferences for currency order, group order, and settle defaults, and warms the exchange-rate cache for currencies seen in the user's expenses.
 
 ## Client-server communication
 
@@ -61,7 +62,7 @@ This document describes the architecture of the MoneySplit application (React Na
   - `delete-user` is invoked when deleting an account (with bearer token).
   - `send-invitation` is invoked when inviting members by email.
   - `update-known-users` is invoked when a member is connected to an authenticated user (with bearer token).
-- Exchange rates are fetched from `https://api.exchangerate-api.com/v4/latest/{base}` in `services/exchangeRateService.ts` and cached in Supabase.
+  - `get-exchange-rate` is invoked in `services/exchangeRateService.ts` on local cache miss/staleness, and is prewarmed at login for known currency pairs.
 
 ## Data model (current schema + notes)
 
@@ -109,7 +110,8 @@ The canonical schema is defined by the SQL migrations under `supabase/migrations
 - Description: Cached FX rates used to convert expenses to a group's main currency.
 - Table: `public.exchange_rates`
 - Columns: `id`, `base_currency_code`, `quote_currency_code`, `rate_scaled`, `fetched_at`.
-- Cached rates are read/written in `services/exchangeRateService.ts`.
+- Cached rates are managed by the `get-exchange-rate` edge function.
+- Clients can read cached rates but cannot insert or update them directly (RLS policies restrict write access).
 
 ### user_currency_preferences
 
@@ -167,7 +169,7 @@ The RLS policies have evolved through multiple migrations. The most recent polic
   - All CRUD access is scoped to group membership (member of the group that owns the expense).
 
 - `exchange_rates`
-  - Policies allow read access to cached rates; writes occur from the client and are subject to RLS.
+  - Policies allow read access to cached rates; writes are performed by the `get-exchange-rate` edge function using service role permissions.
 
 - `user_currency_preferences`, `user_group_preferences`, and `user_settle_preferences`
   - User can read/insert/update their own preferences.
@@ -196,11 +198,15 @@ Relevant files:
 
 ## Exchange rate workflow
 
-- `services/exchangeRateService.ts` first tries to read a cached rate from `exchange_rates`.
+- `services/exchangeRateService.ts` first checks an in-memory cache, then AsyncStorage (`exchange_rate_cache_v1`), before calling `get-exchange-rate`.
+- On login, `syncUserPreferences()` calls `prefetchExchangeRatesOnLogin()` to prewarm local rates for currency pairs derived from existing expenses and group main currencies.
+- The edge function first tries to read a cached rate from `exchange_rates`.
 - Cached rates expire after 12 hours (`CACHE_DURATION_MS`).
-- If missing or stale, the client fetches from `https://api.exchangerate-api.com/v4/latest/{base}`.
-- The rate is scaled (4dp) and upserted into `exchange_rates`.
+- If missing or stale, the edge function fetches from `https://api.exchangerate-api.com/v4/latest/{base}`.
+- The rate is scaled (4dp) and upserted into `exchange_rates` by the edge function using service role permissions.
+- Clients cannot write to `exchange_rates` directly (RLS policies restrict insert/update access).
 - All expenses store a snapshot of the rate in `exchange_rate_to_main_scaled` to keep historical accuracy.
+- Group payments UI uses `expense.total_in_main_scaled` for conversion previews, avoiding any runtime FX fetch when opening the Payments tab.
 
 ## Edge functions
 
@@ -236,6 +242,14 @@ Relevant files:
 - Triggered when a member is added to a group or when a member's connection changes (`createGroupMember()`, `updateGroupMember()`, `reconnectGroupMembers()` in `services/groupRepository.ts`).
 - Updates the `user_known_users` table bidirectionally: adds the new member to existing members' known users lists and adds existing members to the new member's known users list.
 - Only processes members that are connected to authenticated users (have a `connected_user_id`).
+
+### get-exchange-rate
+
+- File: `supabase/functions/get-exchange-rate/index.ts`.
+- Triggered from `getExchangeRate()` in `services/exchangeRateService.ts`.
+- Fetches exchange rates from `https://api.exchangerate-api.com` and caches them in the `exchange_rates` table.
+- First checks for cached rates (valid for 12 hours), then fetches fresh rates if needed.
+- Uses service role permissions to write to `exchange_rates`, which clients cannot modify directly.
 
 ## UI design and screen-by-screen behavior
 
@@ -288,7 +302,7 @@ The UI uses a light, card-based aesthetic with consistent spacing and neutral gr
 
 - Loads group, members, and expenses (`getGroup()`, `getGroupExpenses()`).
 - Tabs:
-  - Payments: list of expenses and transfers with conversion previews.
+  - Payments: list of expenses and transfers with conversion previews rendered from stored `total_in_main_scaled`.
   - Balances: per-member net balance via `computeBalances()`.
   - Settle: embedded settle view powered by `SettleContent`, with transfer recording and debt simplification controls.
 - Group actions (overflow menu):
@@ -313,6 +327,7 @@ The UI uses a light, card-based aesthetic with consistent spacing and neutral gr
 ### Edit Expense (`app/group/[id]/edit-expense.tsx`)
 
 - Loads expense and group, pre-fills form and split method.
+- Preserves the original FX snapshot rate when the edited currency is unchanged; fetches a new rate only if currency changes.
 - Recomputes shares on save and updates via `updateExpense()`.
 - Can delete via `deleteExpense()`.
 - UI rendering is shared via `components/ExpenseFormScreen.tsx`.
@@ -320,6 +335,7 @@ The UI uses a light, card-based aesthetic with consistent spacing and neutral gr
 ### Edit Transfer (`app/group/[id]/edit-transfer.tsx`)
 
 - Specialized edit form for transfers (single recipient).
+- Preserves the original FX snapshot rate when the edited currency is unchanged; fetches a new rate only if currency changes.
 - Updates expense using `updateExpense()` .
 - Can delete via `deleteExpense()`.
 - UI rendering is shared via `components/ExpenseFormScreen.tsx`.

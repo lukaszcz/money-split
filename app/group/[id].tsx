@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -24,9 +24,8 @@ import {
   GroupMember,
 } from '../../services/groupRepository';
 import { computeBalances } from '../../services/settlementService';
-import { formatNumber, multiplyScaled } from '../../utils/money';
+import { formatNumber } from '../../utils/money';
 import { getCurrencySymbol } from '../../utils/currencies';
-import { getExchangeRate } from '../../services/exchangeRateService';
 import { recordGroupVisit } from '../../services/groupPreferenceService';
 import { getMenuPosition } from '../../utils/ui';
 import BottomActionBar from '../../components/BottomActionBar';
@@ -329,38 +328,7 @@ function ExpensesTab({
 }) {
   const router = useRouter();
   const memberMap = new Map(group.members.map((m) => [m.id, m]));
-  const [convertedAmounts, setConvertedAmounts] = useState<Map<string, bigint>>(
-    new Map(),
-  );
   const groupCurrencySymbol = getCurrencySymbol(group.mainCurrencyCode);
-
-  useEffect(() => {
-    const fetchConversions = async () => {
-      const conversions = new Map<string, bigint>();
-
-      for (const expense of expenses) {
-        if (expense.currencyCode !== group.mainCurrencyCode) {
-          const rate = await getExchangeRate(
-            expense.currencyCode,
-            group.mainCurrencyCode,
-          );
-          if (rate) {
-            const converted = multiplyScaled(
-              expense.totalAmountScaled,
-              rate.rateScaled,
-            );
-            conversions.set(expense.id, converted);
-          }
-        }
-      }
-
-      setConvertedAmounts(conversions);
-    };
-
-    if (expenses.length > 0) {
-      fetchConversions();
-    }
-  }, [expenses, group.mainCurrencyCode]);
 
   if (expenses.length === 0) {
     return (
@@ -379,9 +347,8 @@ function ExpensesTab({
     <View style={styles.tabContent}>
       {expenses.map((expense) => {
         const payer = memberMap.get(expense.payerMemberId);
-        const convertedAmount = convertedAmounts.get(expense.id);
-        const showConversion =
-          expense.currencyCode !== group.mainCurrencyCode && convertedAmount;
+        const showConversion = expense.currencyCode !== group.mainCurrencyCode;
+        const convertedAmount = showConversion ? expense.totalInMainScaled : 0n;
         const isTransfer = expense.paymentType === 'transfer';
         const editRoute = isTransfer
           ? `/group/${group.id}/edit-transfer?expenseId=${expense.id}`
