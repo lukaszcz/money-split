@@ -19,6 +19,8 @@ import {
   getUserByEmail,
   sendInvitationEmail,
   ensureUserProfile,
+  getKnownUsers,
+  KnownUser,
 } from '../services/groupRepository';
 import { useCurrencyOrder } from '../hooks/useCurrencyOrder';
 import { isValidEmail, isDuplicateMemberName } from '../utils/validation';
@@ -39,8 +41,14 @@ export default function CreateGroupScreen() {
   const [newMemberName, setNewMemberName] = useState('');
   const [newMemberEmail, setNewMemberEmail] = useState('');
   const [currentUserName, setCurrentUserName] = useState('');
+  const [knownUsers, setKnownUsers] = useState<KnownUser[]>([]);
+  const [filteredSuggestions, setFilteredSuggestions] = useState<KnownUser[]>(
+    [],
+  );
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [currentUserLoading, setCurrentUserLoading] = useState(true);
   const [hasDuplicateName, setHasDuplicateName] = useState(false);
+  const [creating, setCreating] = useState(false);
 
   const {
     currencies: orderedCurrencies,
@@ -50,6 +58,7 @@ export default function CreateGroupScreen() {
 
   useEffect(() => {
     loadCurrentUser();
+    loadKnownUsers();
   }, []);
 
   useEffect(() => {
@@ -83,6 +92,42 @@ export default function CreateGroupScreen() {
     const isDuplicate = isDuplicateMemberName(trimmedName, allMemberNames);
     setHasDuplicateName(isDuplicate);
     return isDuplicate;
+  };
+
+  const loadKnownUsers = async () => {
+    const users = await getKnownUsers();
+    setKnownUsers(users);
+  };
+
+  const filterSuggestions = (text: string) => {
+    if (!text || text.length < 2) {
+      setFilteredSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+
+    const searchText = text.toLowerCase().trim();
+    const filtered = knownUsers.filter(
+      (user) =>
+        user.name.toLowerCase().includes(searchText) ||
+        (user.email && user.email.toLowerCase().includes(searchText)),
+    );
+
+    setFilteredSuggestions(filtered);
+    setShowSuggestions(filtered.length > 0);
+  };
+
+  const handleSelectSuggestion = (user: KnownUser) => {
+    setNewMemberName(user.name);
+    setNewMemberEmail(user.email || '');
+    setShowSuggestions(false);
+    setFilteredSuggestions([]);
+  };
+
+  const handleMemberNameChange = (text: string) => {
+    setNewMemberName(text);
+    filterSuggestions(text);
+    checkForDuplicateName(text);
   };
 
   const handleAddMember = async () => {
@@ -155,32 +200,38 @@ export default function CreateGroupScreen() {
       return;
     }
 
-    const initialMembers = pendingMembers.map((m) => ({
-      name: m.name,
-      email: m.email,
-    }));
+    setCreating(true);
 
-    const group = await createGroup(
-      groupName.trim(),
-      mainCurrency,
-      initialMembers,
-    );
+    try {
+      const initialMembers = pendingMembers.map((m) => ({
+        name: m.name,
+        email: m.email,
+      }));
 
-    if (group) {
-      for (const member of pendingMembers) {
-        if (member.email) {
-          const existingUser = await getUserByEmail(member.email);
-          if (!existingUser) {
-            sendInvitationEmail(member.email, groupName.trim());
+      const group = await createGroup(
+        groupName.trim(),
+        mainCurrency,
+        initialMembers,
+      );
+
+      if (group) {
+        for (const member of pendingMembers) {
+          if (member.email) {
+            const existingUser = await getUserByEmail(member.email);
+            if (!existingUser) {
+              sendInvitationEmail(member.email, groupName.trim());
+            }
           }
         }
+        router.back();
+      } else {
+        Alert.alert(
+          'Error',
+          'Failed to create group. Check console for details.',
+        );
       }
-      router.back();
-    } else {
-      Alert.alert(
-        'Error',
-        'Failed to create group. Check console for details.',
-      );
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -315,14 +366,54 @@ export default function CreateGroupScreen() {
                       hasDuplicateName && styles.inputError,
                     ]}
                     value={newMemberName}
-                    onChangeText={(text) => {
-                      setNewMemberName(text);
-                      checkForDuplicateName(text);
+                    onChangeText={handleMemberNameChange}
+                    onBlur={() => {
+                      setNewMemberName((name) => name.trim());
+                      setTimeout(() => setShowSuggestions(false), 200);
                     }}
-                    onBlur={() => setNewMemberName((name) => name.trim())}
+                    onFocus={() => {
+                      if (newMemberName && filteredSuggestions.length > 0) {
+                        setShowSuggestions(true);
+                      }
+                    }}
                     placeholder="Member name"
                     placeholderTextColor="#9ca3af"
                   />
+                  {showSuggestions && filteredSuggestions.length > 0 && (
+                    <View style={styles.suggestionsContainer}>
+                      <ScrollView
+                        style={styles.suggestionsList}
+                        keyboardShouldPersistTaps="handled"
+                        nestedScrollEnabled
+                      >
+                        {filteredSuggestions.map((user) => (
+                          <TouchableOpacity
+                            key={user.id}
+                            style={styles.suggestionItem}
+                            onPress={() => handleSelectSuggestion(user)}
+                          >
+                            <View style={styles.suggestionContent}>
+                              <User
+                                size={16}
+                                color="#6b7280"
+                                style={styles.suggestionIcon}
+                              />
+                              <View style={styles.suggestionText}>
+                                <Text style={styles.suggestionName}>
+                                  {user.name}
+                                </Text>
+                                {user.email && (
+                                  <Text style={styles.suggestionEmail}>
+                                    {user.email}
+                                  </Text>
+                                )}
+                              </View>
+                            </View>
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
+                    </View>
+                  )}
 
                   <Text style={[styles.formLabel, styles.formLabelSpaced]}>
                     Email (optional)
@@ -339,8 +430,8 @@ export default function CreateGroupScreen() {
                   />
 
                   <Text style={styles.formHint}>
-                    If only email is provided, the name will be taken from the
-                    user&#39;s account or derived from the email.
+                    Start typing to see suggestions from users you&#39;ve shared
+                    groups with
                   </Text>
 
                   <View style={styles.formButtons}>
@@ -350,6 +441,8 @@ export default function CreateGroupScreen() {
                         setShowAddMember(false);
                         setNewMemberName('');
                         setNewMemberEmail('');
+                        setShowSuggestions(false);
+                        setFilteredSuggestions([]);
                       }}
                     >
                       <Text style={styles.formCancelButtonText}>Cancel</Text>
@@ -384,8 +477,17 @@ export default function CreateGroupScreen() {
         </View>
 
         <View style={styles.footer}>
-          <TouchableOpacity style={styles.createButton} onPress={handleCreate}>
-            <Text style={styles.createButtonText}>Create Group</Text>
+          <TouchableOpacity
+            style={[
+              styles.createButton,
+              creating && styles.createButtonDisabled,
+            ]}
+            onPress={handleCreate}
+            disabled={creating}
+          >
+            <Text style={styles.createButtonText}>
+              {creating ? 'Creating...' : 'Create Group'}
+            </Text>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -624,6 +726,46 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingVertical: 16,
   },
+  suggestionsContainer: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderTopWidth: 0,
+    borderBottomLeftRadius: 8,
+    borderBottomRightRadius: 8,
+    maxHeight: 150,
+    marginTop: -8,
+    marginBottom: 8,
+  },
+  suggestionsList: {
+    flexGrow: 0,
+  },
+  suggestionItem: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+  },
+  suggestionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  suggestionIcon: {
+    marginRight: 10,
+  },
+  suggestionText: {
+    flex: 1,
+  },
+  suggestionName: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#111827',
+    marginBottom: 2,
+  },
+  suggestionEmail: {
+    fontSize: 12,
+    color: '#6b7280',
+  },
   footer: {
     padding: 16,
     backgroundColor: '#ffffff',
@@ -640,6 +782,9 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 8,
     alignItems: 'center',
+  },
+  createButtonDisabled: {
+    backgroundColor: '#9ca3af',
   },
   createButtonText: {
     color: '#ffffff',

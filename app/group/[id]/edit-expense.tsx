@@ -39,6 +39,7 @@ export default function EditExpenseScreen() {
 
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(false);
 
   const loadData = useCallback(async () => {
     if (
@@ -106,11 +107,16 @@ export default function EditExpenseScreen() {
           onPress: async () => {
             if (!expenseId || typeof expenseId !== 'string') return;
 
-            const success = await deleteExpense(expenseId);
-            if (success) {
-              router.back();
-            } else {
-              Alert.alert('Error', 'Failed to delete expense');
+            setDeleting(true);
+            try {
+              const success = await deleteExpense(expenseId);
+              if (success) {
+                router.back();
+              } else {
+                Alert.alert('Error', 'Failed to delete expense');
+              }
+            } finally {
+              setDeleting(false);
             }
           },
         },
@@ -232,7 +238,7 @@ export default function EditExpenseScreen() {
       setPercentages={setPercentages}
       exactAmounts={exactAmounts}
       setExactAmounts={setExactAmounts}
-      saving={saving}
+      saving={saving || deleting}
       onClose={() => router.back()}
       onDelete={handleDelete}
       onSaveExpense={handleSave}

@@ -503,14 +503,22 @@ export default function ExpenseFormScreen(props: ExpenseFormScreenProps) {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={props.onClose} style={styles.closeButton}>
+        <TouchableOpacity
+          onPress={props.onClose}
+          style={styles.closeButton}
+          disabled={props.saving}
+        >
           <X color="#111827" size={24} />
         </TouchableOpacity>
         <Text style={styles.title}>{title}</Text>
         {'onDelete' in props ? (
           <TouchableOpacity
             onPress={props.onDelete}
-            style={styles.deleteButton}
+            style={[
+              styles.deleteButton,
+              props.saving && styles.deleteButtonDisabled,
+            ]}
+            disabled={props.saving}
           >
             <Trash2 color="#dc2626" size={20} />
           </TouchableOpacity>
@@ -616,6 +624,9 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     padding: 4,
+  },
+  deleteButtonDisabled: {
+    opacity: 0.4,
   },
   title: {
     fontSize: 20,

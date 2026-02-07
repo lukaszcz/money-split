@@ -31,6 +31,7 @@ export default function EditTransferScreen() {
 
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(false);
 
   const loadData = useCallback(async () => {
     if (
@@ -158,11 +159,16 @@ export default function EditTransferScreen() {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
-            const success = await deleteExpense(expense.id);
-            if (success) {
-              router.back();
-            } else {
-              Alert.alert('Error', 'Failed to delete transfer');
+            setDeleting(true);
+            try {
+              const success = await deleteExpense(expense.id);
+              if (success) {
+                router.back();
+              } else {
+                Alert.alert('Error', 'Failed to delete transfer');
+              }
+            } finally {
+              setDeleting(false);
             }
           },
         },
@@ -192,7 +198,7 @@ export default function EditTransferScreen() {
       setPayerId={setPayerId}
       recipientId={recipientId}
       setRecipientId={setRecipientId}
-      saving={saving}
+      saving={saving || deleting}
       onClose={() => router.back()}
       onDelete={handleDelete}
       onSaveTransfer={handleSave}
