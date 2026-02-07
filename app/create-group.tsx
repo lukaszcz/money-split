@@ -250,8 +250,8 @@ export default function CreateGroupScreen() {
 
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
       >
         <View style={styles.scrollContainer}>
           <ScrollView
@@ -480,10 +480,10 @@ export default function CreateGroupScreen() {
           <TouchableOpacity
             style={[
               styles.createButton,
-              creating && styles.createButtonDisabled,
+              (creating || showAddMember) && styles.createButtonDisabled,
             ]}
             onPress={handleCreate}
-            disabled={creating}
+            disabled={creating || showAddMember}
           >
             <Text style={styles.createButtonText}>
               {creating ? 'Creating...' : 'Create Group'}
