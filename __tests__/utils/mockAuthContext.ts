@@ -12,7 +12,7 @@ export interface MockAuthContext {
   session: Session | null;
   loading: boolean;
   signIn: jest.Mock<Promise<void>, [string, string]>;
-  signUp: jest.Mock<Promise<void>, [string, string]>;
+  signUp: jest.Mock<Promise<void>, [string, string, string]>;
   signOut: jest.Mock<Promise<void>, []>;
 }
 
@@ -237,7 +237,7 @@ export function mockSignInFailure(
  * const authContext = createMockAuthContext();
  * mockSignUpSuccess(authContext);
  *
- * await authContext.signUp('new@example.com', 'password123');
+ * await authContext.signUp('new@example.com', 'password123', 'New User');
  * expect(authContext.signUp).toHaveBeenCalled();
  */
 export function mockSignUpSuccess(
