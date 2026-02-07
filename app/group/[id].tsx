@@ -138,7 +138,10 @@ export default function GroupDetailScreen() {
               if (success) {
                 router.back();
               } else {
-                Alert.alert('Error', 'Failed to leave group. Please try again.');
+                Alert.alert(
+                  'Error',
+                  'Failed to leave group. Please try again.',
+                );
               }
             } finally {
               setLeaving(false);
