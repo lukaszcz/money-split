@@ -25,10 +25,11 @@ The MoneySplit test suite includes:
 - **Component tests** for reusable UI components (BottomActionBar)
 - **Screen tests** for UI business logic (auth, groups, settings)
 - **Integration tests** (optional, requires local Supabase)
+- **Exchange-rate cache tests** for AsyncStorage caching, stale fallback behavior, and login prefetch warmup
 
 ### Test Statistics
 
-- **Total Tests**: 355
+- **Total Tests**: 360
 - **Test Suites**: 21
 - **Coverage Targets**:
   - Lines: 80%
@@ -54,7 +55,7 @@ __tests__/
 │   └── integration.setup.ts       # Integration test helpers
 ├── services/
 │   ├── groupRepository.test.ts    # Service layer tests
-│   ├── exchangeRateService.test.ts # Exchange rate edge-function tests
+│   ├── exchangeRateService.test.ts # Exchange rate cache + edge-function tests
 │   ├── currencyPreferenceService.test.ts # Currency preference service
 │   ├── groupPreferenceService.test.ts # Group preference service
 │   └── settlePreferenceService.test.ts # Settle preference storage
