@@ -45,6 +45,7 @@ export default function GroupDetailScreen() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [activeTab, setActiveTab] = useState<Tab>('payments');
   const [loading, setLoading] = useState(true);
+  const [leaving, setLeaving] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
   const [menuAnchor, setMenuAnchor] = useState<{
     x: number;
@@ -130,11 +131,20 @@ export default function GroupDetailScreen() {
           onPress: async () => {
             if (!id || typeof id !== 'string') return;
 
-            const success = await leaveGroup(id);
-            if (success) {
-              router.back();
-            } else {
-              Alert.alert('Error', 'Failed to leave group. Please try again.');
+            setLeaving(true);
+            setMenuVisible(false);
+            try {
+              const success = await leaveGroup(id);
+              if (success) {
+                router.back();
+              } else {
+                Alert.alert(
+                  'Error',
+                  'Failed to leave group. Please try again.',
+                );
+              }
+            } finally {
+              setLeaving(false);
             }
           },
         },
@@ -159,6 +169,7 @@ export default function GroupDetailScreen() {
         <TouchableOpacity
           onPress={() => router.back()}
           style={styles.backButton}
+          disabled={leaving}
         >
           <ArrowLeft color="#111827" size={24} />
         </TouchableOpacity>
@@ -173,6 +184,7 @@ export default function GroupDetailScreen() {
               accessibilityRole="button"
               accessibilityLabel="Group actions"
               onPress={handleMorePress}
+              disabled={leaving}
             >
               <MoreVertical color="#6b7280" size={20} />
             </TouchableOpacity>
@@ -184,6 +196,7 @@ export default function GroupDetailScreen() {
         <TouchableOpacity
           style={[styles.tab, activeTab === 'payments' && styles.tabActive]}
           onPress={() => setActiveTab('payments')}
+          disabled={leaving}
         >
           <Text
             style={[
@@ -197,6 +210,7 @@ export default function GroupDetailScreen() {
         <TouchableOpacity
           style={[styles.tab, activeTab === 'balances' && styles.tabActive]}
           onPress={() => setActiveTab('balances')}
+          disabled={leaving}
         >
           <Text
             style={[
@@ -210,6 +224,7 @@ export default function GroupDetailScreen() {
         <TouchableOpacity
           style={[styles.tab, activeTab === 'settle' && styles.tabActive]}
           onPress={() => setActiveTab('settle')}
+          disabled={leaving}
         >
           <Text
             style={[
@@ -225,9 +240,15 @@ export default function GroupDetailScreen() {
       <ScrollView
         style={styles.content}
         contentContainerStyle={styles.scrollContent}
+        scrollEnabled={!leaving}
       >
         {activeTab === 'payments' && (
-          <ExpensesTab expenses={expenses} group={group} reload={loadData} />
+          <ExpensesTab
+            expenses={expenses}
+            group={group}
+            reload={loadData}
+            disabled={leaving}
+          />
         )}
         {activeTab === 'balances' && (
           <BalancesTab
@@ -245,7 +266,7 @@ export default function GroupDetailScreen() {
         )}
       </ScrollView>
 
-      {showAddButton && (
+      {showAddButton && !leaving && (
         <BottomActionBar
           label={activeTab === 'payments' ? 'Add expense' : 'Add member'}
           onPress={handleAddPress}
@@ -299,10 +320,12 @@ export default function GroupDetailScreen() {
 function ExpensesTab({
   expenses,
   group,
+  disabled = false,
 }: {
   expenses: Expense[];
   group: GroupWithMembers;
   reload: () => void;
+  disabled?: boolean;
 }) {
   const router = useRouter();
   const memberMap = new Map(group.members.map((m) => [m.id, m]));
@@ -369,6 +392,7 @@ function ExpensesTab({
             key={expense.id}
             style={styles.expenseCard}
             onPress={() => router.push(editRoute as any)}
+            disabled={disabled}
           >
             <View style={styles.expenseHeader}>
               <Text style={styles.expenseDescription}>
