@@ -260,8 +260,8 @@ Relevant files:
 
 - File: `supabase/functions/password-recovery/index.ts`.
 - Triggered from `requestPasswordRecovery()` in `services/authService.ts`.
-- Generates a one-time password, sends it via Resend, then activates it by updating the auth password and `recoveryPasswordExpiresAt` metadata.
-- This ordering avoids locking users out if email delivery fails before activation.
+- Generates a one-time password, activates it first by updating the auth password and `recoveryPasswordExpiresAt` metadata, then sends it via Resend.
+- This ordering ensures a delivered recovery password is always already valid when the user receives it.
 - The client consumes this metadata in `contexts/AuthContext.tsx` to enforce a required password change flow after recovery sign-in.
 
 ## UI design and screen-by-screen behavior

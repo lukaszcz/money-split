@@ -155,24 +155,6 @@ Deno.serve(async (req: Request) => {
       </html>
     `;
 
-    const { error: emailError } = await resend.emails.send({
-      from: 'moneysplit@moneysplit.polapp.pl',
-      to: email,
-      subject: 'Your MoneySplit recovery password',
-      html: emailHtml,
-    });
-
-    if (emailError) {
-      console.error('Failed to send recovery email:', emailError);
-      return new Response(
-        JSON.stringify({ error: 'Failed to send recovery email' }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        },
-      );
-    }
-
     const { error: updateError } =
       await supabaseClient.auth.admin.updateUserById(userData.user.id, {
         password: recoveryPassword,
@@ -183,13 +165,34 @@ Deno.serve(async (req: Request) => {
       });
 
     if (updateError) {
-      console.error('Failed to activate recovery password after email send:', {
+      console.error('Failed to set recovery password before email send:', {
         userId: userData.user.id,
         message: updateError.message,
         status: updateError.status,
       });
       return new Response(
         JSON.stringify({ error: 'Failed to set recovery password' }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      );
+    }
+
+    const { error: emailError } = await resend.emails.send({
+      from: 'moneysplit@moneysplit.polapp.pl',
+      to: email,
+      subject: 'Your MoneySplit recovery password',
+      html: emailHtml,
+    });
+
+    if (emailError) {
+      console.error(
+        'Failed to send recovery email after password update:',
+        emailError,
+      );
+      return new Response(
+        JSON.stringify({ error: 'Failed to send recovery email' }),
         {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },

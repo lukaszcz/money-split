@@ -31,10 +31,12 @@ let mockSupabase: MockSupabaseClient;
 let supabaseModule: any;
 let ensureUserProfile: jest.Mock;
 let syncUserPreferences: jest.Mock;
+let warnSpy: jest.SpyInstance;
 
 describe('AuthContext', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     mockSupabase = createMockSupabaseClient();
     supabaseModule = require('../../lib/supabase');
     supabaseModule.supabase = mockSupabase;
@@ -42,6 +44,10 @@ describe('AuthContext', () => {
     ensureUserProfile = groupRepository.ensureUserProfile;
     syncUserPreferences =
       require('../../services/userPreferenceSync').syncUserPreferences;
+  });
+
+  afterEach(() => {
+    warnSpy.mockRestore();
   });
 
   const createWrapper = () => {
@@ -297,7 +303,6 @@ describe('AuthContext', () => {
     });
 
     it('should sign out and throw when recovery password invalidation fails', async () => {
-      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
       const recoveryExpiry = new Date(Date.now() + 60_000).toISOString();
       const mockUser = createMockUser({
         id: 'user-123',
@@ -344,20 +349,13 @@ describe('AuthContext', () => {
         expect(result.current.loading).toBe(false);
       });
 
-      try {
-        await expect(
-          act(async () => {
-            await result.current.signIn(
-              'test@example.com',
-              'recovery-password',
-            );
-          }),
-        ).rejects.toThrow(
-          'Unable to finalize recovery sign-in. Request a new recovery password.',
-        );
-      } finally {
-        warnSpy.mockRestore();
-      }
+      await expect(
+        act(async () => {
+          await result.current.signIn('test@example.com', 'recovery-password');
+        }),
+      ).rejects.toThrow(
+        'Unable to finalize recovery sign-in. Request a new recovery password.',
+      );
     });
   });
 
