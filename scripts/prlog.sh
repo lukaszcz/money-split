@@ -98,8 +98,25 @@ if [[ "$TYPE_LC" == fix* ]]; then
   fi
 fi
 
-# Create draft PR; output is a URL
-PR_URL="$(gh pr create --draft --title "$TITLE" --body-file "$FILE")"
+CURRENT_BRANCH="$(git branch --show-current)"
+
+if [[ -z "$CURRENT_BRANCH" ]]; then
+  echo "Could not determine current branch"
+  exit 1
+fi
+
+# Ensure upstream exists
+if ! git rev-parse --abbrev-ref --symbolic-full-name "@{u}" >/dev/null 2>&1; then
+  echo "Pushing branch to origin..."
+  git push -u origin "$CURRENT_BRANCH"
+fi
+
+PR_URL="$(gh pr create \
+  --draft \
+  --head "$CURRENT_BRANCH" \
+  --title "$TITLE" \
+  --body-file "$FILE")"
+
 PR_NUMBER="$(gh pr view "$PR_URL" --json number --jq .number)"
 
 DEST_DIR="docs/history"
