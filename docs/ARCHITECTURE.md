@@ -24,11 +24,12 @@ This document describes the architecture of the MoneySplit application (React Na
 - Auth: user identity and sessions (Supabase Auth).
 - Database: persistence, constraints, and RLS (migrations in `supabase/migrations/*.sql`).
 - Row-level security policies enforce membership-based access.
-- Edge Functions for group creation, delete-user, cleanup, and invitations (Deno runtime):
+- Edge Functions for group creation, delete-user, cleanup, invitations, and known users tracking (Deno runtime):
   - `supabase/functions/create-group/index.ts`
   - `supabase/functions/delete-user/index.ts`
   - `supabase/functions/cleanup-orphaned-groups/index.ts`
   - `supabase/functions/send-invitation/index.ts`
+  - `supabase/functions/update-known-users/index.ts`
 
 ## App initialization and auth flow
 
@@ -110,6 +111,15 @@ The canonical schema is defined by the SQL migrations under `supabase/migrations
 - Table: `public.user_group_preferences`
 - Columns: `user_id`, `group_order`, `updated_at`.
 - Managed in `services/groupPreferenceService.ts` for recency-ordered group lists.
+
+### user_known_users
+
+- Description: Tracks users that each user has shared a group with, enabling autocomplete suggestions when adding group members.
+- Table: `public.user_known_users`
+- Columns: `user_id`, `known_user_id`, `first_shared_at`, `last_shared_at`.
+- Bidirectional relationship: when user A and user B share a group, both users add each other to their known users list.
+- Updated automatically via the `update-known-users` edge function when members are added or connected to groups.
+- Read via `getKnownUsers()` in `services/groupRepository.ts` for autocomplete UI.
 
 ### user_settle_preferences
 
@@ -210,6 +220,13 @@ Relevant files:
 - Triggered from `deleteUserAccount()` in `services/groupRepository.ts`.
 - Disconnects the user from all `group_members`, deletes the public `users` row, runs cleanup, then deletes the auth user.
 
+### update-known-users
+
+- File: `supabase/functions/update-known-users/index.ts`.
+- Triggered when a member is added to a group or when a member's connection changes (`createGroupMember()`, `updateGroupMember()`, `reconnectGroupMembers()` in `services/groupRepository.ts`).
+- Updates the `user_known_users` table bidirectionally: adds the new member to existing members' known users lists and adds existing members to the new member's known users list.
+- Only processes members that are connected to authenticated users (have a `connected_user_id`).
+
 ## UI design and screen-by-screen behavior
 
 The UI uses a light, card-based aesthetic with consistent spacing and neutral grays, accent blue (`#2563eb`), and iconography via `lucide-react-native`. Common patterns include:
@@ -254,6 +271,8 @@ The UI uses a light, card-based aesthetic with consistent spacing and neutral gr
 - Uses currency ordering via `useCurrencyOrder()`.
 - Creates group + members via `createGroup()`.
 - Sends invitations via `sendInvitationEmail()` for non-existing users.
+- Shows autocomplete suggestions from known users when adding members to the initial member list.
+- Suggestions are filtered as the user types in the member name field.
 
 ### Group detail (`app/group/[id].tsx`)
 
@@ -301,11 +320,16 @@ The UI uses a light, card-based aesthetic with consistent spacing and neutral gr
 - If email is provided:
   - Connects to existing user if present.
   - Sends invitation email otherwise.
+- Uses `KnownUserSuggestionInput` component to show autocomplete suggestions from the user's known users list as they type.
+- When a suggestion is selected, both name and email are auto-filled.
+- Known users list is populated from users the current user has previously shared groups with.
 
 ### Edit Member (`app/group/[id]/edit-member.tsx`)
 
 - Updates member name/email and optionally re-sends invitation.
 - Uses `updateGroupMember()`.
+- Uses `KnownUserSuggestionInput` component for autocomplete suggestions.
+- When email changes and connects to a different user, the known users lists are updated via the edge function.
 - Shows a delete button if the member can be removed (has no non-zero expense shares).
 - Uses `canDeleteGroupMember()` to check if deletion is allowed.
 - Uses `deleteGroupMember()` to remove the member from the group.
@@ -324,12 +348,14 @@ The UI uses a light, card-based aesthetic with consistent spacing and neutral gr
 
 1. User signs up or signs in (`app/auth.tsx` → `contexts/AuthContext.tsx`).
 2. `ensureUserProfile()` creates a `users` row and reconnects matching members.
-3. User creates a group (`app/create-group.tsx` → `createGroup()` → `group_members`).
-4. User adds expenses or transfers (`app/group/[id]/add-expense.tsx` → `createExpense()` + `expense_shares`).
-5. Balances and settlements are computed locally (`services/settlementService.ts`).
-6. User can record settlement transfers (creates a transfer expense).
-7. Leaving a group disconnects the user and triggers cleanup (`leaveGroup()` → edge function).
-8. Deleting account calls `delete-user` edge function to disconnect and purge server-side records.
+3. When reconnecting, `reconnectGroupMembers()` calls `update-known-users` edge function to update known users lists.
+4. User creates a group (`app/create-group.tsx` → `createGroup()` → `group_members`).
+5. When adding members, `createGroupMember()` calls `update-known-users` edge function to track user relationships bidirectionally.
+6. User adds expenses or transfers (`app/group/[id]/add-expense.tsx` → `createExpense()` + `expense_shares`).
+7. Balances and settlements are computed locally (`services/settlementService.ts`).
+8. User can record settlement transfers (creates a transfer expense).
+9. Leaving a group disconnects the user and triggers cleanup (`leaveGroup()` → edge function).
+10. Deleting account calls `delete-user` edge function to disconnect and purge server-side records.
 
 ## Key file map
 
@@ -340,6 +366,7 @@ The UI uses a light, card-based aesthetic with consistent spacing and neutral gr
 - Money math: `utils/money.ts`, `utils/currencies.ts`.
 - Input validation logic: `utils/validation.ts` (decimal, integer, percentage, and exact-amount input helpers).
 - Shared expense/transfer form UI: `components/ExpenseFormScreen.tsx`.
+- Known user autocomplete UI: `components/KnownUserSuggestionInput.tsx`.
 - Settlement logic: `services/settlementService.ts`.
 - Edge functions: `supabase/functions/*`.
 - RLS and schema: `supabase/migrations/*.sql`.
