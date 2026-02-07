@@ -2,17 +2,6 @@
 
 MoneySplit is a React Native/Expo mobile app for tracking shared expenses and debts among groups of friends.
 
-## Project Structure & Module Organization
-
-- `app/` contains Expo Router screens and navigation (e.g., `app/(tabs)/groups.tsx`).
-- `services/` holds data access and business logic (Supabase queries, settlements).
-- `utils/` includes money math and currency definitions.
-- `contexts/` provides shared providers (auth state).
-- `hooks/` includes client hooks (currency ordering, framework ready).
-- `supabase/` contains migrations and edge functions.
-- `assets/` stores icons and branding images.
-- `docs/` holds architecture and database documentation.
-
 ## Architecture
 
 **IMPORTANT**: Read @docs/ARCHITECTURE.md to understand application architecture. Update docs/ARCHITECTURE.md whenever architecture changes – always keep it up-to-date with the codebase.
@@ -46,6 +35,7 @@ MoneySplit is a React Native/Expo mobile app for tracking shared expenses and de
 ## Commit & Pull Request Guidelines
 
 - Commit format: `type: subject` in imperative lowercase (e.g., `feat: add transfer flow`).
+- PR title format same as commit format (`type: subject`).
 - PR descriptions should summarize changes.
 - Keep commits focused; avoid mixing unrelated changes.
 
@@ -57,6 +47,8 @@ MoneySplit is a React Native/Expo mobile app for tracking shared expenses and de
 
 ## Instructions
 
+- **IMPORTANT**: Keep docs/ARCHITECTURE.md in sync with the codebase. Update it after any application architecture changes, addition of major new features, database schema updates, or significant RLS policy changes.
 - Avoid code duplication. Abstract common logic into parameterized functions.
-- Use `npm run check` to verify that no compilation, formatting or test errors were introduced.
-- Always include current date *and* time in the names of new supabase migration files.
+- Always include current date _and_ time in the names of new supabase migration files.
+- In database migrations, always use `(select auth.<function>())` instead of bare `auth.<function>()` to avoid re-evaluating `auth.<function>()` for each row.
+- When finished, verify with `npm run check` that there are no compilation, formatting or test errors.

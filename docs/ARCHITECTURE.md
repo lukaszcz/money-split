@@ -8,6 +8,18 @@ This document describes the architecture of the MoneySplit application (React Na
 - Backend: Supabase Postgres (tables + RLS), Supabase Auth, and Edge Functions in `supabase/functions/`.
 - External services: Exchange rate API (`https://api.exchangerate-api.com`) and Resend email API for invitations.
 
+### Project & Module Organization
+
+- `app/`: Expo Router screens and navigation (e.g., `app/(tabs)/groups.tsx`).
+- `components/`: UI components.
+- `services/`: data access and business logic (Supabase queries, settlements).
+- `utils/`: money math and currency definitions.
+- `contexts/`: shared providers (auth state).
+- `hooks/`: client hooks (currency ordering, framework ready).
+- `supabase/`: migrations and edge functions.
+- `assets/`: icons and branding images.
+- `docs/`: architecture and database documentation.
+
 ## Runtime split: device vs server
 
 ### Runs on the device
