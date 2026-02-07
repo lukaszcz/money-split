@@ -22,9 +22,9 @@ The table contains these key columns:
 
 Row-level security limits access to the owning user only:
 
-- **SELECT** is allowed only when `auth.uid()` matches `user_id`.
-- **INSERT** is allowed only when `auth.uid()` matches `user_id`.
-- **UPDATE** is allowed only when `auth.uid()` matches `user_id`.
+- **SELECT** is allowed only when `(select auth.uid())` matches `user_id`.
+- **INSERT** is allowed only when `(select auth.uid())` matches `user_id`.
+- **UPDATE** is allowed only when `(select auth.uid())` matches `user_id`.
 - **DELETE** is not enabled by policy in the current migrations.
 
 ## How It Works in Practice
@@ -53,7 +53,9 @@ See also: [users](users.md), [groups](groups.md)
 
 **Cleanup:** Missing group IDs are pruned to avoid stale ordering.
 
-**RLS:** Users can only read and write their own preferences.
+**RLS:** Users can only read and write their own preference row.
+
+**Client Cache:** Values are cached in AsyncStorage and refreshed at sign-in.
 
 ## Usage in Code
 

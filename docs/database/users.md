@@ -26,9 +26,9 @@ The table contains these key columns:
 Row-level security allows authenticated users to manage only their own profile while keeping profiles readable:
 
 - **SELECT** is allowed for authenticated users across all user rows (public profiles within the app).
-- **INSERT** is allowed only when `auth.uid()` matches the inserted `id`.
-- **UPDATE** is allowed only when `auth.uid()` matches the updated `id`.
-- **DELETE** is allowed only when `auth.uid()` matches the deleted `id`.
+- **INSERT** is allowed only when `(select auth.uid())` matches the inserted `id`.
+- **UPDATE** is allowed only when `(select auth.uid())` matches the updated `id`.
+- **DELETE** is allowed only when `(select auth.uid())` matches the deleted `id`.
 
 The delete-user edge function uses a service role key to bypass RLS during account removal.
 
@@ -49,10 +49,12 @@ users (public profile)
   |-- group_members.connected_user_id (optional link)
   |-- user_currency_preferences.user_id
   |-- user_group_preferences.user_id
+  |-- user_known_users.user_id
+  |-- user_known_users.known_user_id
   |-- user_settle_preferences.user_id
 ```
 
-See also: [group_members](group_members.md), [user_currency_preferences](user_currency_preferences.md), [user_group_preferences](user_group_preferences.md), [user_settle_preferences](user_settle_preferences.md)
+See also: [group_members](group_members.md), [user_currency_preferences](user_currency_preferences.md), [user_group_preferences](user_group_preferences.md), [user_known_users](user_known_users.md), [user_settle_preferences](user_settle_preferences.md)
 
 ## Key Implementation Details
 

@@ -6,7 +6,7 @@ This document describes the architecture of the MoneySplit application (React Na
 
 - Mobile client: Expo Router app under `app/` with shared UI and domain logic in `components/`, `services/`, `utils/`, `hooks/`, and `contexts/`.
 - Backend: Supabase Postgres (tables + RLS), Supabase Auth, and Edge Functions in `supabase/functions/`.
-- External services: Exchange rate API (`https://api.exchangerate-api.com`) and Resend email API for invitations.
+- External services: Exchange rate API (`https://api.exchangerate-api.com/v4/latest/{base}`) and Resend email API for invitations.
 
 ### Project & Module Organization
 
@@ -54,11 +54,12 @@ This document describes the architecture of the MoneySplit application (React Na
 
 - Data access uses the Supabase JS client (`lib/supabase.ts`) from service modules in `services/`.
 - All CRUD operations are executed on the device via Supabase REST endpoints with RLS enforcement on the server.
-- Edge function calls are direct `fetch()` requests to the Supabase Functions endpoint:
-  - `services/groupRepository.ts` calls `/functions/v1/cleanup-orphaned-groups` when a user leaves a group.
-  - `services/groupRepository.ts` calls `/functions/v1/delete-user` when deleting an account.
-  - `services/groupRepository.ts` calls `/functions/v1/send-invitation` when inviting members by email.
-- Exchange rates are fetched from `https://api.exchangerate-api.com` in `services/exchangeRateService.ts` and cached in Supabase.
+- Edge function calls are made with `supabase.functions.invoke()` from `services/groupRepository.ts`:
+  - `cleanup-orphaned-groups` is invoked when a user leaves a group.
+  - `delete-user` is invoked when deleting an account (with bearer token).
+  - `send-invitation` is invoked when inviting members by email.
+  - `update-known-users` is invoked when a member is connected to an authenticated user (with bearer token).
+- Exchange rates are fetched from `https://api.exchangerate-api.com/v4/latest/{base}` in `services/exchangeRateService.ts` and cached in Supabase.
 
 ## Data model (current schema + notes)
 
@@ -140,23 +141,24 @@ The canonical schema is defined by the SQL migrations under `supabase/migrations
 
 ## Row-level security (RLS) summary
 
-The RLS policies have evolved through multiple migrations. The most recent policies enforce membership-based access using helper functions `user_is_group_member()` and `group_has_connected_members()` with immutable search paths. The intent of the latest policies is:
+The RLS policies have evolved through multiple migrations. The most recent policies enforce membership-based access using helper functions such as `user_is_group_member()`, `group_has_connected_members()`, and `member_is_involved_in_expenses()`, and use `(select auth.uid())` in policy predicates to avoid per-row re-evaluation. The intent of the latest policies is:
 
 - `users`
   - Authenticated users can read all users.
-  - Insert/update/delete is restricted to the authenticated user (`auth.uid() = id`).
+  - Insert/update/delete is restricted to the authenticated user (`(select auth.uid()) = id`).
 
 - `groups`
-  - Select/update: only members can view/update their groups (`user_is_group_member(auth.uid(), id)`).
+  - Select: users can view groups they are members of, plus groups with no connected members (required for group creation and orphan cleanup windows).
+  - Update: only members can update their groups (`user_is_group_member((select auth.uid()), id)`).
   - Insert: any authenticated user can create a group.
   - Delete: only allowed when no connected members remain (`NOT group_has_connected_members(id)`).
   - Policies established or refined in `supabase/migrations/20251225175535_fix_groups_insert_policy.sql` and `supabase/migrations/20251225180300_fix_groups_insert_select_policy.sql`.
 
 - `group_members`
   - Select: members can view members of their groups; users can also view unconnected members with matching email (needed for reconnection).
-  - Insert: user can add themselves (`connected_user_id = auth.uid()`) or existing members can add others.
+  - Insert: user can add themselves (`connected_user_id = (select auth.uid())`) or existing members can add others.
   - Update: members can update member details within groups they belong to; updates are also used for connect/disconnect flows.
-  - Delete: any group member can delete another member if that member has no non-zero expense shares (prevents deletion of members involved in expenses).
+  - Delete: any group member can delete another member only if that member is not involved in expenses (no non-zero shares and not referenced as `payer_member_id`).
 
 - `expenses` and `expense_shares`
   - All CRUD access is scoped to group membership (member of the group that owns the expense).
@@ -167,6 +169,9 @@ The RLS policies have evolved through multiple migrations. The most recent polic
 - `user_currency_preferences`, `user_group_preferences`, and `user_settle_preferences`
   - User can read/insert/update their own preferences.
 
+- `user_known_users`
+  - User can read/insert/update/delete their own known-users rows only (`user_id = (select auth.uid())`).
+
 For the exact SQL definitions and helper functions, see:
 
 - `supabase/migrations/20251225090146_remove_unused_indexes_and_fix_function.sql`
@@ -174,6 +179,11 @@ For the exact SQL definitions and helper functions, see:
 - `supabase/migrations/20251225181452_fix_group_members_insert_allow_self.sql`
 - `supabase/migrations/20251225180300_fix_groups_insert_select_policy.sql`
 - `supabase/migrations/20260110000000_enable_remove_member_with_no_shares.sql`
+- `supabase/migrations/20260201000000_update_member_delete_rls_for_payers.sql`
+- `supabase/migrations/20260202220730_create_user_known_users_table.sql`
+- `supabase/migrations/20260203000104_add_with_check_to_user_known_users_update_policy.sql`
+- `supabase/migrations/20260203000904_update_user_known_users_policies_select_auth_uid.sql`
+- `supabase/migrations/20260204120000_fix_group_members_delete_policy_performance.sql`
 
 ## Money math and settlement algorithms
 
@@ -282,7 +292,7 @@ The UI uses a light, card-based aesthetic with consistent spacing and neutral gr
 - Tabs:
   - Payments: list of expenses and transfers with conversion previews.
   - Balances: per-member net balance via `computeBalances()`.
-  - Settle: shortcut into settle flow if balances are non-zero.
+  - Settle: embedded settle view powered by `SettleContent`, with transfer recording and debt simplification controls.
 - Group actions (overflow menu):
   - Group members: opens member management screen.
   - Leave group uses `leaveGroup()` and triggers cleanup function.
@@ -332,7 +342,7 @@ The UI uses a light, card-based aesthetic with consistent spacing and neutral gr
 - Uses `updateGroupMember()`.
 - Uses `KnownUserSuggestionInput` component for autocomplete suggestions.
 - When email changes and connects to a different user, the known users lists are updated via the edge function.
-- Shows a delete button if the member can be removed (has no non-zero expense shares).
+- Shows a delete button if the member can be removed (is not involved in expenses as payer or non-zero share), and always shows a leave action when editing the current user’s own member row.
 - Uses `canDeleteGroupMember()` to check if deletion is allowed.
 - Uses `deleteGroupMember()` to remove the member from the group.
 
@@ -364,11 +374,12 @@ The UI uses a light, card-based aesthetic with consistent spacing and neutral gr
 - App entry + routing: `app/_layout.tsx`, `app/(tabs)/_layout.tsx`.
 - Auth state: `contexts/AuthContext.tsx`.
 - Data access: `services/groupRepository.ts`, `services/exchangeRateService.ts`.
-- Preferences: `services/currencyPreferenceService.ts`, `services/groupPreferenceService.ts`, `hooks/useCurrencyOrder.ts`.
+- Preferences: `services/currencyPreferenceService.ts`, `services/groupPreferenceService.ts`, `services/settlePreferenceService.ts`, `services/userPreferenceSync.ts`, `services/userPreferenceCache.ts`, `hooks/useCurrencyOrder.ts`.
 - Money math: `utils/money.ts`, `utils/currencies.ts`.
 - Input validation logic: `utils/validation.ts` (decimal, integer, percentage, and exact-amount input helpers).
 - Shared expense/transfer form UI: `components/ExpenseFormScreen.tsx`.
 - Known user autocomplete UI: `components/KnownUserSuggestionInput.tsx`.
+- Shared settle UI: `components/SettleContent.tsx`.
 - Settlement logic: `services/settlementService.ts`.
 - Edge functions: `supabase/functions/*`.
 - RLS and schema: `supabase/migrations/*.sql`.
