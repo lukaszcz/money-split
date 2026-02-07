@@ -24,9 +24,9 @@ The table contains these key columns:
 
 Row-level security limits access to the owning user only:
 
-- **SELECT** is allowed only when `auth.uid()` matches `user_id`.
-- **INSERT** is allowed only when `auth.uid()` matches `user_id`.
-- **UPDATE** is allowed only when `auth.uid()` matches `user_id`.
+- **SELECT** is allowed only when `(select auth.uid())` matches `user_id`.
+- **INSERT** is allowed only when `(select auth.uid())` matches `user_id`.
+- **UPDATE** is allowed only when `(select auth.uid())` matches `user_id`.
 - **DELETE** is not enabled by policy in the current migrations.
 
 ## How It Works in Practice
@@ -54,7 +54,9 @@ See also: [users](users.md)
 
 **Single Record:** Each user has a single preference row updated in place.
 
-**RLS:** Users can only read and write their own preferences.
+**RLS:** Users can only read and write their own preference row.
+
+**Client Cache:** Values are also cached locally in AsyncStorage (`services/userPreferenceCache.ts`) and refreshed on auth events (`services/userPreferenceSync.ts`).
 
 ## Usage in Code
 

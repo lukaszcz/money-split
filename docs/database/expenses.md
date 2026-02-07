@@ -32,7 +32,7 @@ The table contains these key columns:
 
 Row-level security ensures only members of a group can access its expenses:
 
-- **SELECT** is allowed when the authenticated user is a member of the expense's group (`user_is_group_member(auth.uid(), group_id)`).
+- **SELECT** is allowed when the authenticated user is a member of the expense's group (`user_is_group_member((select auth.uid()), group_id)`).
 - **INSERT** is allowed only for members of the group.
 - **UPDATE** is allowed only for members of the group (no owner-only restriction).
 - **DELETE** is allowed only for members of the group.

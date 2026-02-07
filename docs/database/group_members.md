@@ -24,12 +24,16 @@ The table contains these key columns:
 
 ## RLS Policies
 
-Row-level security balances group membership access with email-based invitations:
+Row-level security balances membership control and invitation/reconnection flows:
 
-- **SELECT** is allowed for group members (`user_is_group_member(auth.uid(), group_id)`) and for rows where `email` matches the authenticated user's email (so invited users can see unconnected rows).
-- **INSERT** is allowed when the authenticated user is adding themselves (`connected_user_id = auth.uid()`) or when they are already a member of the group.
-- **UPDATE** is allowed for group members so they can edit member details within their group. Additional policies allow users to connect themselves when the member email matches their account.
-- **DELETE** is allowed for disconnected members only (`connected_user_id IS NULL`), used by cleanup routines.
+- **SELECT** is allowed when:
+  - the user is already a connected member of the group, or
+  - the row email matches the authenticated user email (`email = get_user_email_by_id((select auth.uid()))`), so invited users can reconnect.
+- **INSERT** is allowed when:
+  - `connected_user_id = (select auth.uid())` (user adds themselves), or
+  - the user is already a group member.
+- **UPDATE** is allowed for group members (`USING` + `WITH CHECK` on group membership).
+- **DELETE** is allowed only for group members and only if `NOT member_is_involved_in_expenses(id)` (member has no non-zero shares and is not an expense payer).
 
 ## How It Works in Practice
 
@@ -59,9 +63,9 @@ See also: [groups](groups.md), [expenses](expenses.md), [expense_shares](expense
 
 **Email Reconnection:** Policies allow users to view and connect records that match their email.
 
-**Disconnect Flow:** Leaving a group sets `connected_user_id` to null while keeping historical data.
+**Disconnect Flow:** Leaving a group sets `connected_user_id` to null while keeping historical expense/share data.
 
-**RLS:** Access is based on membership and email matching for unconnected members.
+**RLS:** Access is based on membership plus email-based reconnection support.
 
 ## Usage in Code
 
@@ -72,3 +76,4 @@ The application uses this table for:
 - Connecting members on signup (`ensureUserProfile()` and `reconnectGroupMembers()` in `services/groupRepository.ts`)
 - Updating members (`updateGroupMember()` in `services/groupRepository.ts`)
 - Leaving groups (`leaveGroup()` sets `connected_user_id` to null)
+- Guarding member deletion (`canDeleteGroupMember()` / `deleteGroupMember()` in `services/groupRepository.ts`)
