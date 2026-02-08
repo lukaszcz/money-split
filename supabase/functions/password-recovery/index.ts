@@ -1,7 +1,7 @@
 import 'jsr:@supabase/functions-js@2/edge-runtime.d.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.58.0';
 import { Resend } from 'npm:resend@4.0.0';
-import * as bcrypt from 'https://deno.land/x/bcrypt@v0.4.1/mod.ts';
+import * as bcrypt from 'npm:bcryptjs@2.4.3';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -186,8 +186,9 @@ Deno.serve(async (req: Request) => {
       </html>
     `;
 
-    // Hash the recovery password before storing
-    const passwordHash = await bcrypt.hash(recoveryPassword);
+    // Hash the recovery password before storing.
+    // Supabase Edge runtime does not provide Worker, so use sync bcrypt.
+    const passwordHash = bcrypt.hashSync(recoveryPassword, 10);
 
     // Store the hashed recovery password in the database
     const { error: upsertError } = await supabaseClient
@@ -245,7 +246,6 @@ Deno.serve(async (req: Request) => {
     return new Response(
       JSON.stringify({
         error: 'Internal server error',
-        details: String(error),
       }),
       {
         status: 500,

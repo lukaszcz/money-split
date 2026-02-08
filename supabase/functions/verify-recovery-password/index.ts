@@ -1,6 +1,6 @@
 import 'jsr:@supabase/functions-js@2/edge-runtime.d.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.58.0';
-import * as bcrypt from 'https://deno.land/x/bcrypt@v0.4.1/mod.ts';
+import * as bcrypt from 'npm:bcryptjs@2.4.3';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -132,7 +132,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // Verify the password
-    const isMatch = await bcrypt.compare(password, recoveryData.password_hash);
+    const isMatch = bcrypt.compareSync(password, recoveryData.password_hash);
 
     if (isMatch) {
       // Delete the recovery password before applying changes to make it one-time use.
