@@ -19,7 +19,7 @@ export default function RecoveryPasswordChangeScreen() {
   return (
     <PasswordUpdateForm
       title="Set a new password"
-      subtitle="For security, you need to create a permanent password to continue."
+      subtitle="For security reasons, you need to create a permanent password to continue."
       submitLabel="Save new password"
       defaultSubmitErrorMessage="Unable to update password"
       onSubmit={handleSubmit}

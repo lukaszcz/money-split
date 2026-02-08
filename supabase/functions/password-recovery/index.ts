@@ -88,13 +88,15 @@ Deno.serve(async (req: Request) => {
       .single();
 
     if (publicUserError || !publicUser) {
-      console.error(
-        'Failed to fetch public user by email during password recovery:',
-        {
-          message: publicUserError.message,
-          code: publicUserError.code,
-        },
-      );
+      if (publicUserError) {
+        console.error(
+          'Failed to fetch public user by email during password recovery:',
+          {
+            message: publicUserError.message,
+            code: publicUserError.code,
+          },
+        );
+      }
       return createGenericSuccessResponse();
     }
 
@@ -185,8 +187,7 @@ Deno.serve(async (req: Request) => {
     `;
 
     // Hash the recovery password before storing.
-    // Supabase Edge runtime does not provide Worker, so use sync bcrypt.
-    const passwordHash = bcrypt.hashSync(recoveryPassword, 10);
+    const passwordHash = await bcrypt.hash(recoveryPassword, 10);
 
     // Store the hashed recovery password in the database
     const { error: upsertError } = await supabaseClient
