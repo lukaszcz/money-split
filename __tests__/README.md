@@ -31,7 +31,7 @@ The MoneySplit test suite includes:
 ### Test Statistics
 
 - **Total Tests**: 379
-- **Test Suites**: 23
+- **Test Suites**: 24
 - **Coverage Targets**:
   - Lines: 80%
   - Functions: 80%
@@ -495,6 +495,7 @@ npm run test:coverage -- --coverageReporters=json-summary
 - **Use async/await**: Prefer over callbacks or `.then()`
 - **Wait for conditions**: Use `waitFor` from Testing Library
 - **Handle errors**: Test both success and failure paths
+- **Silence expected console errors**: Filter known-noise logs in `jest.setup.js` or mock `console.error` in targeted tests
 - **Clean up**: Always cleanup async resources
 
 ### 4. Test Data

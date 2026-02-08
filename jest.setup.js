@@ -81,9 +81,12 @@ jest.mock('react-native', () => {
 
 const originalConsoleError = console.error;
 console.error = (...args) => {
+  const firstArg = typeof args[0] === 'string' ? args[0] : '';
   if (
-    typeof args[0] === 'string' &&
-    args[0].includes('react-test-renderer is deprecated')
+    firstArg.includes('react-test-renderer is deprecated') ||
+    firstArg.includes(
+      'Recovery verification and temporary password assignment failed:',
+    )
   ) {
     return;
   }
