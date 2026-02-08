@@ -219,6 +219,38 @@ export type Database = {
         };
         Relationships: [];
       };
+      recovery_passwords: {
+        Row: {
+          id: string;
+          user_id: string;
+          password_hash: string;
+          expires_at: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          password_hash: string;
+          expires_at: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          password_hash?: string;
+          expires_at?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'recovery_passwords_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: true;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       user_currency_preferences: {
         Row: {
           id: string;

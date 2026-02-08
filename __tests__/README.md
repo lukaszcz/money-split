@@ -19,7 +19,7 @@ Comprehensive testing infrastructure for the MoneySplit application.
 The MoneySplit test suite includes:
 
 - **Unit tests** for utilities and business logic (money math, settlement algorithms)
-- **Service tests** for data and edge-function access (groupRepository, exchangeRateService)
+- **Service tests** for data and edge-function access (groupRepository, exchangeRateService, authService)
 - **Context tests** for React state management (AuthContext)
 - **Hook tests** for client hooks (currency order, framework ready)
 - **Component tests** for reusable UI components (BottomActionBar)
@@ -29,8 +29,8 @@ The MoneySplit test suite includes:
 
 ### Test Statistics
 
-- **Total Tests**: 360
-- **Test Suites**: 21
+- **Total Tests**: 378
+- **Test Suites**: 23
 - **Coverage Targets**:
   - Lines: 80%
   - Functions: 80%
@@ -56,6 +56,7 @@ __tests__/
 ├── services/
 │   ├── groupRepository.test.ts    # Service layer tests
 │   ├── exchangeRateService.test.ts # Exchange rate cache + edge-function tests
+│   ├── authService.test.ts        # Authentication edge-function tests
 │   ├── currencyPreferenceService.test.ts # Currency preference service
 │   ├── groupPreferenceService.test.ts # Group preference service
 │   └── settlePreferenceService.test.ts # Settle preference storage
@@ -70,6 +71,8 @@ __tests__/
 │   └── BottomActionBar.test.tsx   # BottomActionBar component tests
 ├── screens/
 │   ├── auth.test.tsx              # Auth screen tests
+│   ├── passwordRecovery.test.tsx  # Password recovery screen tests
+│   ├── recoveryPasswordChange.test.tsx # Forced permanent password setup screen
 │   ├── groups.test.tsx            # Groups screen tests
 │   ├── groupDetail.test.tsx       # Group detail screen tests
 │   └── settings.test.tsx          # Settings screen tests

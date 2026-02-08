@@ -117,4 +117,14 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
   removeItem: jest.fn(),
 }));
 
+jest.mock('expo-crypto', () => ({
+  getRandomBytes: jest.fn((byteCount) => {
+    const bytes = new Uint8Array(byteCount);
+    for (let index = 0; index < byteCount; index += 1) {
+      bytes[index] = Math.floor(Math.random() * 256);
+    }
+    return bytes;
+  }),
+}));
+
 jest.mock('./assets/images/moneysplit.jpg', () => 1);

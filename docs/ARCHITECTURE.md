@@ -36,21 +36,30 @@ This document describes the architecture of the MoneySplit application (React Na
 - Auth: user identity and sessions (Supabase Auth).
 - Database: persistence, constraints, and RLS (migrations in `supabase/migrations/*.sql`).
 - Row-level security policies enforce membership-based access.
-- Edge Functions for group creation, delete-user, cleanup, invitations, exchange rates, and known users tracking (Deno runtime):
+- Edge Functions for group creation, delete-user, cleanup, invitations, exchange rates, known users tracking, and password recovery (Deno runtime):
   - `supabase/functions/create-group/index.ts`
   - `supabase/functions/delete-user/index.ts`
   - `supabase/functions/cleanup-orphaned-groups/index.ts`
   - `supabase/functions/send-invitation/index.ts`
   - `supabase/functions/get-exchange-rate/index.ts`
   - `supabase/functions/update-known-users/index.ts`
+  - `supabase/functions/password-recovery/index.ts`
+  - `supabase/functions/verify-recovery-password/index.ts`
+  - `supabase/functions/set-recovery-user-password/index.ts`
 
 ## App initialization and auth flow
 
 - The app bootstraps in `app/_layout.tsx`. `AuthProvider` from `contexts/AuthContext.tsx` wraps the app and subscribes to Supabase auth events.
 - On startup, `AuthProvider` calls `supabase.auth.getSession()` and, if signed in, calls `ensureUserProfile()` to provision a local user record in the public `users` table (`services/groupRepository.ts`). It also syncs user preferences from the database to the local AsyncStorage cache (`services/userPreferenceSync.ts`).
-- Routing is guarded by `useSegments()` in `app/_layout.tsx`: unauthenticated users are forced to `app/auth.tsx`, authenticated users are redirected to the Groups tab.
+- Routing is guarded by `useSegments()` in `app/_layout.tsx`: unauthenticated users are forced to `app/auth.tsx` (with `app/password-recovery.tsx` available as a public route), authenticated users are redirected to the Groups tab.
 - Sign in and sign up are handled in `app/auth.tsx` by `useAuth().signIn()` / `signUp()`. On successful sign-in, the app updates `users.last_login` in `contexts/AuthContext.tsx`.
-- Sign-in also triggers a preference sync to refresh cached user preferences for currency order, group order, and settle defaults, and warms the exchange-rate cache for currencies seen in the user's expenses.
+- Sign-in also triggers a preference sync to refresh cached user preferences for currency order, group order, and settle defaults.
+- Sign-in also warms the exchange-rate cache for currency pairs seen in the user's expenses.
+- Password recovery is handled by `app/password-recovery.tsx`, which requests a one-time recovery password from the `password-recovery` edge function.
+- The `password-recovery` edge function stores a hashed recovery password in the `recovery_passwords` table (separate from the user's actual password) and emails the unhashed password to the user.
+- When a user signs in, `contexts/AuthContext.tsx` first attempts normal authentication. If that fails, it calls the `verify-recovery-password` edge function to check if the provided password is a valid recovery password.
+- If verified as a recovery password, the `set-recovery-user-password` edge function sets a temporary internal password, and the user is signed in with that temporary password.
+- The user is then forced to navigate to `app/recovery-password-change.tsx` to set a new permanent password before accessing the app.
 
 ## Client-server communication
 
@@ -62,7 +71,10 @@ This document describes the architecture of the MoneySplit application (React Na
   - `delete-user` is invoked when deleting an account (with bearer token).
   - `send-invitation` is invoked when inviting members by email.
   - `update-known-users` is invoked when a member is connected to an authenticated user (with bearer token).
-  - `get-exchange-rate` is invoked in `services/exchangeRateService.ts` on local cache miss/staleness, and is prewarmed at login for known currency pairs.
+- `services/exchangeRateService.ts` invokes `get-exchange-rate` on local cache miss/staleness and prewarms local rates at login for known currency pairs.
+- `services/authService.ts` invokes `password-recovery` to issue one-time recovery passwords by email.
+- `contexts/AuthContext.tsx` invokes `verify-recovery-password` during sign-in to check if a failed authentication is due to using a recovery password.
+- `contexts/AuthContext.tsx` invokes `set-recovery-user-password` to set a temporary password after successful recovery password verification.
 
 ## Data model (current schema + notes)
 
@@ -112,6 +124,19 @@ The canonical schema is defined by the SQL migrations under `supabase/migrations
 - Columns: `id`, `base_currency_code`, `quote_currency_code`, `rate_scaled`, `fetched_at`.
 - Cached rates are managed by the `get-exchange-rate` edge function.
 - Clients can read cached rates but cannot insert or update them directly (RLS policies restrict write access).
+
+### recovery_passwords
+
+- Description: Short-lived recovery passwords for account recovery, separate from user passwords to prevent account lockout attacks.
+- Table: `public.recovery_passwords`
+- Columns: `id`, `user_id`, `password_hash`, `expires_at`, `created_at`.
+- One recovery password per user (enforced by unique constraint on `user_id`).
+- Password is bcrypt-hashed before storage.
+- Expires after 5 minutes (`expires_at`).
+- Clients have no direct access (service role only via RLS).
+- Created by the `password-recovery` edge function.
+- Verified and deleted (one-time use) by the `verify-recovery-password` edge function.
+- Expired passwords are cleaned up automatically when verification is attempted.
 
 ### user_currency_preferences
 
@@ -170,6 +195,10 @@ The RLS policies have evolved through multiple migrations. The most recent polic
 
 - `exchange_rates`
   - Policies allow read access to cached rates; writes are performed by the `get-exchange-rate` edge function using service role permissions.
+
+- `recovery_passwords`
+  - No client access allowed (service role only).
+  - All operations are performed by edge functions (`password-recovery`, `verify-recovery-password`) using service role key.
 
 - `user_currency_preferences`, `user_group_preferences`, and `user_settle_preferences`
   - User can read/insert/update their own preferences.
@@ -251,6 +280,33 @@ Relevant files:
 - First checks for cached rates (valid for 12 hours), then fetches fresh rates if needed.
 - Uses service role permissions to write to `exchange_rates`, which clients cannot modify directly.
 
+### password-recovery
+
+- File: `supabase/functions/password-recovery/index.ts`.
+- Triggered from `requestPasswordRecovery()` in `services/authService.ts`.
+- Generates a one-time recovery password, bcrypt-hashes it, and stores it in the `recovery_passwords` table.
+- Sends the unhashed password via Resend email.
+- Prevents duplicate requests: if an unexpired recovery password already exists for the user, returns success without creating a new one.
+- Returns a generic success response regardless of whether the user exists (prevents email enumeration attacks).
+- If email sending fails, the recovery password is deleted from the database to maintain consistency.
+
+### verify-recovery-password
+
+- File: `supabase/functions/verify-recovery-password/index.ts`.
+- Triggered from `signIn()` in `contexts/AuthContext.tsx` when normal authentication fails.
+- Checks if the provided password matches a recovery password in the `recovery_passwords` table.
+- Verifies the password using bcrypt comparison.
+- Checks if the recovery password has expired; if so, deletes it and returns `expired: true`.
+- If verification succeeds, deletes the recovery password (one-time use) and returns `isRecoveryPassword: true` with the user ID.
+- Returns `isRecoveryPassword: false` for invalid or non-existent recovery passwords.
+
+### set-recovery-user-password
+
+- File: `supabase/functions/set-recovery-user-password/index.ts`.
+- Triggered from `signIn()` in `contexts/AuthContext.tsx` after successful recovery password verification.
+- Uses service role permissions to set a temporary password for the user.
+- This temporary password is then used by the client to sign in and complete the recovery flow.
+
 ## UI design and screen-by-screen behavior
 
 The UI uses a light, card-based aesthetic with consistent spacing and neutral grays, accent blue (`#2563eb`), and iconography via `lucide-react-native`. Common patterns include:
@@ -262,8 +318,20 @@ The UI uses a light, card-based aesthetic with consistent spacing and neutral gr
 ### Auth (`app/auth.tsx`)
 
 - Email/password sign-in and sign-up.
-- On success, navigates to `/(tabs)/groups`.
+- On success, navigates to `/(tabs)/groups` unless `useAuth()` marks `requiresRecoveryPasswordChange`, in which case routing is redirected to `app/recovery-password-change.tsx`.
 - Uses `useAuth()` methods from `contexts/AuthContext.tsx`.
+
+### Password recovery (`app/password-recovery.tsx`)
+
+- Explains the recovery flow and requests a recovery email.
+- Calls `requestPasswordRecovery()` in `services/authService.ts` to send a one-time password.
+- Informs the user that they must set a permanent password after signing in with the recovery password.
+
+### Recovery password change (`app/recovery-password-change.tsx`)
+
+- Forced screen shown after a successful recovery-password login.
+- Collects and validates a new permanent password, then calls `completeRecoveryPasswordChange()` from `contexts/AuthContext.tsx`.
+- Clears recovery metadata and unblocks access to the main tabs once the permanent password is saved.
 
 ### Tabs layout (`app/(tabs)/_layout.tsx`)
 

@@ -8,26 +8,23 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
-  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useAuth } from '@/contexts/AuthContext';
-import { type Href, router } from 'expo-router';
+import { router } from 'expo-router';
 import { isValidEmail } from '@/utils/validation';
+import { requestPasswordRecovery } from '@/services/authService';
 
-export default function AuthScreen() {
-  const [isLogin, setIsLogin] = useState(true);
+export default function PasswordRecoveryScreen() {
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const { signIn, signUp } = useAuth();
+  const [successMessage, setSuccessMessage] = useState('');
 
   const handleSubmit = async () => {
     const trimmedEmail = email.trim();
 
-    if (!trimmedEmail || !password) {
-      setError('Please enter both email and password');
+    if (!trimmedEmail) {
+      setError('Please enter your email address');
       return;
     }
 
@@ -38,16 +35,15 @@ export default function AuthScreen() {
 
     setLoading(true);
     setError('');
+    setSuccessMessage('');
 
     try {
-      if (isLogin) {
-        await signIn(trimmedEmail, password);
-      } else {
-        await signUp(trimmedEmail, password);
-      }
-      router.replace('/(tabs)/groups');
+      await requestPasswordRecovery(trimmedEmail);
+      setSuccessMessage(
+        'Recovery email sent. Check your inbox for a one-time password valid for 5 minutes. You will set a new password after sign-in.',
+      );
     } catch (err: any) {
-      setError(err.message || 'An error occurred');
+      setError(err.message || 'Unable to send recovery email');
     } finally {
       setLoading(false);
     }
@@ -60,18 +56,11 @@ export default function AuthScreen() {
         style={{ flex: 1 }}
       >
         <View style={styles.content}>
-          <View style={styles.logoContainer}>
-            <Image
-              source={require('../assets/images/moneysplit.jpg')}
-              style={styles.logo}
-              resizeMode="contain"
-            />
-          </View>
-          <Text style={styles.title}>
-            {isLogin ? 'Welcome back' : 'Create account'}
-          </Text>
+          <Text style={styles.title}>Password recovery</Text>
           <Text style={styles.subtitle}>
-            {isLogin ? 'Sign in to continue' : 'Sign up to get started'}
+            We will send a one-time random password to your email address. The
+            password is valid for 5 minutes, and you will set a new permanent
+            password after sign-in.
           </Text>
 
           <View style={styles.form}>
@@ -87,28 +76,10 @@ export default function AuthScreen() {
               autoComplete="email"
             />
 
-            <TextInput
-              style={styles.input}
-              placeholder="Password"
-              placeholderTextColor="#999"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              autoCapitalize="none"
-            />
-
-            {isLogin ? (
-              <TouchableOpacity
-                style={styles.forgotButton}
-                accessibilityRole="button"
-                accessibilityLabel="Forgot password"
-                onPress={() => router.push('/password-recovery' as Href)}
-              >
-                <Text style={styles.forgotText}>Forgot password?</Text>
-              </TouchableOpacity>
-            ) : null}
-
             {error ? <Text style={styles.errorText}>{error}</Text> : null}
+            {successMessage ? (
+              <Text style={styles.successText}>{successMessage}</Text>
+            ) : null}
 
             <TouchableOpacity
               style={[styles.button, loading && styles.buttonDisabled]}
@@ -118,31 +89,17 @@ export default function AuthScreen() {
               {loading ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text style={styles.buttonText}>
-                  {isLogin ? 'Sign In' : 'Sign Up'}
-                </Text>
+                <Text style={styles.buttonText}>Send recovery email</Text>
               )}
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.switchButton}
+              style={styles.linkButton}
               accessibilityRole="button"
-              accessibilityLabel={
-                isLogin ? 'Switch to sign up' : 'Switch to sign in'
-              }
-              onPress={() => {
-                setIsLogin(!isLogin);
-                setError('');
-              }}
+              accessibilityLabel="Back to sign in"
+              onPress={() => router.replace('/auth')}
             >
-              <Text style={styles.switchText}>
-                {isLogin
-                  ? "Don't have an account? "
-                  : 'Already have an account? '}
-                <Text style={styles.switchTextBold}>
-                  {isLogin ? 'Sign Up' : 'Sign In'}
-                </Text>
-              </Text>
+              <Text style={styles.linkText}>Back to sign in</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -161,24 +118,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 24,
   },
-  logoContainer: {
-    marginBottom: 40,
-    alignItems: 'center',
-  },
-  logo: {
-    width: 280,
-    height: 80,
-  },
   title: {
     fontSize: 32,
     fontWeight: '700',
     color: '#000',
-    marginBottom: 8,
+    marginBottom: 12,
   },
   subtitle: {
     fontSize: 16,
     color: '#666',
-    marginBottom: 32,
+    marginBottom: 24,
   },
   form: {
     gap: 16,
@@ -207,28 +156,22 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  switchButton: {
+  linkButton: {
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 4,
   },
-  forgotButton: {
-    alignItems: 'flex-end',
-  },
-  forgotText: {
+  linkText: {
     fontSize: 14,
     color: '#007AFF',
     fontWeight: '600',
-  },
-  switchText: {
-    fontSize: 14,
-    color: '#666',
-  },
-  switchTextBold: {
-    fontWeight: '600',
-    color: '#007AFF',
   },
   errorText: {
     color: '#ff3b30',
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  successText: {
+    color: '#16a34a',
     fontSize: 14,
     textAlign: 'center',
   },

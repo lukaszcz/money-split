@@ -17,6 +17,7 @@ export interface MockSupabaseClient {
     getUser: jest.Mock;
     getSession: jest.Mock;
     signInWithPassword: jest.Mock;
+    updateUser: jest.Mock;
     signUp: jest.Mock;
     signOut: jest.Mock;
     onAuthStateChange: jest.Mock;
@@ -55,6 +56,9 @@ export function createMockSupabaseClient(): MockSupabaseClient {
         data: { user: null, session: null },
         error: null,
       }),
+      updateUser: jest
+        .fn()
+        .mockResolvedValue({ data: { user: null }, error: null }),
       signUp: jest.fn().mockResolvedValue({
         data: { user: null, session: null },
         error: null,
@@ -98,6 +102,7 @@ export function resetAllMocks(mockClient: MockSupabaseClient): void {
   mockClient.auth.getUser.mockClear();
   mockClient.auth.getSession.mockClear();
   mockClient.auth.signInWithPassword.mockClear();
+  mockClient.auth.updateUser.mockClear();
   mockClient.auth.signUp.mockClear();
   mockClient.auth.signOut.mockClear();
   mockClient.auth.onAuthStateChange.mockClear();
