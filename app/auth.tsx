@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/AuthContext';
-import { router } from 'expo-router';
+import { type Href, router } from 'expo-router';
 import { isValidEmail } from '@/utils/validation';
 
 export default function AuthScreen() {
@@ -123,6 +123,17 @@ export default function AuthScreen() {
               autoCapitalize="none"
             />
 
+            {isLogin ? (
+              <TouchableOpacity
+                style={styles.forgotButton}
+                accessibilityRole="button"
+                accessibilityLabel="Forgot password"
+                onPress={() => router.push('/password-recovery' as Href)}
+              >
+                <Text style={styles.forgotText}>Forgot password?</Text>
+              </TouchableOpacity>
+            ) : null}
+
             {error ? <Text style={styles.errorText}>{error}</Text> : null}
             {info ? <Text style={styles.infoText}>{info}</Text> : null}
 
@@ -227,6 +238,14 @@ const styles = StyleSheet.create({
   switchButton: {
     alignItems: 'center',
     marginTop: 8,
+  },
+  forgotButton: {
+    alignItems: 'flex-end',
+  },
+  forgotText: {
+    fontSize: 14,
+    color: '#007AFF',
+    fontWeight: '600',
   },
   switchText: {
     fontSize: 14,

@@ -10,6 +10,7 @@ import type { MockAuthContext } from '../utils/mockAuthContext';
 
 jest.mock('expo-router', () => ({
   router: {
+    push: jest.fn(),
     replace: jest.fn(),
   },
 }));
@@ -20,7 +21,7 @@ jest.mock('@/contexts/AuthContext', () => ({
 
 describe('Auth Screen', () => {
   let mockAuthContext: MockAuthContext;
-  let mockRouter: { replace: jest.Mock };
+  let mockRouter: { push: jest.Mock; replace: jest.Mock };
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -118,5 +119,13 @@ describe('Auth Screen', () => {
     });
 
     expect(mockRouter.replace).not.toHaveBeenCalled();
+  });
+
+  it('navigates to password recovery', () => {
+    const { getByText } = render(<AuthScreen />);
+
+    fireEvent.press(getByText('Forgot password?'));
+
+    expect(mockRouter.push).toHaveBeenCalledWith('/password-recovery');
   });
 });
