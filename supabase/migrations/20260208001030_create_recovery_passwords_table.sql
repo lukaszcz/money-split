@@ -10,9 +10,6 @@ CREATE TABLE IF NOT EXISTS public.recovery_passwords (
   CONSTRAINT one_recovery_password_per_user UNIQUE (user_id)
 );
 
--- Index for efficient lookup by user_id
-CREATE INDEX IF NOT EXISTS idx_recovery_passwords_user_id ON public.recovery_passwords(user_id);
-
 -- Index for efficient cleanup of expired passwords
 CREATE INDEX IF NOT EXISTS idx_recovery_passwords_expires_at ON public.recovery_passwords(expires_at);
 
