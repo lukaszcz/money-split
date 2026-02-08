@@ -44,7 +44,8 @@ MoneySplit is a React Native/Expo mobile app for tracking shared expenses and de
 
 - RLS and schema changes live in `supabase/migrations/`.
 - Edge functions run under `supabase/functions/` and should be referenced in `docs/ARCHITECTURE.md` when changed.
-- When adding an edge function, make sure it performs appropriate user authorization.
+- Each edge function should check user authorization.
+- Never expose internal server error information to clients. Return a generic error message to clients while keeping detailed logging server-side.
 
 ## Instructions
 

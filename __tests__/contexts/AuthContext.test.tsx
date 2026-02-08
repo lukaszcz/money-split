@@ -264,18 +264,12 @@ describe('AuthContext', () => {
         error: new Error('Invalid credentials'),
       });
 
-      // Edge function verifies it's a valid recovery password
+      // Edge function verifies recovery password and sets a temporary password
       mockSupabase.functions.invoke.mockResolvedValueOnce({
         data: {
           isRecoveryPassword: true,
-          userId: 'user-123',
+          temporaryPassword: 'server-generated-temporary-password',
         },
-        error: null,
-      });
-
-      // Edge function sets temporary password
-      mockSupabase.functions.invoke.mockResolvedValueOnce({
-        data: { success: true },
         error: null,
       });
 
@@ -317,16 +311,7 @@ describe('AuthContext', () => {
         },
       );
 
-      // Should have called set-recovery-user-password edge function
-      expect(mockSupabase.functions.invoke).toHaveBeenCalledWith(
-        'set-recovery-user-password',
-        {
-          body: {
-            userId: 'user-123',
-            password: expect.any(String),
-          },
-        },
-      );
+      expect(mockSupabase.functions.invoke).toHaveBeenCalledTimes(1);
 
       // Should have signed in twice (first fail, second success with temp password)
       expect(mockSupabase.auth.signInWithPassword).toHaveBeenCalledTimes(2);
@@ -334,28 +319,19 @@ describe('AuthContext', () => {
       expect(result.current.requiresRecoveryPasswordChange).toBe(true);
     });
 
-    it('should throw when setting temporary password fails', async () => {
+    it('should throw when recovery sign-in edge function fails', async () => {
       mockSupabase.auth.getSession.mockResolvedValue({
         data: { session: null },
         error: null,
       });
 
       // First sign-in attempt fails
-      mockSupabase.auth.signInWithPassword.mockResolvedValue({
+      mockSupabase.auth.signInWithPassword.mockResolvedValueOnce({
         data: { user: null, session: null },
         error: new Error('Invalid credentials'),
       });
 
-      // Edge function verifies it's a valid recovery password
-      mockSupabase.functions.invoke.mockResolvedValueOnce({
-        data: {
-          isRecoveryPassword: true,
-          userId: 'user-123',
-        },
-        error: null,
-      });
-
-      // Edge function fails to set temporary password
+      // Combined edge function fails
       mockSupabase.functions.invoke.mockResolvedValueOnce({
         data: null,
         error: new Error('Failed to set password'),
@@ -481,7 +457,7 @@ describe('AuthContext', () => {
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
       });
-      expect(result.current.requiresRecoveryPasswordChange).toBe(true);
+      expect(result.current.requiresRecoveryPasswordChange).toBe(false);
 
       await expect(
         act(async () => {
@@ -490,7 +466,7 @@ describe('AuthContext', () => {
           );
         }),
       ).rejects.toThrow('Unable to update password');
-      expect(result.current.requiresRecoveryPasswordChange).toBe(true);
+      expect(result.current.requiresRecoveryPasswordChange).toBe(false);
     });
   });
 

@@ -14,6 +14,16 @@ interface VerifyRecoveryPasswordRequest {
   password: string;
 }
 
+const TEMPORARY_PASSWORD_LENGTH = 32;
+
+function generateTemporaryPassword(length = TEMPORARY_PASSWORD_LENGTH): string {
+  const values = new Uint8Array(length);
+  crypto.getRandomValues(values);
+  return Array.from(values, (value) =>
+    value.toString(16).padStart(2, '0'),
+  ).join('');
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, {
@@ -113,16 +123,59 @@ Deno.serve(async (req: Request) => {
     const isMatch = await bcrypt.compare(password, recoveryData.password_hash);
 
     if (isMatch) {
-      // Delete the recovery password after successful verification (one-time use)
-      await supabaseClient
-        .from('recovery_passwords')
-        .delete()
-        .eq('user_id', userData.user.id);
+      // Delete the recovery password before applying changes to make it one-time use.
+      const { data: consumedRecoveryRows, error: consumeRecoveryError } =
+        await supabaseClient
+          .from('recovery_passwords')
+          .delete()
+          .eq('user_id', userData.user.id)
+          .select('id');
+
+      if (consumeRecoveryError) {
+        console.error(
+          'Failed to consume recovery password before password update:',
+          consumeRecoveryError,
+        );
+        return new Response(
+          JSON.stringify({ error: 'Failed to complete recovery sign-in' }),
+          {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          },
+        );
+      }
+
+      if (!consumedRecoveryRows || consumedRecoveryRows.length === 0) {
+        return new Response(JSON.stringify({ isRecoveryPassword: false }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const temporaryPassword = generateTemporaryPassword();
+      const { error: updateError } =
+        await supabaseClient.auth.admin.updateUserById(userData.user.id, {
+          password: temporaryPassword,
+        });
+
+      if (updateError) {
+        console.error(
+          'Failed to set temporary password after recovery password verification:',
+          updateError,
+        );
+        return new Response(
+          JSON.stringify({ error: 'Failed to complete recovery sign-in' }),
+          {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          },
+        );
+      }
 
       return new Response(
         JSON.stringify({
           isRecoveryPassword: true,
-          userId: userData.user.id,
+          temporaryPassword,
         }),
         {
           status: 200,

@@ -21,6 +21,7 @@ The MoneySplit test suite includes:
 - **Unit tests** for utilities and business logic (money math, settlement algorithms)
 - **Service tests** for data and edge-function access (groupRepository, exchangeRateService, authService)
 - **Context tests** for React state management (AuthContext)
+- **Recovery auth-flow tests** for atomic recovery-password verification and temporary sign-in provisioning in `AuthContext`
 - **Hook tests** for client hooks (currency order, framework ready)
 - **Component tests** for reusable UI components (BottomActionBar)
 - **Screen tests** for UI business logic (auth, groups, settings)
@@ -29,7 +30,7 @@ The MoneySplit test suite includes:
 
 ### Test Statistics
 
-- **Total Tests**: 378
+- **Total Tests**: 379
 - **Test Suites**: 23
 - **Coverage Targets**:
   - Lines: 80%

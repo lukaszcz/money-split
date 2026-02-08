@@ -45,7 +45,6 @@ This document describes the architecture of the MoneySplit application (React Na
   - `supabase/functions/update-known-users/index.ts`
   - `supabase/functions/password-recovery/index.ts`
   - `supabase/functions/verify-recovery-password/index.ts`
-  - `supabase/functions/set-recovery-user-password/index.ts`
 
 ## App initialization and auth flow
 
@@ -57,8 +56,9 @@ This document describes the architecture of the MoneySplit application (React Na
 - Sign-in also warms the exchange-rate cache for currency pairs seen in the user's expenses.
 - Password recovery is handled by `app/password-recovery.tsx`, which requests a one-time recovery password from the `password-recovery` edge function.
 - The `password-recovery` edge function stores a hashed recovery password in the `recovery_passwords` table (separate from the user's actual password) and emails the unhashed password to the user.
-- When a user signs in, `contexts/AuthContext.tsx` first attempts normal authentication. If that fails, it calls the `verify-recovery-password` edge function to check if the provided password is a valid recovery password.
-- If verified as a recovery password, the `set-recovery-user-password` edge function sets a temporary internal password, and the user is signed in with that temporary password.
+- When a user signs in, `contexts/AuthContext.tsx` first attempts normal authentication. If that fails, it calls the `verify-recovery-password` edge function.
+- The `verify-recovery-password` edge function verifies the recovery password and, in the same request, sets a temporary internal password with service-role privileges.
+- The client signs in using that temporary password returned from the edge function.
 - The user is then forced to navigate to `app/recovery-password-change.tsx` to set a new permanent password before accessing the app.
 
 ## Client-server communication
@@ -73,8 +73,7 @@ This document describes the architecture of the MoneySplit application (React Na
   - `update-known-users` is invoked when a member is connected to an authenticated user (with bearer token).
 - `services/exchangeRateService.ts` invokes `get-exchange-rate` on local cache miss/staleness and prewarms local rates at login for known currency pairs.
 - `services/authService.ts` invokes `password-recovery` to issue one-time recovery passwords by email.
-- `contexts/AuthContext.tsx` invokes `verify-recovery-password` during sign-in to check if a failed authentication is due to using a recovery password.
-- `contexts/AuthContext.tsx` invokes `set-recovery-user-password` to set a temporary password after successful recovery password verification.
+- `contexts/AuthContext.tsx` invokes `verify-recovery-password` during sign-in to verify recovery-password credentials and provision a temporary password in one server-side step.
 
 ## Data model (current schema + notes)
 
@@ -135,7 +134,7 @@ The canonical schema is defined by the SQL migrations under `supabase/migrations
 - Expires after 5 minutes (`expires_at`).
 - Clients have no direct access (service role only via RLS).
 - Created by the `password-recovery` edge function.
-- Verified and deleted (one-time use) by the `verify-recovery-password` edge function.
+- Verified and consumed (one-time use) by the `verify-recovery-password` edge function before it sets a temporary sign-in password.
 - Expired passwords are cleaned up automatically when verification is attempted.
 
 ### user_currency_preferences
@@ -297,15 +296,8 @@ Relevant files:
 - Checks if the provided password matches a recovery password in the `recovery_passwords` table.
 - Verifies the password using bcrypt comparison.
 - Checks if the recovery password has expired; if so, deletes it and returns `expired: true`.
-- If verification succeeds, deletes the recovery password (one-time use) and returns `isRecoveryPassword: true` with the user ID.
+- If verification succeeds, consumes the recovery password (one-time use), sets a temporary internal password using the admin API, and returns `isRecoveryPassword: true` with that temporary password.
 - Returns `isRecoveryPassword: false` for invalid or non-existent recovery passwords.
-
-### set-recovery-user-password
-
-- File: `supabase/functions/set-recovery-user-password/index.ts`.
-- Triggered from `signIn()` in `contexts/AuthContext.tsx` after successful recovery password verification.
-- Uses service role permissions to set a temporary password for the user.
-- This temporary password is then used by the client to sign in and complete the recovery flow.
 
 ## UI design and screen-by-screen behavior
 

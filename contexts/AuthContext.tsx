@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
-import * as Crypto from 'expo-crypto';
 import { supabase } from '@/lib/supabase';
 import { ensureUserProfile } from '@/services/groupRepository';
 import { syncUserPreferences } from '@/services/userPreferenceSync';
@@ -17,16 +16,6 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-function generateInvalidatedRecoveryPassword() {
-  const randomChunk = () => {
-    const bytes = Crypto.getRandomBytes(8);
-    return Array.from(bytes, (value) =>
-      value.toString(16).padStart(2, '0'),
-    ).join('');
-  };
-  return `msr-${Date.now().toString(36)}-${randomChunk()}-${randomChunk()}`;
-}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
@@ -93,14 +82,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await supabase.functions.invoke<{
         isRecoveryPassword: boolean;
         expired?: boolean;
-        userId?: string;
+        temporaryPassword?: string;
       }>('verify-recovery-password', {
         body: { email, password },
       });
 
     if (verifyError) {
-      // If verification failed, throw the original sign-in error
-      throw signInError;
+      console.error(
+        'Recovery verification and temporary password assignment failed:',
+        verifyError,
+      );
+      throw new Error(
+        'Unable to complete recovery sign-in. Please request a new recovery password.',
+      );
     }
 
     if (verifyData?.expired) {
@@ -112,32 +106,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw signInError;
     }
 
-    // It's a valid recovery password - set a temporary password and sign in
-    // The recovery password has already been deleted by the verify function
-    const temporaryPassword = generateInvalidatedRecoveryPassword();
-
-    // Use admin API via edge function to set the temporary password
-    const { error: setPasswordError } = await supabase.functions.invoke(
-      'set-recovery-user-password',
-      {
-        body: {
-          userId: verifyData.userId,
-          password: temporaryPassword,
-        },
-      },
-    );
-
-    if (setPasswordError) {
-      console.error('Failed to set temporary password:', setPasswordError);
+    if (!verifyData.temporaryPassword) {
+      console.error(
+        'Recovery verification succeeded without a temporary password',
+      );
       throw new Error(
         'Unable to complete recovery sign-in. Please request a new recovery password.',
       );
     }
 
-    // Now sign in with the temporary password
+    // The recovery edge function already verified the recovery password and
+    // atomically set a temporary password server-side.
     const { error: tempSignInError } = await supabase.auth.signInWithPassword({
       email,
-      password: temporaryPassword,
+      password: verifyData.temporaryPassword,
     });
 
     if (tempSignInError) {
