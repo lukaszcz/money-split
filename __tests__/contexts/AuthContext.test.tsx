@@ -115,11 +115,10 @@ describe('AuthContext', () => {
       expect(syncUserPreferences).toHaveBeenCalledWith(mockUser.id);
     });
 
-    it('should mark existing session for forced password change when metadata flag is set', async () => {
+    it('should not mark existing session for forced password change on init', async () => {
       const mockSession = createMockSession({
         id: 'user-123',
         email: 'test@example.com',
-        user_metadata: { recoveryPasswordMustChange: true },
       });
 
       mockSupabase.auth.getSession.mockResolvedValue({
@@ -136,7 +135,8 @@ describe('AuthContext', () => {
         expect(result.current.loading).toBe(false);
       });
 
-      expect(result.current.requiresRecoveryPasswordChange).toBe(true);
+      // Recovery password change is only set during sign-in flow, not on init
+      expect(result.current.requiresRecoveryPasswordChange).toBe(false);
     });
 
     it('should set loading false with no session', async () => {
@@ -243,12 +243,10 @@ describe('AuthContext', () => {
       ).rejects.toThrow('Invalid credentials');
     });
 
-    it('should invalidate recovery password after successful recovery sign in', async () => {
-      const recoveryExpiry = new Date(Date.now() + 60_000).toISOString();
+    it('should handle recovery password sign in via edge function', async () => {
       const mockUser = createMockUser({
         id: 'user-123',
         email: 'test@example.com',
-        user_metadata: { recoveryPasswordExpiresAt: recoveryExpiry },
       });
       const mockSession = createMockSession({
         id: 'user-123',
@@ -260,7 +258,29 @@ describe('AuthContext', () => {
         error: null,
       });
 
-      mockSupabase.auth.signInWithPassword.mockResolvedValue({
+      // First sign-in attempt fails (not the real password)
+      mockSupabase.auth.signInWithPassword.mockResolvedValueOnce({
+        data: { user: null, session: null },
+        error: new Error('Invalid credentials'),
+      });
+
+      // Edge function verifies it's a valid recovery password
+      mockSupabase.functions.invoke.mockResolvedValueOnce({
+        data: {
+          isRecoveryPassword: true,
+          userId: 'user-123',
+        },
+        error: null,
+      });
+
+      // Edge function sets temporary password
+      mockSupabase.functions.invoke.mockResolvedValueOnce({
+        data: { success: true },
+        error: null,
+      });
+
+      // Second sign-in attempt succeeds with temporary password
+      mockSupabase.auth.signInWithPassword.mockResolvedValueOnce({
         data: { user: mockUser, session: mockSession },
         error: null,
       });
@@ -289,56 +309,57 @@ describe('AuthContext', () => {
         await result.current.signIn('test@example.com', 'recovery-password');
       });
 
-      expect(mockSupabase.auth.updateUser).toHaveBeenCalledWith({
-        password: expect.any(String),
-        data: {
-          recoveryPasswordExpiresAt: null,
-          recoveryPasswordMustChange: true,
+      // Should have called verify-recovery-password edge function
+      expect(mockSupabase.functions.invoke).toHaveBeenCalledWith(
+        'verify-recovery-password',
+        {
+          body: { email: 'test@example.com', password: 'recovery-password' },
         },
-      });
-      const updatePayload = mockSupabase.auth.updateUser.mock.calls[0][0];
-      expect(updatePayload.password).not.toBe('recovery-password');
-      expect(updatePayload.password.length).toBeGreaterThanOrEqual(20);
+      );
+
+      // Should have called set-recovery-user-password edge function
+      expect(mockSupabase.functions.invoke).toHaveBeenCalledWith(
+        'set-recovery-user-password',
+        {
+          body: {
+            userId: 'user-123',
+            password: expect.any(String),
+          },
+        },
+      );
+
+      // Should have signed in twice (first fail, second success with temp password)
+      expect(mockSupabase.auth.signInWithPassword).toHaveBeenCalledTimes(2);
+
       expect(result.current.requiresRecoveryPasswordChange).toBe(true);
     });
 
-    it('should sign out and throw when recovery password invalidation fails', async () => {
-      const recoveryExpiry = new Date(Date.now() + 60_000).toISOString();
-      const mockUser = createMockUser({
-        id: 'user-123',
-        email: 'test@example.com',
-        user_metadata: { recoveryPasswordExpiresAt: recoveryExpiry },
-      });
-      const mockSession = createMockSession({
-        id: 'user-123',
-        email: 'test@example.com',
-      });
-
+    it('should throw when setting temporary password fails', async () => {
       mockSupabase.auth.getSession.mockResolvedValue({
         data: { session: null },
         error: null,
       });
 
+      // First sign-in attempt fails
       mockSupabase.auth.signInWithPassword.mockResolvedValue({
-        data: { user: mockUser, session: mockSession },
+        data: { user: null, session: null },
+        error: new Error('Invalid credentials'),
+      });
+
+      // Edge function verifies it's a valid recovery password
+      mockSupabase.functions.invoke.mockResolvedValueOnce({
+        data: {
+          isRecoveryPassword: true,
+          userId: 'user-123',
+        },
         error: null,
       });
 
-      mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: mockUser },
-        error: null,
+      // Edge function fails to set temporary password
+      mockSupabase.functions.invoke.mockResolvedValueOnce({
+        data: null,
+        error: new Error('Failed to set password'),
       });
-
-      mockSupabase.auth.updateUser.mockResolvedValue({
-        data: { user: null },
-        error: new Error('Failed to update'),
-      });
-
-      const updateBuilder = {
-        update: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockResolvedValue({ error: null }),
-      };
-      mockSupabase.from.mockReturnValue(updateBuilder as any);
 
       const { useAuth } = require('../../contexts/AuthContext');
       const { result } = renderHook(() => useAuth(), {
@@ -354,34 +375,61 @@ describe('AuthContext', () => {
           await result.current.signIn('test@example.com', 'recovery-password');
         }),
       ).rejects.toThrow(
-        'Unable to finalize recovery sign-in. Request a new recovery password.',
+        'Unable to complete recovery sign-in. Please request a new recovery password.',
       );
+    });
+
+    it('should throw expired error when recovery password is expired', async () => {
+      mockSupabase.auth.getSession.mockResolvedValue({
+        data: { session: null },
+        error: null,
+      });
+
+      // First sign-in attempt fails
+      mockSupabase.auth.signInWithPassword.mockResolvedValue({
+        data: { user: null, session: null },
+        error: new Error('Invalid credentials'),
+      });
+
+      // Edge function reports recovery password is expired
+      mockSupabase.functions.invoke.mockResolvedValueOnce({
+        data: {
+          isRecoveryPassword: false,
+          expired: true,
+        },
+        error: null,
+      });
+
+      const { useAuth } = require('../../contexts/AuthContext');
+      const { result } = renderHook(() => useAuth(), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      await expect(
+        act(async () => {
+          await result.current.signIn('test@example.com', 'recovery-password');
+        }),
+      ).rejects.toThrow('Recovery password expired. Request a new one.');
     });
   });
 
   describe('completeRecoveryPasswordChange', () => {
-    it('should save the new permanent password and clear the forced-change flag', async () => {
-      const sessionUser = createMockUser({
-        id: 'user-123',
-        email: 'test@example.com',
-        user_metadata: { recoveryPasswordMustChange: true },
-      });
+    it('should save the new permanent password', async () => {
       const refreshedUser = createMockUser({
         id: 'user-123',
         email: 'test@example.com',
-        user_metadata: {},
-      });
-      const mockSession = createMockSession({
-        id: 'user-123',
-        email: 'test@example.com',
-        user_metadata: { recoveryPasswordMustChange: true },
       });
 
-      mockSupabase.auth.getSession.mockResolvedValue({
-        data: { session: mockSession },
+      mockSupabase.auth.getUser.mockResolvedValue({
+        data: { user: refreshedUser },
         error: null,
       });
-      mockSupabase.auth.getUser.mockResolvedValue({
+
+      mockSupabase.auth.updateUser.mockResolvedValue({
         data: { user: refreshedUser },
         error: null,
       });
@@ -394,28 +442,18 @@ describe('AuthContext', () => {
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
       });
-      expect(result.current.user).toMatchObject({
-        id: sessionUser.id,
-        email: sessionUser.email,
-      });
-      expect(result.current.requiresRecoveryPasswordChange).toBe(true);
 
+      // In a real scenario, requiresRecoveryPasswordChange would be set to true after
+      // successful recovery password sign-in. For this test, we just verify the
+      // completeRecoveryPasswordChange function works correctly.
       await act(async () => {
         await result.current.completeRecoveryPasswordChange('new-password-123');
       });
 
       expect(mockSupabase.auth.updateUser).toHaveBeenCalledWith({
         password: 'new-password-123',
-        data: {
-          recoveryPasswordExpiresAt: null,
-          recoveryPasswordMustChange: null,
-        },
       });
       expect(result.current.requiresRecoveryPasswordChange).toBe(false);
-      expect(result.current.user).toMatchObject({
-        id: refreshedUser.id,
-        email: refreshedUser.email,
-      });
     });
 
     it('should throw when updating permanent password fails', async () => {

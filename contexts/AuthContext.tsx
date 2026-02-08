@@ -17,8 +17,6 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-const RECOVERY_PASSWORD_EXPIRES_AT_KEY = 'recoveryPasswordExpiresAt';
-const RECOVERY_PASSWORD_MUST_CHANGE_KEY = 'recoveryPasswordMustChange';
 
 function generateInvalidatedRecoveryPassword() {
   const randomChunk = () => {
@@ -28,10 +26,6 @@ function generateInvalidatedRecoveryPassword() {
     ).join('');
   };
   return `msr-${Date.now().toString(36)}-${randomChunk()}-${randomChunk()}`;
-}
-
-function requiresRecoveryPasswordChange(user: User | null): boolean {
-  return user?.user_metadata?.[RECOVERY_PASSWORD_MUST_CHANGE_KEY] === true;
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -51,9 +45,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       setSession(session);
       setUser(session?.user ?? null);
-      setRequiresRecoveryPasswordChange(
-        requiresRecoveryPasswordChange(session?.user ?? null),
-      );
+      // Don't set requiresRecoveryPasswordChange on initial load
+      // It's only set during the signIn flow
       setLoading(false);
     });
 
@@ -67,9 +60,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         setSession(session);
         setUser(session?.user ?? null);
-        setRequiresRecoveryPasswordChange(
-          requiresRecoveryPasswordChange(session?.user ?? null),
-        );
       })();
     });
 
@@ -77,46 +67,91 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
+    // First, try normal sign-in
+    const { error: signInError } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
-    if (error) throw error;
+
+    // If normal sign-in succeeds, proceed with normal flow
+    if (!signInError) {
+      const { data: userData } = await supabase.auth.getUser();
+      if (userData.user?.id) {
+        setRequiresRecoveryPasswordChange(false);
+        const now = new Date().toISOString();
+        await supabase
+          .from('users')
+          .update({ last_login: now })
+          .eq('id', userData.user.id);
+        await syncUserPreferences(userData.user.id);
+      }
+      return;
+    }
+
+    // If normal sign-in failed, check if it's a recovery password
+    const { data: verifyData, error: verifyError } =
+      await supabase.functions.invoke<{
+        isRecoveryPassword: boolean;
+        expired?: boolean;
+        userId?: string;
+      }>('verify-recovery-password', {
+        body: { email, password },
+      });
+
+    if (verifyError) {
+      // If verification failed, throw the original sign-in error
+      throw signInError;
+    }
+
+    if (verifyData?.expired) {
+      throw new Error('Recovery password expired. Request a new one.');
+    }
+
+    if (!verifyData?.isRecoveryPassword) {
+      // Not a recovery password, throw the original sign-in error
+      throw signInError;
+    }
+
+    // It's a valid recovery password - set a temporary password and sign in
+    // The recovery password has already been deleted by the verify function
+    const temporaryPassword = generateInvalidatedRecoveryPassword();
+
+    // Use admin API via edge function to set the temporary password
+    const { error: setPasswordError } = await supabase.functions.invoke(
+      'set-recovery-user-password',
+      {
+        body: {
+          userId: verifyData.userId,
+          password: temporaryPassword,
+        },
+      },
+    );
+
+    if (setPasswordError) {
+      console.error('Failed to set temporary password:', setPasswordError);
+      throw new Error(
+        'Unable to complete recovery sign-in. Please request a new recovery password.',
+      );
+    }
+
+    // Now sign in with the temporary password
+    const { error: tempSignInError } = await supabase.auth.signInWithPassword({
+      email,
+      password: temporaryPassword,
+    });
+
+    if (tempSignInError) {
+      console.error('Failed to sign in with temporary password');
+      throw new Error(
+        'Unable to complete recovery sign-in. Please request a new recovery password.',
+      );
+    }
+
+    // Mark that password change is required
+    setRequiresRecoveryPasswordChange(true);
 
     const { data: userData } = await supabase.auth.getUser();
     if (userData.user?.id) {
-      const recoveryExpiry = userData.user.user_metadata?.[
-        RECOVERY_PASSWORD_EXPIRES_AT_KEY
-      ] as string | undefined;
-      let shouldRequireRecoveryPasswordChange = requiresRecoveryPasswordChange(
-        userData.user,
-      );
-
-      if (recoveryExpiry) {
-        const expiresAtMs = Date.parse(recoveryExpiry);
-        if (Number.isNaN(expiresAtMs) || expiresAtMs <= Date.now()) {
-          await supabase.auth.signOut();
-          throw new Error('Recovery password expired. Request a new one.');
-        }
-
-        const { error: updateError } = await supabase.auth.updateUser({
-          password: generateInvalidatedRecoveryPassword(),
-          data: {
-            [RECOVERY_PASSWORD_EXPIRES_AT_KEY]: null,
-            [RECOVERY_PASSWORD_MUST_CHANGE_KEY]: true,
-          },
-        });
-        if (updateError) {
-          console.warn('Failed to invalidate recovery password', updateError);
-          await supabase.auth.signOut();
-          throw new Error(
-            'Unable to finalize recovery sign-in. Request a new recovery password.',
-          );
-        }
-        shouldRequireRecoveryPasswordChange = true;
-      }
-      setRequiresRecoveryPasswordChange(shouldRequireRecoveryPasswordChange);
-
       const now = new Date().toISOString();
       await supabase
         .from('users')
@@ -129,10 +164,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const completeRecoveryPasswordChange = async (newPassword: string) => {
     const { error } = await supabase.auth.updateUser({
       password: newPassword,
-      data: {
-        [RECOVERY_PASSWORD_EXPIRES_AT_KEY]: null,
-        [RECOVERY_PASSWORD_MUST_CHANGE_KEY]: null,
-      },
     });
 
     if (error) {

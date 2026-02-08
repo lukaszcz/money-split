@@ -1,6 +1,7 @@
 import 'jsr:@supabase/functions-js@2/edge-runtime.d.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.58.0';
 import { Resend } from 'npm:resend@4.0.0';
+import * as bcrypt from 'https://deno.land/x/bcrypt@v0.4.1/mod.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -96,9 +97,36 @@ Deno.serve(async (req: Request) => {
       return createGenericSuccessResponse();
     }
 
+    // Check if there's an existing unexpired recovery password
+    const { data: existingRecovery, error: checkError } = await supabaseClient
+      .from('recovery_passwords')
+      .select('expires_at')
+      .eq('user_id', userData.user.id)
+      .single();
+
+    if (checkError && checkError.code !== 'PGRST116') {
+      console.error('Failed to check existing recovery password:', checkError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to check recovery status' }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      );
+    }
+
+    if (existingRecovery) {
+      const existingExpiry = new Date(existingRecovery.expires_at);
+      if (existingExpiry > new Date()) {
+        console.log(
+          'User already has an active recovery password, rejecting new request',
+        );
+        return createGenericSuccessResponse();
+      }
+    }
+
     const recoveryPassword = generatePassword();
     const expiresAt = new Date(Date.now() + PASSWORD_TTL_MS).toISOString();
-    const existingMetadata = userData.user.user_metadata ?? {};
     const resend = new Resend(resendApiKey);
 
     const emailHtml = `
@@ -155,6 +183,36 @@ Deno.serve(async (req: Request) => {
       </html>
     `;
 
+    // Hash the recovery password before storing
+    const passwordHash = await bcrypt.hash(recoveryPassword);
+
+    // Store the hashed recovery password in the database
+    const { error: upsertError } = await supabaseClient
+      .from('recovery_passwords')
+      .upsert(
+        {
+          user_id: userData.user.id,
+          password_hash: passwordHash,
+          expires_at: expiresAt,
+          created_at: new Date().toISOString(),
+        },
+        {
+          onConflict: 'user_id',
+        },
+      );
+
+    if (upsertError) {
+      console.error('Failed to store recovery password:', upsertError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to create recovery password' }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      );
+    }
+
+    // Send the recovery password via email
     const { error: emailError } = await resend.emails.send({
       from: 'moneysplit@moneysplit.polapp.pl',
       to: email,
@@ -163,39 +221,14 @@ Deno.serve(async (req: Request) => {
     });
 
     if (emailError) {
-      console.error(
-        'Failed to send recovery email before password update:',
-        emailError,
-      );
+      console.error('Failed to send recovery email:', emailError);
+      // Clean up the recovery password since email failed
+      await supabaseClient
+        .from('recovery_passwords')
+        .delete()
+        .eq('user_id', userData.user.id);
       return new Response(
         JSON.stringify({ error: 'Failed to send recovery email' }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        },
-      );
-    }
-
-    const { error: updateError } =
-      await supabaseClient.auth.admin.updateUserById(userData.user.id, {
-        password: recoveryPassword,
-        user_metadata: {
-          ...existingMetadata,
-          recoveryPasswordExpiresAt: expiresAt,
-        },
-      });
-
-    if (updateError) {
-      console.error(
-        'Failed to set recovery password after email send; recovery password may be invalid:',
-        {
-          userId: userData.user.id,
-          message: updateError.message,
-          status: updateError.status,
-        },
-      );
-      return new Response(
-        JSON.stringify({ error: 'Failed to activate recovery password' }),
         {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
