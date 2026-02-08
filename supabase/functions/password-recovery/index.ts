@@ -81,16 +81,19 @@ Deno.serve(async (req: Request) => {
       },
     });
 
-    const { data: userData, error: userError } =
-      await supabaseClient.auth.admin.getUserByEmail(email);
+    const { data: publicUser, error: publicUserError } = await supabaseClient
+      .from('users')
+      .select('id')
+      .eq('email', email)
+      .maybeSingle();
 
-    if (userError || !userData?.user) {
-      if (userError) {
+    if (publicUserError || !publicUser) {
+      if (publicUserError) {
         console.error(
-          'Failed to fetch user by email during password recovery:',
+          'Failed to fetch public user by email during password recovery:',
           {
-            message: userError.message,
-            status: userError.status,
+            message: publicUserError.message,
+            code: publicUserError.code,
           },
         );
       }
@@ -101,7 +104,7 @@ Deno.serve(async (req: Request) => {
     const { data: existingRecovery, error: checkError } = await supabaseClient
       .from('recovery_passwords')
       .select('expires_at')
-      .eq('user_id', userData.user.id)
+      .eq('user_id', publicUser.id)
       .single();
 
     if (checkError && checkError.code !== 'PGRST116') {
@@ -191,7 +194,7 @@ Deno.serve(async (req: Request) => {
       .from('recovery_passwords')
       .upsert(
         {
-          user_id: userData.user.id,
+          user_id: publicUser.id,
           password_hash: passwordHash,
           expires_at: expiresAt,
           created_at: new Date().toISOString(),
@@ -226,7 +229,7 @@ Deno.serve(async (req: Request) => {
       await supabaseClient
         .from('recovery_passwords')
         .delete()
-        .eq('user_id', userData.user.id);
+        .eq('user_id', publicUser.id);
       return new Response(
         JSON.stringify({ error: 'Failed to send recovery email' }),
         {

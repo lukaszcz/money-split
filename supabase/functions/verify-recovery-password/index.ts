@@ -73,11 +73,23 @@ Deno.serve(async (req: Request) => {
       },
     });
 
-    // Get user by email
-    const { data: userData, error: userError } =
-      await supabaseClient.auth.admin.getUserByEmail(email);
+    // Get user by email from public.users
+    const { data: publicUser, error: publicUserError } = await supabaseClient
+      .from('users')
+      .select('id')
+      .eq('email', email)
+      .maybeSingle();
 
-    if (userError || !userData?.user) {
+    if (publicUserError || !publicUser) {
+      if (publicUserError) {
+        console.error(
+          'Failed to fetch public user by email during recovery verification:',
+          {
+            message: publicUserError.message,
+            code: publicUserError.code,
+          },
+        );
+      }
       return new Response(JSON.stringify({ isRecoveryPassword: false }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -88,7 +100,7 @@ Deno.serve(async (req: Request) => {
     const { data: recoveryData, error: recoveryError } = await supabaseClient
       .from('recovery_passwords')
       .select('password_hash, expires_at')
-      .eq('user_id', userData.user.id)
+      .eq('user_id', publicUser.id)
       .single();
 
     if (recoveryError || !recoveryData) {
@@ -105,7 +117,7 @@ Deno.serve(async (req: Request) => {
       await supabaseClient
         .from('recovery_passwords')
         .delete()
-        .eq('user_id', userData.user.id);
+        .eq('user_id', publicUser.id);
 
       return new Response(
         JSON.stringify({
@@ -128,7 +140,7 @@ Deno.serve(async (req: Request) => {
         await supabaseClient
           .from('recovery_passwords')
           .delete()
-          .eq('user_id', userData.user.id)
+          .eq('user_id', publicUser.id)
           .select('id');
 
       if (consumeRecoveryError) {
@@ -154,7 +166,7 @@ Deno.serve(async (req: Request) => {
 
       const temporaryPassword = generateTemporaryPassword();
       const { error: updateError } =
-        await supabaseClient.auth.admin.updateUserById(userData.user.id, {
+        await supabaseClient.auth.admin.updateUserById(publicUser.id, {
           password: temporaryPassword,
         });
 
@@ -193,7 +205,6 @@ Deno.serve(async (req: Request) => {
     return new Response(
       JSON.stringify({
         error: 'Internal server error',
-        details: String(error),
       }),
       {
         status: 500,
