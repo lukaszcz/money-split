@@ -1,7 +1,7 @@
 import 'jsr:@supabase/functions-js@2/edge-runtime.d.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.58.0';
 import { Resend } from 'npm:resend@4.0.0';
-import * as bcrypt from 'npm:bcryptjs@2.4.3';
+import bcrypt from 'npm:bcryptjs@2.4.3';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -85,18 +85,16 @@ Deno.serve(async (req: Request) => {
       .from('users')
       .select('id')
       .eq('email', email)
-      .maybeSingle();
+      .single();
 
     if (publicUserError || !publicUser) {
-      if (publicUserError) {
-        console.error(
-          'Failed to fetch public user by email during password recovery:',
-          {
-            message: publicUserError.message,
-            code: publicUserError.code,
-          },
-        );
-      }
+      console.error(
+        'Failed to fetch public user by email during password recovery:',
+        {
+          message: publicUserError.message,
+          code: publicUserError.code,
+        },
+      );
       return createGenericSuccessResponse();
     }
 
