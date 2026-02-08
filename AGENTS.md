@@ -37,7 +37,7 @@ MoneySplit is a React Native/Expo mobile app for tracking shared expenses and de
 
 - Commit format: `type: subject` in imperative lowercase (e.g., `feat: add transfer flow`).
 - PR title format same as commit format (`type: subject`).
-- PR descriptions should summarize changes, rationale and impact. Do not include validation or testing summaries.
+- PR descriptions should summarize code changes, rationale and impact. Do not include documentation changes, validation or testing summaries.
 - Keep commits focused; avoid mixing unrelated changes.
 
 ## Security & Configuration

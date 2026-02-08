@@ -99,10 +99,7 @@ describe('Settings Screen', () => {
       expect(mockUpdateUserName).toHaveBeenCalledWith('user-123', 'New Name');
     });
 
-    expect(alertSpy).toHaveBeenCalledWith(
-      'Success',
-      'Name updated successfully',
-    );
+    expect(alertSpy).not.toHaveBeenCalled();
     expect(getByText('New Name')).toBeTruthy();
   });
 

@@ -56,7 +56,6 @@ export default function SettingsScreen() {
       if (result) {
         setUserName(result.name);
         setEditingName(false);
-        Alert.alert('Success', 'Name updated successfully');
       } else {
         Alert.alert('Error', 'Failed to update name');
       }
