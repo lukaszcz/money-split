@@ -8,6 +8,7 @@ import type { MockAuthContext } from '../utils/mockAuthContext';
 jest.mock('expo-router', () => ({
   router: {
     replace: jest.fn(),
+    push: jest.fn(),
   },
 }));
 
@@ -23,7 +24,7 @@ jest.mock('../../services/groupRepository', () => ({
 
 describe('Settings Screen', () => {
   let mockAuthContext: MockAuthContext;
-  let mockRouter: { replace: jest.Mock };
+  let mockRouter: { replace: jest.Mock; push: jest.Mock };
   let mockGetUser: jest.Mock;
   let mockUpdateUserName: jest.Mock;
   let mockDeleteUserAccount: jest.Mock;
@@ -98,10 +99,7 @@ describe('Settings Screen', () => {
       expect(mockUpdateUserName).toHaveBeenCalledWith('user-123', 'New Name');
     });
 
-    expect(alertSpy).toHaveBeenCalledWith(
-      'Success',
-      'Name updated successfully',
-    );
+    expect(alertSpy).not.toHaveBeenCalled();
     expect(getByText('New Name')).toBeTruthy();
   });
 
@@ -136,6 +134,24 @@ describe('Settings Screen', () => {
     });
 
     expect(mockRouter.replace).toHaveBeenCalledWith('/auth');
+  });
+
+  it('navigates to change password screen', async () => {
+    mockGetUser.mockResolvedValue({
+      id: 'user-123',
+      name: 'Jane Doe',
+      email: 'test@example.com',
+    });
+
+    const { getByLabelText } = render(<SettingsScreen />);
+
+    await waitFor(() => {
+      expect(mockGetUser).toHaveBeenCalledWith('user-123');
+    });
+
+    fireEvent.press(getByLabelText('Change password'));
+
+    expect(mockRouter.push).toHaveBeenCalledWith('/change-password');
   });
 
   it('deletes the account after double confirmation', async () => {
