@@ -40,7 +40,7 @@ export default function PasswordRecoveryScreen() {
     try {
       await requestPasswordRecovery(trimmedEmail);
       setSuccessMessage(
-        'Recovery email sent. Check your inbox for a one-time password valid for 5 minutes. You will set a new password after sign-in.',
+        'Recovery email sent. Check your inbox for a one-time password valid for 5 minutes.',
       );
     } catch (err: any) {
       setError(err.message || 'Unable to send recovery email');
@@ -58,9 +58,8 @@ export default function PasswordRecoveryScreen() {
         <View style={styles.content}>
           <Text style={styles.title}>Password recovery</Text>
           <Text style={styles.subtitle}>
-            We will send a one-time random password to your email address. The
-            password is valid for 5 minutes, and you will set a new permanent
-            password after sign-in.
+            We will send a one-time random password to your email address. You
+            can use it to sign in and set a new password.
           </Text>
 
           <View style={styles.form}>
