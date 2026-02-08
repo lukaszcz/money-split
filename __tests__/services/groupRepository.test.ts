@@ -2455,53 +2455,48 @@ describe('groupRepository', () => {
   });
 
   describe('reconnectGroupMembers', () => {
-    it('should reconnect unconnected members by email', async () => {
+    it('should call connect-user-to-groups edge function', async () => {
       const {
         reconnectGroupMembers,
       } = require('../../services/groupRepository');
-      const mockUser = createMockUser({
-        id: 'user-alice',
-        email: 'alice@example.com',
-      });
-
-      mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: mockUser },
+      mockSupabase.functions.invoke.mockResolvedValue({
+        data: { connectedCount: 1 },
         error: null,
       });
-
-      const updateBuilder = {
-        update: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        is: jest.fn().mockReturnThis(),
-        select: jest.fn().mockResolvedValue({
-          data: [createMockDatabaseRow(mockMembers.aliceInTrip)],
-          error: null,
-        }),
-      };
-
-      mockSupabase.from.mockReturnValue(updateBuilder as any);
 
       const result = await reconnectGroupMembers();
 
       expect(result).toBe(1);
-      expect(updateBuilder.update).toHaveBeenCalledWith({
-        connected_user_id: 'user-alice',
-      });
-      expect(updateBuilder.eq).toHaveBeenCalledWith(
-        'email',
-        'alice@example.com',
+      expect(mockSupabase.functions.invoke).toHaveBeenCalledWith(
+        'connect-user-to-groups',
+        {
+          headers: { Authorization: 'Bearer mock-access-token' },
+        },
       );
     });
 
-    it('should return 0 when no user email', async () => {
+    it('should return 0 when no session token is available', async () => {
       const {
         reconnectGroupMembers,
       } = require('../../services/groupRepository');
-      const mockUser = createMockUser({ id: 'user-alice', email: undefined });
-
-      mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: mockUser },
+      mockSupabase.auth.getSession.mockResolvedValue({
+        data: { session: null },
         error: null,
+      });
+
+      const result = await reconnectGroupMembers();
+
+      expect(result).toBe(0);
+      expect(mockSupabase.functions.invoke).not.toHaveBeenCalled();
+    });
+
+    it('should return 0 when edge function fails', async () => {
+      const {
+        reconnectGroupMembers,
+      } = require('../../services/groupRepository');
+      mockSupabase.functions.invoke.mockResolvedValue({
+        data: null,
+        error: new Error('Connect failed'),
       });
 
       const result = await reconnectGroupMembers();
@@ -2509,31 +2504,14 @@ describe('groupRepository', () => {
       expect(result).toBe(0);
     });
 
-    it('should return 0 when update fails', async () => {
+    it('should return 0 when edge function returns error payload', async () => {
       const {
         reconnectGroupMembers,
       } = require('../../services/groupRepository');
-      const mockUser = createMockUser({
-        id: 'user-alice',
-        email: 'alice@example.com',
-      });
-
-      mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: mockUser },
+      mockSupabase.functions.invoke.mockResolvedValue({
+        data: { error: 'Function-level error' },
         error: null,
       });
-
-      const updateBuilder = {
-        update: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        is: jest.fn().mockReturnThis(),
-        select: jest.fn().mockResolvedValue({
-          data: null,
-          error: new Error('Update failed'),
-        }),
-      };
-
-      mockSupabase.from.mockReturnValue(updateBuilder as any);
 
       const result = await reconnectGroupMembers();
 
