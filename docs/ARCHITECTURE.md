@@ -50,6 +50,7 @@ This document describes the architecture of the MoneySplit application (React Na
 - On startup, `AuthProvider` calls `supabase.auth.getSession()` and, if signed in, calls `ensureUserProfile()` to provision a local user record in the public `users` table (`services/groupRepository.ts`). It also syncs user preferences from the database to the local AsyncStorage cache (`services/userPreferenceSync.ts`).
 - Routing is guarded by `useSegments()` in `app/_layout.tsx`: unauthenticated users are forced to `app/auth.tsx`, authenticated users are redirected to the Groups tab.
 - Sign in and sign up are handled in `app/auth.tsx` by `useAuth().signIn()` / `signUp()`. On successful sign-in, the app updates `users.last_login` in `contexts/AuthContext.tsx`.
+- After successful sign-up, the app keeps users on `app/auth.tsx` and prompts them to confirm their email address before signing in.
 - Sign-in also triggers a preference sync to refresh cached user preferences for currency order, group order, and settle defaults, and warms the exchange-rate cache for currencies seen in the user's expenses.
 
 ## Client-server communication

@@ -212,7 +212,7 @@ describe('AuthContext', () => {
   });
 
   describe('signUp', () => {
-    it('should sign up user with email and password', async () => {
+    it('should sign up user with email, password, and name', async () => {
       const mockUser = createMockUser({
         id: 'user-new',
         email: 'new@example.com',
@@ -238,12 +238,21 @@ describe('AuthContext', () => {
       });
 
       await act(async () => {
-        await result.current.signUp('new@example.com', 'password123');
+        await result.current.signUp(
+          'new@example.com',
+          'password123',
+          'New User',
+        );
       });
 
       expect(mockSupabase.auth.signUp).toHaveBeenCalledWith({
         email: 'new@example.com',
         password: 'password123',
+        options: {
+          data: {
+            name: 'New User',
+          },
+        },
       });
     });
 
@@ -270,7 +279,11 @@ describe('AuthContext', () => {
 
       await expect(
         act(async () => {
-          await result.current.signUp('test@example.com', 'password123');
+          await result.current.signUp(
+            'test@example.com',
+            'password123',
+            'Test User',
+          );
         }),
       ).rejects.toThrow('Email already exists');
     });
