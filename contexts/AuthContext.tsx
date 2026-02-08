@@ -12,6 +12,10 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, name: string) => Promise<void>;
   completeRecoveryPasswordChange: (newPassword: string) => Promise<void>;
+  changePassword: (
+    currentPassword: string,
+    newPassword: string,
+  ) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -25,6 +29,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     requiresRecoveryPasswordChangeState,
     setRequiresRecoveryPasswordChange,
   ] = useState(false);
+
+  const refreshAuthUser = async (warningPrefix: string) => {
+    const { data: refreshedUserData, error: refreshedUserError } =
+      await supabase.auth.getUser();
+    if (refreshedUserError) {
+      console.warn(
+        `${warningPrefix} but failed to refresh auth user metadata`,
+        refreshedUserError,
+      );
+      return;
+    }
+
+    if (refreshedUserData.user) {
+      setUser(refreshedUserData.user);
+    }
+  };
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
@@ -154,19 +174,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     setRequiresRecoveryPasswordChange(false);
 
-    const { data: refreshedUserData, error: refreshedUserError } =
-      await supabase.auth.getUser();
-    if (refreshedUserError) {
-      console.warn(
-        'Password changed but failed to refresh auth user metadata',
-        refreshedUserError,
-      );
-      return;
+    await refreshAuthUser('Password changed');
+  };
+
+  const changePassword = async (
+    currentPassword: string,
+    newPassword: string,
+  ) => {
+    if (!user?.email) {
+      throw new Error('Unable to verify your current password');
     }
 
-    if (refreshedUserData.user) {
-      setUser(refreshedUserData.user);
+    const { error: verifyError } = await supabase.auth.signInWithPassword({
+      email: user.email,
+      password: currentPassword,
+    });
+
+    if (verifyError) {
+      throw new Error('Current password is incorrect');
     }
+
+    const { error: updateError } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+
+    if (updateError) {
+      throw updateError;
+    }
+
+    await refreshAuthUser('Password changed');
   };
 
   const signUp = async (email: string, password: string, name: string) => {
@@ -198,6 +234,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signIn,
         signUp,
         completeRecoveryPasswordChange,
+        changePassword,
         signOut,
       }}
     >

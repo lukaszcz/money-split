@@ -24,14 +24,14 @@ The MoneySplit test suite includes:
 - **Recovery auth-flow tests** for atomic recovery-password verification and temporary sign-in provisioning in `AuthContext`
 - **Hook tests** for client hooks (currency order, framework ready)
 - **Component tests** for reusable UI components (BottomActionBar)
-- **Screen tests** for UI business logic (auth, groups, settings)
+- **Screen tests** for UI business logic (auth, groups, settings, password changes)
 - **Integration tests** (optional, requires local Supabase)
 - **Exchange-rate cache tests** for AsyncStorage caching, stale fallback behavior, and login prefetch warmup
 
 ### Test Statistics
 
-- **Total Tests**: 379
-- **Test Suites**: 24
+- **Total Tests**: 388
+- **Test Suites**: 25
 - **Coverage Targets**:
   - Lines: 80%
   - Functions: 80%
@@ -74,6 +74,7 @@ __tests__/
 │   ├── auth.test.tsx              # Auth screen tests
 │   ├── passwordRecovery.test.tsx  # Password recovery screen tests
 │   ├── recoveryPasswordChange.test.tsx # Forced permanent password setup screen
+│   ├── changePassword.test.tsx    # Authenticated password change screen
 │   ├── groups.test.tsx            # Groups screen tests
 │   ├── groupDetail.test.tsx       # Group detail screen tests
 │   └── settings.test.tsx          # Settings screen tests
@@ -741,9 +742,10 @@ it('shows a validation error for missing credentials', () => {
 See these files for complete examples:
 
 - `__tests__/screens/auth.test.tsx` - Authentication flows
+- `__tests__/screens/changePassword.test.tsx` - Authenticated password change flow
 - `__tests__/screens/groups.test.tsx` - Groups list and navigation
 - `__tests__/screens/groupDetail.test.tsx` - Group detail screen, overflow menu, and leave group flows
-- `__tests__/screens/settings.test.tsx` - Profile, logout, delete flows
+- `__tests__/screens/settings.test.tsx` - Profile, password-change navigation, logout, delete flows
 
 ### Tips for Screen Testing
 

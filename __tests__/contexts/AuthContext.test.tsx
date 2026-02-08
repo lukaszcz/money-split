@@ -470,6 +470,134 @@ describe('AuthContext', () => {
     });
   });
 
+  describe('changePassword', () => {
+    it('should verify current password and save the new password', async () => {
+      const session = createMockSession({
+        id: 'user-123',
+        email: 'test@example.com',
+      });
+      const refreshedUser = createMockUser({
+        id: 'user-123',
+        email: 'test@example.com',
+      });
+
+      mockSupabase.auth.getSession.mockResolvedValue({
+        data: { session },
+        error: null,
+      });
+      mockSupabase.auth.signInWithPassword.mockResolvedValue({
+        data: { user: session.user, session },
+        error: null,
+      });
+      mockSupabase.auth.updateUser.mockResolvedValue({
+        data: { user: refreshedUser },
+        error: null,
+      });
+      mockSupabase.auth.getUser.mockResolvedValue({
+        data: { user: refreshedUser },
+        error: null,
+      });
+
+      const { useAuth } = require('../../contexts/AuthContext');
+      const { result } = renderHook(() => useAuth(), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      await act(async () => {
+        await result.current.changePassword(
+          'current-password-123',
+          'new-password-123',
+        );
+      });
+
+      expect(mockSupabase.auth.signInWithPassword).toHaveBeenCalledWith({
+        email: 'test@example.com',
+        password: 'current-password-123',
+      });
+      expect(mockSupabase.auth.updateUser).toHaveBeenCalledWith({
+        password: 'new-password-123',
+      });
+    });
+
+    it('should throw when current password is incorrect', async () => {
+      const session = createMockSession({
+        id: 'user-123',
+        email: 'test@example.com',
+      });
+
+      mockSupabase.auth.getSession.mockResolvedValue({
+        data: { session },
+        error: null,
+      });
+      mockSupabase.auth.signInWithPassword.mockResolvedValue({
+        data: { user: null, session: null },
+        error: new Error('Invalid credentials'),
+      });
+
+      const { useAuth } = require('../../contexts/AuthContext');
+      const { result } = renderHook(() => useAuth(), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      await expect(
+        act(async () => {
+          await result.current.changePassword(
+            'wrong-password',
+            'new-password-123',
+          );
+        }),
+      ).rejects.toThrow('Current password is incorrect');
+
+      expect(mockSupabase.auth.updateUser).not.toHaveBeenCalled();
+    });
+
+    it('should throw when password update fails', async () => {
+      const session = createMockSession({
+        id: 'user-123',
+        email: 'test@example.com',
+      });
+
+      mockSupabase.auth.getSession.mockResolvedValue({
+        data: { session },
+        error: null,
+      });
+      mockSupabase.auth.signInWithPassword.mockResolvedValue({
+        data: { user: session.user, session },
+        error: null,
+      });
+      mockSupabase.auth.updateUser.mockResolvedValue({
+        data: { user: null },
+        error: new Error('Unable to update password'),
+      });
+
+      const { useAuth } = require('../../contexts/AuthContext');
+      const { result } = renderHook(() => useAuth(), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      await expect(
+        act(async () => {
+          await result.current.changePassword(
+            'current-password-123',
+            'new-password-123',
+          );
+        }),
+      ).rejects.toThrow('Unable to update password');
+    });
+  });
+
   describe('signUp', () => {
     it('should sign up user with email, password, and name', async () => {
       const mockUser = createMockUser({

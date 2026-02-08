@@ -60,6 +60,7 @@ This document describes the architecture of the MoneySplit application (React Na
 - The `verify-recovery-password` edge function verifies the recovery password and, in the same request, sets a temporary internal password with service-role privileges.
 - The client signs in using that temporary password returned from the edge function.
 - The user is then forced to navigate to `app/recovery-password-change.tsx` to set a new permanent password before accessing the app.
+- Authenticated users can also change their password from settings via `app/change-password.tsx`, which requires entering the current password before calling `supabase.auth.updateUser()`.
 
 ## Client-server communication
 
@@ -325,6 +326,12 @@ The UI uses a light, card-based aesthetic with consistent spacing and neutral gr
 - Collects and validates a new permanent password, then calls `completeRecoveryPasswordChange()` from `contexts/AuthContext.tsx`.
 - Clears recovery metadata and unblocks access to the main tabs once the permanent password is saved.
 
+### Change password (`app/change-password.tsx`)
+
+- Optional authenticated screen opened from Settings.
+- Reuses the shared password-update form component (`components/PasswordUpdateForm.tsx`) used by recovery-password-change.
+- Requires current password verification via `changePassword()` in `contexts/AuthContext.tsx`, then updates the password with Supabase Auth.
+
 ### Tabs layout (`app/(tabs)/_layout.tsx`)
 
 - Bottom tab navigation on the main screen: Groups, Activity, Settings.
@@ -346,6 +353,7 @@ The UI uses a light, card-based aesthetic with consistent spacing and neutral gr
 ### Settings (`app/(tabs)/settings.tsx`)
 
 - Displays profile (email, display name) and allows rename via `updateUserName()`.
+- Includes navigation to `app/change-password.tsx` for authenticated password changes.
 - Logout via `useAuth().signOut()`.
 - Account deletion triggers edge function `delete-user` (`deleteUserAccount()` in `services/groupRepository.ts`).
 
@@ -446,12 +454,14 @@ The UI uses a light, card-based aesthetic with consistent spacing and neutral gr
 ## Key file map
 
 - App entry + routing: `app/_layout.tsx`, `app/(tabs)/_layout.tsx`.
+- Password update screens: `app/change-password.tsx`, `app/recovery-password-change.tsx`.
 - Auth state: `contexts/AuthContext.tsx`.
 - Data access: `services/groupRepository.ts`, `services/exchangeRateService.ts`.
 - Preferences: `services/currencyPreferenceService.ts`, `services/groupPreferenceService.ts`, `services/settlePreferenceService.ts`, `services/userPreferenceSync.ts`, `services/userPreferenceCache.ts`, `hooks/useCurrencyOrder.ts`.
 - Money math: `utils/money.ts`, `utils/currencies.ts`.
 - Input validation logic: `utils/validation.ts` (decimal, integer, percentage, and exact-amount input helpers).
 - Shared expense/transfer form UI: `components/ExpenseFormScreen.tsx`.
+- Shared password update form UI: `components/PasswordUpdateForm.tsx`.
 - Known user autocomplete UI: `components/KnownUserSuggestionInput.tsx`.
 - Shared settle UI: `components/SettleContent.tsx`.
 - Settlement logic: `services/settlementService.ts`.

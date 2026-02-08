@@ -11,9 +11,17 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useState, useEffect, useCallback } from 'react';
-import { LogOut, User, Edit2, Check, X, Trash2 } from 'lucide-react-native';
+import {
+  LogOut,
+  User,
+  Edit2,
+  Check,
+  X,
+  Trash2,
+  KeyRound,
+} from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
-import { router } from 'expo-router';
+import { router, type Href } from 'expo-router';
 import {
   getUser,
   updateUserName,
@@ -198,6 +206,18 @@ export default function SettingsScreen() {
                 </View>
               )}
             </View>
+
+            <TouchableOpacity
+              style={styles.changePasswordButton}
+              accessibilityRole="button"
+              accessibilityLabel="Change password"
+              onPress={() => router.push('/change-password' as Href)}
+            >
+              <KeyRound color="#2563eb" size={20} />
+              <Text style={styles.changePasswordButtonText}>
+                Change password
+              </Text>
+            </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.logoutButton}
@@ -396,6 +416,23 @@ const styles = StyleSheet.create({
   },
   logoutButtonText: {
     color: '#ef4444',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  changePasswordButton: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: '#eff6ff',
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+    marginBottom: 12,
+  },
+  changePasswordButtonText: {
+    color: '#2563eb',
     fontSize: 16,
     fontWeight: '600',
     marginLeft: 8,

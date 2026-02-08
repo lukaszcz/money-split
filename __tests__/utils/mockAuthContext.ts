@@ -15,6 +15,7 @@ export interface MockAuthContext {
   signIn: jest.Mock<Promise<void>, [string, string]>;
   signUp: jest.Mock<Promise<void>, [string, string, string]>;
   completeRecoveryPasswordChange: jest.Mock<Promise<void>, [string]>;
+  changePassword: jest.Mock<Promise<void>, [string, string]>;
   signOut: jest.Mock<Promise<void>, []>;
 }
 
@@ -109,6 +110,7 @@ export function createMockAuthContext(
     signIn: jest.fn().mockResolvedValue(undefined),
     signUp: jest.fn().mockResolvedValue(undefined),
     completeRecoveryPasswordChange: jest.fn().mockResolvedValue(undefined),
+    changePassword: jest.fn().mockResolvedValue(undefined),
     signOut: jest.fn().mockResolvedValue(undefined),
     ...overrides,
   };
@@ -177,6 +179,7 @@ export function resetMockAuthContext(authContext: MockAuthContext): void {
   authContext.signIn.mockClear();
   authContext.signUp.mockClear();
   authContext.completeRecoveryPasswordChange.mockClear();
+  authContext.changePassword.mockClear();
   authContext.signOut.mockClear();
 }
 

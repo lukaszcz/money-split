@@ -46,6 +46,7 @@ function RootLayoutNav() {
       <Stack.Screen name="auth" />
       <Stack.Screen name="password-recovery" />
       <Stack.Screen name="recovery-password-change" />
+      <Stack.Screen name="change-password" />
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="+not-found" />
     </Stack>
