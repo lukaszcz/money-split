@@ -8,6 +8,7 @@ import {
   TextInput,
   Modal,
   ActivityIndicator,
+  Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useState, useEffect, useCallback } from 'react';
@@ -49,6 +50,7 @@ export default function SettingsScreen() {
   }, [loadUserProfile]);
 
   const handleSaveName = async () => {
+    Keyboard.dismiss();
     if (!user?.id || !tempName.trim()) return;
 
     try {
