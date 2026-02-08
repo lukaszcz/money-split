@@ -101,20 +101,23 @@ export async function getUser(userId: string): Promise<User | null> {
 
 export async function getUserByEmail(email: string): Promise<User | null> {
   try {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('email', email)
-      .maybeSingle();
+    const { data, error } = await supabase.functions.invoke('get-user-by-email', {
+      body: { email },
+    });
 
     if (error) throw error;
-    if (!data) return null;
+    if (!data?.success) {
+      throw new Error('Edge function returned unsuccessful response');
+    }
+
+    const user = data.user;
+    if (!user) return null;
 
     return {
-      id: data.id,
-      name: data.name,
-      email: data.email || undefined,
-      createdAt: data.created_at,
+      id: user.id,
+      name: user.name,
+      email: user.email || undefined,
+      createdAt: user.createdAt,
     };
   } catch (error) {
     console.error('Failed to get user by email:', error);

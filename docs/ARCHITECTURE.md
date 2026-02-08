@@ -36,12 +36,13 @@ This document describes the architecture of the MoneySplit application (React Na
 - Auth: user identity and sessions (Supabase Auth).
 - Database: persistence, constraints, and RLS (migrations in `supabase/migrations/*.sql`).
 - Row-level security policies enforce membership-based access.
-- Edge Functions for group creation, delete-user, cleanup, invitations, exchange rates, known users tracking, and password recovery (Deno runtime):
+- Edge Functions for group creation, delete-user, cleanup, invitations, exchange rates, known users tracking, user lookup by email, and password recovery (Deno runtime):
   - `supabase/functions/create-group/index.ts`
   - `supabase/functions/delete-user/index.ts`
   - `supabase/functions/cleanup-orphaned-groups/index.ts`
   - `supabase/functions/send-invitation/index.ts`
   - `supabase/functions/get-exchange-rate/index.ts`
+  - `supabase/functions/get-user-by-email/index.ts`
   - `supabase/functions/update-known-users/index.ts`
   - `supabase/functions/password-recovery/index.ts`
   - `supabase/functions/verify-recovery-password/index.ts`
@@ -173,8 +174,9 @@ The canonical schema is defined by the SQL migrations under `supabase/migrations
 The RLS policies have evolved through multiple migrations. The most recent policies enforce membership-based access using helper functions such as `user_is_group_member()`, `group_has_connected_members()`, and `member_is_involved_in_expenses()`, and use `(select auth.uid())` in policy predicates to avoid per-row re-evaluation. The intent of the latest policies is:
 
 - `users`
-  - Authenticated users can read all users.
+  - Authenticated users can only read their own user record (`(select auth.uid()) = id`).
   - Insert/update/delete is restricted to the authenticated user (`(select auth.uid()) = id`).
+  - Fetching users by email is performed via the `get-user-by-email` edge function using service role permissions.
 
 - `groups`
   - Select: users can view groups they are members of, plus groups with no connected members (required for group creation and orphan cleanup windows).
@@ -279,6 +281,14 @@ Relevant files:
 - Fetches exchange rates from `https://api.exchangerate-api.com` and caches them in the `exchange_rates` table.
 - First checks for cached rates (valid for 12 hours), then fetches fresh rates if needed.
 - Uses service role permissions to write to `exchange_rates`, which clients cannot modify directly.
+
+### get-user-by-email
+
+- File: `supabase/functions/get-user-by-email/index.ts`.
+- Triggered from `getUserByEmail()` in `services/groupRepository.ts`.
+- Fetches user data (id, name, email) by email address using service role permissions.
+- Required because the RLS policy on the `users` table restricts SELECT to only the authenticated user's own row.
+- Allows looking up users by email (for connecting group members) without exposing all user emails to arbitrary queries.
 
 ### password-recovery
 
