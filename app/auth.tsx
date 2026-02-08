@@ -22,6 +22,7 @@ export default function AuthScreen() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [info, setInfo] = useState('');
   const { signIn, signUp } = useAuth();
 
   const handleSubmit = async () => {
@@ -43,16 +44,22 @@ export default function AuthScreen() {
       return;
     }
 
-    setLoading(true);
     setError('');
+    setInfo('');
+    setLoading(true);
 
     try {
       if (isLogin) {
         await signIn(trimmedEmail, password);
+        router.replace('/(tabs)/groups');
       } else {
         await signUp(trimmedEmail, password, trimmedName);
+        setIsLogin(true);
+        setName('');
+        setPassword('');
+        setEmail(trimmedEmail);
+        setInfo('Check your email and confirm your address before signing in.');
       }
-      router.replace('/(tabs)/groups');
     } catch (err: any) {
       setError(err.message || 'An error occurred');
     } finally {
@@ -117,6 +124,7 @@ export default function AuthScreen() {
             />
 
             {error ? <Text style={styles.errorText}>{error}</Text> : null}
+            {info ? <Text style={styles.infoText}>{info}</Text> : null}
 
             <TouchableOpacity
               style={[styles.button, loading && styles.buttonDisabled]}
@@ -141,6 +149,7 @@ export default function AuthScreen() {
               onPress={() => {
                 setIsLogin(!isLogin);
                 setError('');
+                setInfo('');
               }}
             >
               <Text style={styles.switchText}>
@@ -229,6 +238,11 @@ const styles = StyleSheet.create({
   },
   errorText: {
     color: '#ff3b30',
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  infoText: {
+    color: '#2f7d32',
     fontSize: 14,
     textAlign: 'center',
   },

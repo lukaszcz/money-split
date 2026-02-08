@@ -87,7 +87,7 @@ describe('Auth Screen', () => {
     expect(mockAuthContext.signUp).not.toHaveBeenCalled();
   });
 
-  it('switches to sign up and creates an account', async () => {
+  it('switches to sign up and asks user to confirm email after account creation', async () => {
     mockSignUpSuccess(mockAuthContext);
 
     const { getByPlaceholderText, getByText, getByLabelText } = render(
@@ -110,7 +110,13 @@ describe('Auth Screen', () => {
     });
 
     await waitFor(() => {
-      expect(mockRouter.replace).toHaveBeenCalledWith('/(tabs)/groups');
+      expect(
+        getByText(
+          'Check your email and confirm your address before signing in.',
+        ),
+      ).toBeTruthy();
     });
+
+    expect(mockRouter.replace).not.toHaveBeenCalled();
   });
 });
