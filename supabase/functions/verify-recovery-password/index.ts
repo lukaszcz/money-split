@@ -132,7 +132,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // Verify the password
-    const isMatch = bcrypt.compareSync(password, recoveryData.password_hash);
+    const isMatch = await bcrypt.compare(password, recoveryData.password_hash);
 
     if (isMatch) {
       // Delete the recovery password before applying changes to make it one-time use.
