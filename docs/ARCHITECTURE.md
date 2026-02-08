@@ -52,8 +52,8 @@ This document describes the architecture of the MoneySplit application (React Na
 - On startup, `AuthProvider` calls `supabase.auth.getSession()` and, if signed in, calls `ensureUserProfile()` to provision a local user record in the public `users` table (`services/groupRepository.ts`). It also syncs user preferences from the database to the local AsyncStorage cache (`services/userPreferenceSync.ts`).
 - Routing is guarded by `useSegments()` in `app/_layout.tsx`: unauthenticated users are forced to `app/auth.tsx` (with `app/password-recovery.tsx` available as a public route), authenticated users are redirected to the Groups tab.
 - Sign in and sign up are handled in `app/auth.tsx` by `useAuth().signIn()` / `signUp()`. On successful sign-in, the app updates `users.last_login` in `contexts/AuthContext.tsx`.
-- Sign-in also triggers a preference sync to refresh cached user preferences for currency order, group order, and settle defaults.
-- Sign-in also warms the exchange-rate cache for currency pairs seen in the user's expenses.
+- After successful sign-up, the app keeps users on `app/auth.tsx` and prompts them to confirm their email address before signing in.
+- Sign-in also triggers a preference sync to refresh cached user preferences for currency order, group order, and settle defaults, and warms the exchange-rate cache for currencies seen in the user's expenses.
 - Password recovery is handled by `app/password-recovery.tsx`, which requests a one-time recovery password from the `password-recovery` edge function.
 - The `password-recovery` edge function stores a hashed recovery password in the `recovery_passwords` table (separate from the user's actual password) and emails the unhashed password to the user.
 - When a user signs in, `contexts/AuthContext.tsx` first attempts normal authentication. If that fails, it calls the `verify-recovery-password` edge function.

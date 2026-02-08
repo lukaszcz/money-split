@@ -42,11 +42,19 @@ export async function ensureUserProfile(name?: string): Promise<User | null> {
       return existingUser;
     }
 
+    const resolvedName =
+      name?.trim() ||
+      (typeof authUser.user_metadata?.name === 'string'
+        ? authUser.user_metadata.name.trim()
+        : '') ||
+      authUser.email?.split('@')[0] ||
+      'User';
+
     const { data, error } = await supabase
       .from('users')
       .insert({
         id: authUser.id,
-        name: name || authUser.email?.split('@')[0] || 'User',
+        name: resolvedName,
         email: authUser.email || null,
       })
       .select()

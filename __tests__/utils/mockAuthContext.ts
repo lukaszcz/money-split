@@ -13,7 +13,7 @@ export interface MockAuthContext {
   loading: boolean;
   requiresRecoveryPasswordChange: boolean;
   signIn: jest.Mock<Promise<void>, [string, string]>;
-  signUp: jest.Mock<Promise<void>, [string, string]>;
+  signUp: jest.Mock<Promise<void>, [string, string, string]>;
   completeRecoveryPasswordChange: jest.Mock<Promise<void>, [string]>;
   signOut: jest.Mock<Promise<void>, []>;
 }
@@ -242,7 +242,7 @@ export function mockSignInFailure(
  * const authContext = createMockAuthContext();
  * mockSignUpSuccess(authContext);
  *
- * await authContext.signUp('new@example.com', 'password123');
+ * await authContext.signUp('new@example.com', 'password123', 'New User');
  * expect(authContext.signUp).toHaveBeenCalled();
  */
 export function mockSignUpSuccess(
@@ -271,7 +271,9 @@ export function mockSignUpSuccess(
  * const authContext = createMockAuthContext();
  * mockSignUpFailure(authContext);
  *
- * await expect(authContext.signUp('existing@example.com', 'pass')).rejects.toThrow();
+ * await expect(
+ *   authContext.signUp('existing@example.com', 'pass', 'Existing User'),
+ * ).rejects.toThrow();
  */
 export function mockSignUpFailure(
   authContext: MockAuthContext,
