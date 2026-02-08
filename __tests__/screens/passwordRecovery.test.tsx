@@ -49,7 +49,7 @@ describe('Password Recovery Screen', () => {
 
     expect(
       getByText(
-        'Recovery email sent. Check your inbox for a one-time password valid for 5 minutes. You will set a new password after sign-in.',
+        'Recovery email sent. Check your inbox for a one-time password valid for 5 minutes.',
       ),
     ).toBeTruthy();
   });
