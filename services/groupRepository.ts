@@ -488,6 +488,56 @@ export interface ExpenseShare {
   shareInMainScaled: bigint;
 }
 
+export interface ActivityFeedItem {
+  id: string;
+  groupId: string;
+  groupName: string;
+  description?: string;
+  dateTime: string;
+  currencyCode: string;
+  totalAmountScaled: bigint;
+  payerMemberId: string;
+  payerName: string;
+  paymentType: 'expense' | 'transfer';
+  splitType: 'equal' | 'percentage' | 'exact';
+  createdAt: string;
+}
+
+export async function getActivityFeed(
+  limit = 100,
+  offset = 0,
+): Promise<ActivityFeedItem[]> {
+  try {
+    const normalizedLimit = Math.min(Math.max(limit, 0), 500);
+    const normalizedOffset = Math.max(offset, 0);
+
+    const { data, error } = await supabase.rpc('get_activity_feed', {
+      p_limit: normalizedLimit,
+      p_offset: normalizedOffset,
+    });
+
+    if (error) throw error;
+
+    return (data || []).map((row: any) => ({
+      id: row.id,
+      groupId: row.group_id,
+      groupName: row.group_name,
+      description: row.description || undefined,
+      dateTime: row.date_time,
+      currencyCode: row.currency_code,
+      totalAmountScaled: BigInt(row.total_amount_scaled),
+      payerMemberId: row.payer_member_id || '',
+      payerName: row.payer_name || 'Unknown',
+      paymentType: row.payment_type || 'expense',
+      splitType: row.split_type || 'equal',
+      createdAt: row.created_at,
+    }));
+  } catch (error) {
+    console.error('Failed to get activity feed:', error);
+    return [];
+  }
+}
+
 export async function createExpense(
   groupId: string,
   description: string | undefined,

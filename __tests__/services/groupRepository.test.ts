@@ -2549,6 +2549,68 @@ describe('groupRepository', () => {
     });
   });
 
+  describe('getActivityFeed', () => {
+    it('should map activity rows returned by RPC', async () => {
+      const { getActivityFeed } = require('../../services/groupRepository');
+
+      mockSupabase.rpc.mockResolvedValue({
+        data: [
+          {
+            id: 'expense-1',
+            group_id: 'group-trip',
+            group_name: 'Trip',
+            description: 'Dinner',
+            date_time: '2026-02-10T12:00:00.000Z',
+            currency_code: 'USD',
+            total_amount_scaled: '123450',
+            payer_member_id: 'member-alice-trip',
+            payer_name: 'Alice',
+            payment_type: 'expense',
+            split_type: 'equal',
+            created_at: '2026-02-10T12:01:00.000Z',
+          },
+        ],
+        error: null,
+      });
+
+      const result = await getActivityFeed(50, 10);
+
+      expect(mockSupabase.rpc).toHaveBeenCalledWith('get_activity_feed', {
+        p_limit: 50,
+        p_offset: 10,
+      });
+      expect(result).toEqual([
+        {
+          id: 'expense-1',
+          groupId: 'group-trip',
+          groupName: 'Trip',
+          description: 'Dinner',
+          dateTime: '2026-02-10T12:00:00.000Z',
+          currencyCode: 'USD',
+          totalAmountScaled: 123450n,
+          payerMemberId: 'member-alice-trip',
+          payerName: 'Alice',
+          paymentType: 'expense',
+          splitType: 'equal',
+          createdAt: '2026-02-10T12:01:00.000Z',
+        },
+      ]);
+    });
+
+    it('should return empty array when RPC fails', async () => {
+      const { getActivityFeed } = require('../../services/groupRepository');
+
+      mockSupabase.rpc.mockResolvedValue({
+        data: null,
+        error: new Error('RPC failed'),
+      });
+
+      const result = await getActivityFeed();
+
+      expect(result).toEqual([]);
+    });
+  });
+
   describe('sendInvitationEmail', () => {
     it('should call send-invitation edge function', async () => {
       const { sendInvitationEmail } = require('../../services/groupRepository');

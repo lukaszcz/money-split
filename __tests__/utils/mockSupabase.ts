@@ -23,6 +23,7 @@ export interface MockSupabaseClient {
     onAuthStateChange: jest.Mock;
   };
   from: jest.Mock<MockSupabaseQueryBuilder>;
+  rpc: jest.Mock;
   functions: {
     invoke: jest.Mock;
   };
@@ -69,6 +70,7 @@ export function createMockSupabaseClient(): MockSupabaseClient {
       }),
     },
     from: jest.fn(createQueryBuilder),
+    rpc: jest.fn().mockResolvedValue({ data: null, error: null }),
     functions: {
       invoke: jest.fn().mockResolvedValue({ data: null, error: null }),
     },
@@ -107,5 +109,6 @@ export function resetAllMocks(mockClient: MockSupabaseClient): void {
   mockClient.auth.signOut.mockClear();
   mockClient.auth.onAuthStateChange.mockClear();
   mockClient.from.mockClear();
+  mockClient.rpc.mockClear();
   mockClient.functions.invoke.mockClear();
 }
