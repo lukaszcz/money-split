@@ -14,7 +14,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'expo-router';
 import { X, Plus, Check, Trash2, User, Mail } from 'lucide-react-native';
-import { useAuth } from '../contexts/AuthContext';
 import {
   createGroup,
   getUserByEmail,
@@ -34,7 +33,6 @@ interface PendingMember {
 
 export default function CreateGroupScreen() {
   const router = useRouter();
-  const { user } = useAuth();
   const [groupName, setGroupName] = useState('');
   const [mainCurrency, setMainCurrency] = useState('');
   const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
@@ -63,18 +61,18 @@ export default function CreateGroupScreen() {
 
   const loadCurrentUser = useCallback(async () => {
     setCurrentUserLoading(true);
-    const userProfile = await ensureUserProfile(undefined, user?.id);
+    const userProfile = await ensureUserProfile();
     if (userProfile) {
       setCurrentUserName(userProfile.name);
     }
     setCurrentUserLoading(false);
     return userProfile?.name ?? '';
-  }, [user?.id]);
+  }, []);
 
   const loadKnownUsers = useCallback(async () => {
-    const users = await getKnownUsers(user?.id);
+    const users = await getKnownUsers();
     setKnownUsers(users);
-  }, [user?.id]);
+  }, []);
 
   useEffect(() => {
     loadCurrentUser();

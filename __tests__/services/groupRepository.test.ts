@@ -158,43 +158,6 @@ describe('groupRepository', () => {
       expect(result).toBeNull();
     });
 
-    it('should return null when creating profile without session user details', async () => {
-      const { ensureUserProfile } = require('../../services/groupRepository');
-
-      mockSupabase.auth.getSession.mockResolvedValue({
-        data: { session: null },
-        error: null,
-      });
-
-      const getUserBuilder = {
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
-      };
-
-      mockSupabase.from.mockReturnValue(getUserBuilder as any);
-
-      const result = await ensureUserProfile(undefined, 'user-new');
-
-      expect(result).toBeNull();
-      expect(mockSupabase.from).toHaveBeenCalledTimes(1);
-      expect(mockSupabase.from).toHaveBeenCalledWith('users');
-    });
-
-    it('should return null when current user id mismatches session user', async () => {
-      const { ensureUserProfile } = require('../../services/groupRepository');
-
-      mockSupabase.auth.getSession.mockResolvedValue({
-        data: { session: createMockSession({ id: 'user-session' }) },
-        error: null,
-      });
-
-      const result = await ensureUserProfile(undefined, 'user-other');
-
-      expect(result).toBeNull();
-      expect(mockSupabase.from).not.toHaveBeenCalled();
-    });
-
     it('should use custom name when provided', async () => {
       const { ensureUserProfile } = require('../../services/groupRepository');
       const mockUser = createMockUser({
