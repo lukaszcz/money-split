@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useEffect, useCallback } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
+import { useAuth } from '../../../contexts/AuthContext';
 import {
   createGroupMember,
   getUserByEmail,
@@ -26,6 +27,7 @@ import { KnownUserSuggestionInput } from '../../../components/KnownUserSuggestio
 export default function AddMemberScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
+  const { user } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
@@ -41,7 +43,7 @@ export default function AddMemberScreen() {
     setMembersLoading(true);
     setMembersLoadError(false);
     try {
-      const members = await getGroupMembers(id);
+      const members = await getGroupMembers(id, user?.id);
       if (members === null) {
         setMembersLoadError(true);
         return null;
@@ -57,7 +59,7 @@ export default function AddMemberScreen() {
     } finally {
       setMembersLoading(false);
     }
-  }, [id]);
+  }, [id, user?.id]);
 
   useEffect(() => {
     loadExistingMembers();

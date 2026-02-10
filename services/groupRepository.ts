@@ -27,35 +27,65 @@ export interface GroupWithMembers extends Group {
   members: GroupMember[];
 }
 
-export async function ensureUserProfile(name?: string): Promise<User | null> {
+async function resolveCurrentUserId(
+  currentUserId?: string,
+): Promise<string | null> {
+  if (currentUserId) {
+    return currentUserId;
+  }
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  return session?.user?.id || null;
+}
+
+// Ensures a row exists in the `users` table for the current user
+export async function ensureUserProfile(
+  name?: string,
+  currentUserId?: string,
+): Promise<User | null> {
   try {
     const {
-      data: { user: authUser },
-    } = await supabase.auth.getUser();
+      data: { session },
+    } = await supabase.auth.getSession();
+    const authUser = session?.user;
+    const authUserId = currentUserId || authUser?.id;
 
-    if (!authUser) {
+    if (!authUserId) {
       throw new Error('No authenticated user');
     }
 
-    const existingUser = await getUser(authUser.id);
+    if (authUser && currentUserId && authUser.id !== currentUserId) {
+      throw new Error('Authenticated user mismatch');
+    }
+
+    const existingUser = await getUser(authUserId);
     if (existingUser) {
       return existingUser;
     }
 
+    if (!authUser || authUser.id !== authUserId) {
+      throw new Error(
+        'Missing authenticated user details required to create profile',
+      );
+    }
+
     const resolvedName =
       name?.trim() ||
-      (typeof authUser.user_metadata?.name === 'string'
+      (typeof authUser?.user_metadata?.name === 'string'
         ? authUser.user_metadata.name.trim()
         : '') ||
-      authUser.email?.split('@')[0] ||
+      authUser?.email?.split('@')[0] ||
       'User';
 
     const { data, error } = await supabase
       .from('users')
       .insert({
-        id: authUser.id,
+        id: authUserId,
         name: resolvedName,
-        email: authUser.email || null,
+        email: authUser?.email || null,
       })
       .select()
       .single();
@@ -191,8 +221,11 @@ export async function createGroupMember(
 
 export async function getGroupMembers(
   groupId: string,
+  currentUserId?: string,
 ): Promise<GroupMember[] | null> {
   try {
+    const resolvedCurrentUserId = await resolveCurrentUserId(currentUserId);
+
     const { data, error } = await supabase
       .from('group_members')
       .select('*')
@@ -204,7 +237,7 @@ export async function getGroupMembers(
       return null;
     }
 
-    return (data || []).map((m) => ({
+    const members = (data || []).map((m) => ({
       id: m.id,
       groupId: m.group_id,
       name: m.name,
@@ -212,6 +245,19 @@ export async function getGroupMembers(
       connectedUserId: m.connected_user_id || undefined,
       createdAt: m.created_at,
     }));
+
+    if (!resolvedCurrentUserId) return members;
+
+    const currentMemberIndex = members.findIndex(
+      (member) => member.connectedUserId === resolvedCurrentUserId,
+    );
+
+    if (currentMemberIndex <= 0) return members;
+
+    const [currentMember] = members.splice(currentMemberIndex, 1);
+    members.unshift(currentMember);
+
+    return members;
   } catch (error) {
     console.error('Failed to get group members:', error);
     return null;
@@ -247,18 +293,17 @@ export async function getGroupMember(
 
 export async function getCurrentUserMemberInGroup(
   groupId: string,
+  currentUserId?: string,
 ): Promise<GroupMember | null> {
   try {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return null;
+    const resolvedCurrentUserId = await resolveCurrentUserId(currentUserId);
+    if (!resolvedCurrentUserId) return null;
 
     const { data, error } = await supabase
       .from('group_members')
       .select('*')
       .eq('group_id', groupId)
-      .eq('connected_user_id', user.id)
+      .eq('connected_user_id', resolvedCurrentUserId)
       .maybeSingle();
 
     if (error) throw error;
@@ -344,6 +389,7 @@ export async function createGroup(
 
 export async function getGroup(
   groupId: string,
+  currentUserId?: string,
 ): Promise<GroupWithMembers | null> {
   try {
     const { data: groupData, error: groupError } = await supabase
@@ -355,7 +401,7 @@ export async function getGroup(
     if (groupError) throw groupError;
     if (!groupData) return null;
 
-    const members = await getGroupMembers(groupId);
+    const members = await getGroupMembers(groupId, currentUserId);
     if (!members) return null;
 
     return {
@@ -820,16 +866,20 @@ export async function deleteGroupMember(memberId: string): Promise<boolean> {
   }
 }
 
-export async function leaveGroup(groupId: string): Promise<boolean> {
+export async function leaveGroup(
+  groupId: string,
+  currentUserId?: string,
+): Promise<boolean> {
   try {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
+    const resolvedCurrentUserId = await resolveCurrentUserId(currentUserId);
+    if (!resolvedCurrentUserId) {
       throw new Error('No authenticated user');
     }
 
-    const currentMember = await getCurrentUserMemberInGroup(groupId);
+    const currentMember = await getCurrentUserMemberInGroup(
+      groupId,
+      resolvedCurrentUserId,
+    );
     if (!currentMember) {
       throw new Error('You are not a member of this group');
     }
@@ -868,18 +918,18 @@ export async function leaveGroup(groupId: string): Promise<boolean> {
   }
 }
 
-export async function deleteUserAccount(): Promise<boolean> {
+export async function deleteUserAccount(
+  currentUserId?: string,
+): Promise<boolean> {
   try {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      throw new Error('No authenticated user');
-    }
-
     const {
       data: { session },
     } = await supabase.auth.getSession();
+    const resolvedCurrentUserId = currentUserId || session?.user?.id;
+    if (!resolvedCurrentUserId) {
+      throw new Error('No authenticated user');
+    }
+
     const token = session?.access_token;
 
     if (!token) {
@@ -950,12 +1000,6 @@ export async function connectUserToGroups(): Promise<number> {
   }
 }
 
-export async function reconnectGroupMembers(): Promise<number> {
-  // Deprecated: use connectUserToGroups() instead
-  // This function is kept for backwards compatibility but now calls the edge function
-  return connectUserToGroups();
-}
-
 export async function sendInvitationEmail(
   email: string,
   groupName: string,
@@ -988,12 +1032,12 @@ type KnownUserRow = {
   } | null;
 };
 
-export async function getKnownUsers(): Promise<KnownUser[]> {
+export async function getKnownUsers(
+  currentUserId?: string,
+): Promise<KnownUser[]> {
   try {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
+    const resolvedCurrentUserId = await resolveCurrentUserId(currentUserId);
+    if (!resolvedCurrentUserId) {
       return [];
     }
 
@@ -1009,7 +1053,7 @@ export async function getKnownUsers(): Promise<KnownUser[]> {
         )
       `,
       )
-      .eq('user_id', user.id)
+      .eq('user_id', resolvedCurrentUserId)
       .order('last_shared_at', { ascending: false });
 
     if (error) {

@@ -1,6 +1,6 @@
 import {
   createMockSupabaseClient,
-  createMockUser,
+  createMockSession,
   resetAllMocks,
   MockSupabaseClient,
 } from '../utils/mockSupabase';
@@ -45,8 +45,8 @@ describe('Known Users functionality', () => {
     it('should return empty array if no authenticated user', async () => {
       const { getKnownUsers } = require('../../services/groupRepository');
 
-      mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: null },
+      mockSupabase.auth.getSession.mockResolvedValue({
+        data: { session: null },
         error: null,
       });
 
@@ -57,13 +57,9 @@ describe('Known Users functionality', () => {
 
     it('should fetch known users for authenticated user', async () => {
       const { getKnownUsers } = require('../../services/groupRepository');
-      const mockUser = createMockUser({
-        id: 'user-123',
-        email: 'test@example.com',
-      });
 
-      mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: mockUser },
+      mockSupabase.auth.getSession.mockResolvedValue({
+        data: { session: createMockSession({ id: 'user-123' }) },
         error: null,
       });
 
@@ -114,13 +110,9 @@ describe('Known Users functionality', () => {
 
     it('should handle errors gracefully', async () => {
       const { getKnownUsers } = require('../../services/groupRepository');
-      const mockUser = createMockUser({
-        id: 'user-123',
-        email: 'test@example.com',
-      });
 
-      mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: mockUser },
+      mockSupabase.auth.getSession.mockResolvedValue({
+        data: { session: createMockSession({ id: 'user-123' }) },
         error: null,
       });
 

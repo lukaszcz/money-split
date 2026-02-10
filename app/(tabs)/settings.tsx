@@ -144,7 +144,7 @@ export default function SettingsScreen() {
                   onPress: async () => {
                     setDeletingAccount(true);
                     try {
-                      const success = await deleteUserAccount();
+                      const success = await deleteUserAccount(user?.id);
                       if (success) {
                         router.replace('/auth');
                         return;

@@ -6,6 +6,7 @@ import {
   createExpense,
   GroupWithMembers,
 } from '../../../services/groupRepository';
+import { useAuth } from '../../../contexts/AuthContext';
 import {
   toScaled,
   applyExchangeRate,
@@ -18,6 +19,7 @@ import ExpenseFormScreen from '../../../components/ExpenseFormScreen';
 export default function AddExpenseScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
+  const { user } = useAuth();
   const [group, setGroup] = useState<GroupWithMembers | null>(null);
 
   const [description, setDescription] = useState('');
@@ -44,12 +46,15 @@ export default function AddExpenseScreen() {
       setCurrency(fetchedGroup.mainCurrencyCode);
 
       if (fetchedGroup.members.length > 0) {
-        setPayerId(fetchedGroup.members[0].id);
+        const currentUserMember = fetchedGroup.members.find(
+          (member) => member.connectedUserId === user?.id,
+        );
+        setPayerId(currentUserMember?.id ?? fetchedGroup.members[0].id);
         const allIds = fetchedGroup.members.map((m) => m.id);
         setSelectedParticipants(allIds);
       }
     }
-  }, [id]);
+  }, [id, user?.id]);
 
   useEffect(() => {
     loadGroup();
