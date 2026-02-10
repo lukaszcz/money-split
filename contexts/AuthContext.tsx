@@ -49,7 +49,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
-        await ensureUserProfile();
+        await ensureUserProfile(undefined, session.user.id);
         await syncUserPreferences(session.user.id);
       }
       setSession(session);
@@ -64,7 +64,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } = supabase.auth.onAuthStateChange((event, session) => {
       (async () => {
         if (event === 'SIGNED_IN' && session?.user) {
-          await ensureUserProfile();
+          await ensureUserProfile(undefined, session.user.id);
           await syncUserPreferences(session.user.id);
         }
         setSession(session);
