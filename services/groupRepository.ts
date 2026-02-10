@@ -950,12 +950,6 @@ export async function connectUserToGroups(): Promise<number> {
   }
 }
 
-export async function reconnectGroupMembers(): Promise<number> {
-  // Deprecated: use connectUserToGroups() instead
-  // This function is kept for backwards compatibility but now calls the edge function
-  return connectUserToGroups();
-}
-
 export async function sendInvitationEmail(
   email: string,
   groupName: string,
