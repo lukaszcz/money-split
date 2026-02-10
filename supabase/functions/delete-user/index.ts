@@ -73,7 +73,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // Step 2: Delete user from public.users table
-    // This will cascade delete user_currency_preferences and user_group_preferences
+    // This will cascade delete user_currency_preferences, user_group_preferences, user_settle_preferences and user_known_users
     const { error: publicUserError } = await supabaseClient
       .from('users')
       .delete()

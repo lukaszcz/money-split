@@ -67,6 +67,7 @@ This document describes the architecture of the MoneySplit application (React Na
 
 - Data access uses the Supabase JS client (`lib/supabase.ts`) from service modules in `services/`.
 - All CRUD operations are executed on the device via Supabase REST endpoints with RLS enforcement on the server.
+- Read-heavy activity feed loading uses a Postgres RPC (`public.get_activity_feed`) called via `supabase.rpc()` from `getActivityFeed()` in `services/groupRepository.ts`.
 - Edge function calls are made with `supabase.functions.invoke()` from `services/groupRepository.ts`:
   - `create-group` is invoked when creating a new group (with bearer token).
   - `cleanup-orphaned-groups` is invoked when a user leaves a group.
@@ -355,10 +356,9 @@ The UI uses a light, card-based aesthetic with consistent spacing and neutral gr
 
 ### Activity (`app/(tabs)/activity.tsx`)
 
-- Fetches each group the user is a member of.
-- For each fetched group, fetches its expenses.
-- Displays recent expenses across all fetched groups, newest first.
-- Resolves payer names via `getGroupMember()`.
+- Loads recent activity with a single `getActivityFeed()` call (`services/groupRepository.ts`), which invokes the `public.get_activity_feed` RPC.
+- The RPC joins `expenses`, `groups`, and payer `group_members` rows server-side.
+- Results are already sorted newest-first by `date_time` and filtered by membership (`user_is_group_member((select auth.uid()), group_id)`).
 
 ### Settings (`app/(tabs)/settings.tsx`)
 
