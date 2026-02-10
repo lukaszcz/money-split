@@ -19,6 +19,7 @@ interface PasswordUpdateFormProps {
   submitLabel: string;
   requireCurrentPassword?: boolean;
   defaultSubmitErrorMessage?: string;
+  keepLoadingOnSuccess?: boolean;
   onSubmit: (values: {
     currentPassword: string;
     newPassword: string;
@@ -31,6 +32,7 @@ export default function PasswordUpdateForm({
   submitLabel,
   requireCurrentPassword = false,
   defaultSubmitErrorMessage = 'Unable to update password',
+  keepLoadingOnSuccess = false,
   onSubmit,
 }: PasswordUpdateFormProps) {
   const [currentPassword, setCurrentPassword] = useState('');
@@ -40,6 +42,10 @@ export default function PasswordUpdateForm({
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
+    if (loading) {
+      return;
+    }
+
     if (requireCurrentPassword && !currentPassword) {
       setError('Please enter your current password');
       return;
@@ -64,9 +70,11 @@ export default function PasswordUpdateForm({
     setLoading(true);
     try {
       await onSubmit({ currentPassword, newPassword });
+      if (!keepLoadingOnSuccess) {
+        setLoading(false);
+      }
     } catch (submitError: any) {
       setError(submitError.message || defaultSubmitErrorMessage);
-    } finally {
       setLoading(false);
     }
   };
@@ -94,6 +102,7 @@ export default function PasswordUpdateForm({
                 secureTextEntry
                 autoCapitalize="none"
                 accessibilityLabel="Current password"
+                editable={!loading}
               />
             ) : null}
 
@@ -106,6 +115,7 @@ export default function PasswordUpdateForm({
               secureTextEntry
               autoCapitalize="none"
               accessibilityLabel="New password"
+              editable={!loading}
             />
 
             <TextInput
@@ -117,6 +127,7 @@ export default function PasswordUpdateForm({
               secureTextEntry
               autoCapitalize="none"
               accessibilityLabel="Confirm new password"
+              editable={!loading}
             />
 
             {error ? <Text style={styles.errorText}>{error}</Text> : null}

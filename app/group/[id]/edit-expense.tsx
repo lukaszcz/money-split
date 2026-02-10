@@ -108,15 +108,22 @@ export default function EditExpenseScreen() {
             if (!expenseId || typeof expenseId !== 'string') return;
 
             setDeleting(true);
+            let shouldResetDeleting = true;
             try {
               const success = await deleteExpense(expenseId);
               if (success) {
+                shouldResetDeleting = false;
                 router.back();
               } else {
                 Alert.alert('Error', 'Failed to delete expense');
               }
+            } catch (error) {
+              console.error('Failed to delete expense', error);
+              Alert.alert('Error', 'An error occurred while deleting');
             } finally {
-              setDeleting(false);
+              if (shouldResetDeleting) {
+                setDeleting(false);
+              }
             }
           },
         },
@@ -159,10 +166,15 @@ export default function EditExpenseScreen() {
   };
 
   const saveExpense = async (shares: bigint[]) => {
+    if (saving || deleting) {
+      return;
+    }
+
     if (!group || !expense || !expenseId || typeof expenseId !== 'string')
       return;
 
     setSaving(true);
+    let shouldResetSaving = true;
 
     try {
       const rateScaled = await resolveExchangeRateForEdit(
@@ -203,6 +215,7 @@ export default function EditExpenseScreen() {
       );
 
       if (updatedExpense) {
+        shouldResetSaving = false;
         router.back();
       } else {
         Alert.alert('Error', 'Failed to update expense');
@@ -211,7 +224,9 @@ export default function EditExpenseScreen() {
       console.error('Failed to save expense', error);
       Alert.alert('Error', 'An error occurred while saving');
     } finally {
-      setSaving(false);
+      if (shouldResetSaving) {
+        setSaving(false);
+      }
     }
   };
 

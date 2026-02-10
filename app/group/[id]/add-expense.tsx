@@ -90,6 +90,10 @@ export default function AddExpenseScreen() {
   };
 
   const handleSaveTransfer = async () => {
+    if (saving) {
+      return;
+    }
+
     if (!group) return;
 
     if (!amount || parseFloat(amount) <= 0) {
@@ -113,6 +117,7 @@ export default function AddExpenseScreen() {
     }
 
     setSaving(true);
+    let shouldResetSaving = true;
 
     try {
       const rate = await getExchangeRate(currency, group.mainCurrencyCode);
@@ -159,6 +164,7 @@ export default function AddExpenseScreen() {
       );
 
       if (expense) {
+        shouldResetSaving = false;
         router.back();
       } else {
         Alert.alert('Error', 'Failed to create transfer');
@@ -167,14 +173,21 @@ export default function AddExpenseScreen() {
       console.error('Failed to save transfer', error);
       Alert.alert('Error', 'An error occurred while saving');
     } finally {
-      setSaving(false);
+      if (shouldResetSaving) {
+        setSaving(false);
+      }
     }
   };
 
   const saveExpense = async (shares: bigint[]) => {
+    if (saving) {
+      return;
+    }
+
     if (!group) return;
 
     setSaving(true);
+    let shouldResetSaving = true;
 
     try {
       const rate = await getExchangeRate(currency, group.mainCurrencyCode);
@@ -212,6 +225,7 @@ export default function AddExpenseScreen() {
       );
 
       if (expense) {
+        shouldResetSaving = false;
         router.back();
       } else {
         Alert.alert('Error', 'Failed to create expense');
@@ -220,7 +234,9 @@ export default function AddExpenseScreen() {
       console.error('Failed to save expense', error);
       Alert.alert('Error', 'An error occurred while saving');
     } finally {
-      setSaving(false);
+      if (shouldResetSaving) {
+        setSaving(false);
+      }
     }
   };
 

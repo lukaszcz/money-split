@@ -67,6 +67,10 @@ export default function EditTransferScreen() {
   }, [loadData]);
 
   const handleSave = async () => {
+    if (saving || deleting) {
+      return;
+    }
+
     if (!group || !expense) return;
 
     if (!amount || parseFloat(amount) <= 0) {
@@ -90,6 +94,7 @@ export default function EditTransferScreen() {
     }
 
     setSaving(true);
+    let shouldResetSaving = true;
 
     try {
       const rateScaled = await resolveExchangeRateForEdit(
@@ -139,6 +144,7 @@ export default function EditTransferScreen() {
       );
 
       if (updated) {
+        shouldResetSaving = false;
         router.back();
       } else {
         Alert.alert('Error', 'Failed to update transfer');
@@ -147,7 +153,9 @@ export default function EditTransferScreen() {
       console.error('Failed to save transfer', error);
       Alert.alert('Error', 'An error occurred while saving');
     } finally {
-      setSaving(false);
+      if (shouldResetSaving) {
+        setSaving(false);
+      }
     }
   };
 
@@ -164,15 +172,22 @@ export default function EditTransferScreen() {
           style: 'destructive',
           onPress: async () => {
             setDeleting(true);
+            let shouldResetDeleting = true;
             try {
               const success = await deleteExpense(expense.id);
               if (success) {
+                shouldResetDeleting = false;
                 router.back();
               } else {
                 Alert.alert('Error', 'Failed to delete transfer');
               }
+            } catch (error) {
+              console.error('Failed to delete transfer', error);
+              Alert.alert('Error', 'An error occurred while deleting');
             } finally {
-              setDeleting(false);
+              if (shouldResetDeleting) {
+                setDeleting(false);
+              }
             }
           },
         },

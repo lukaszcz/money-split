@@ -22,6 +22,7 @@ interface KnownUserSuggestionInputProps {
   onEmailBlur?: (email: string) => void;
   nameInputRef?: React.RefObject<TextInput>;
   emailInputRef?: React.RefObject<TextInput>;
+  disabled?: boolean;
 }
 
 export function KnownUserSuggestionInput({
@@ -35,6 +36,7 @@ export function KnownUserSuggestionInput({
   onEmailBlur,
   nameInputRef,
   emailInputRef,
+  disabled = false,
 }: KnownUserSuggestionInputProps) {
   const [knownUsers, setKnownUsers] = useState<KnownUser[]>([]);
   const [filteredSuggestions, setFilteredSuggestions] = useState<KnownUser[]>(
@@ -73,17 +75,31 @@ export function KnownUserSuggestionInput({
     }
   }, [filterSuggestions, nameValue]);
 
+  useEffect(() => {
+    if (disabled) {
+      setShowSuggestions(false);
+    }
+  }, [disabled]);
+
   const loadKnownUsers = async () => {
     const users = await getKnownUsers();
     setKnownUsers(users);
   };
 
   const handleNameChange = (text: string) => {
+    if (disabled) {
+      return;
+    }
+
     onNameChange(text);
     filterSuggestions(text);
   };
 
   const handleSelectSuggestion = (user: KnownUser) => {
+    if (disabled) {
+      return;
+    }
+
     onSelectUser(user);
     onNameChange(user.name);
     onEmailChange(user.email || '');
@@ -96,6 +112,7 @@ export function KnownUserSuggestionInput({
     <TouchableOpacity
       style={styles.suggestionItem}
       onPress={() => handleSelectSuggestion(user)}
+      disabled={disabled}
     >
       <View style={styles.suggestionContent}>
         <User size={18} color="#6b7280" style={styles.suggestionIcon} />
@@ -118,13 +135,14 @@ export function KnownUserSuggestionInput({
           style={[styles.input, hasDuplicateName && styles.inputError]}
           value={nameValue}
           onChangeText={handleNameChange}
+          editable={!disabled}
           onBlur={() => {
             // Delay hiding suggestions to allow tap to register
             setTimeout(() => setShowSuggestions(false), 200);
             onNameBlur?.(nameValue);
           }}
           onFocus={() => {
-            if (nameValue && filteredSuggestions.length > 0) {
+            if (!disabled && nameValue && filteredSuggestions.length > 0) {
               setShowSuggestions(true);
             }
           }}
@@ -159,6 +177,7 @@ export function KnownUserSuggestionInput({
           style={styles.input}
           value={emailValue}
           onChangeText={onEmailChange}
+          editable={!disabled}
           onBlur={() => onEmailBlur?.(emailValue)}
           placeholder="member@example.com"
           placeholderTextColor="#9ca3af"

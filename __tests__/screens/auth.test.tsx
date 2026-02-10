@@ -73,6 +73,23 @@ describe('Auth Screen', () => {
     });
   });
 
+  it('disables auth controls immediately after sign in submit', () => {
+    mockAuthContext.signIn.mockImplementation(() => new Promise(() => {}));
+
+    const { getByPlaceholderText, getByText, getByLabelText, queryByText } =
+      render(<AuthScreen />);
+
+    fireEvent.changeText(getByPlaceholderText('Email'), 'test@example.com');
+    fireEvent.changeText(getByPlaceholderText('Password'), 'password123');
+    fireEvent.press(getByText('Sign In'));
+
+    expect(getByPlaceholderText('Email').props.editable).toBe(false);
+    expect(getByPlaceholderText('Password').props.editable).toBe(false);
+    expect(getByLabelText('Forgot password').props.disabled).toBe(true);
+    expect(getByLabelText('Switch to sign up').props.disabled).toBe(true);
+    expect(queryByText('Sign In')).toBeNull();
+  });
+
   it('shows an error when name is missing on sign up', () => {
     const { getByPlaceholderText, getByText, getByLabelText } = render(
       <AuthScreen />,

@@ -49,12 +49,15 @@ export default function CreateGroupScreen() {
   const [currentUserLoading, setCurrentUserLoading] = useState(true);
   const [hasDuplicateName, setHasDuplicateName] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [addingMember, setAddingMember] = useState(false);
 
   const {
     currencies: orderedCurrencies,
     selectCurrency,
     loading: currenciesLoading,
   } = useCurrencyOrder();
+  const controlsDisabled = creating || addingMember;
+  const addMemberControlsDisabled = controlsDisabled || currentUserLoading;
 
   useEffect(() => {
     loadCurrentUser();
@@ -131,7 +134,10 @@ export default function CreateGroupScreen() {
   };
 
   const handleAddMember = async () => {
-    const resolvedUserName = currentUserName || (await loadCurrentUser());
+    if (addMemberControlsDisabled) {
+      return;
+    }
+
     if (!newMemberName.trim() && !newMemberEmail.trim()) {
       Alert.alert('Error', 'Please enter a name or email');
       return;
@@ -146,48 +152,57 @@ export default function CreateGroupScreen() {
       return;
     }
 
-    if (memberEmail) {
-      const existingUser = await getUserByEmail(memberEmail);
-      if (existingUser) {
-        if (!memberName) {
-          memberName = existingUser.name;
-        }
-      } else {
-        if (!memberName) {
+    setAddingMember(true);
+
+    try {
+      const resolvedUserName = currentUserName || (await loadCurrentUser());
+
+      if (memberEmail) {
+        const existingUser = await getUserByEmail(memberEmail);
+        if (existingUser) {
+          if (!memberName) {
+            memberName = existingUser.name;
+          }
+        } else if (!memberName) {
           memberName = memberEmail.split('@')[0];
         }
       }
-    }
 
-    if (!memberName) {
-      Alert.alert('Error', 'Could not determine member name');
-      return;
-    }
-
-    // Check for duplicate names
-    if (checkForDuplicateName(memberName, resolvedUserName)) {
-      // If name was derived from email, populate the input so user can see and edit it
-      if (nameWasDerived) {
-        setNewMemberName(memberName);
+      if (!memberName) {
+        Alert.alert('Error', 'Could not determine member name');
+        return;
       }
-      Alert.alert(
-        'Duplicate Name',
-        'A member with this name already exists in the group. Please use a unique name.',
-      );
-      return;
+
+      // Check for duplicate names
+      if (checkForDuplicateName(memberName, resolvedUserName)) {
+        // If name was derived from email, populate the input so user can see and edit it
+        if (nameWasDerived) {
+          setNewMemberName(memberName);
+        }
+        Alert.alert(
+          'Duplicate Name',
+          'A member with this name already exists in the group. Please use a unique name.',
+        );
+        return;
+      }
+
+      const newMember: PendingMember = {
+        id: Date.now().toString(),
+        name: memberName,
+        email: memberEmail,
+      };
+
+      setPendingMembers([...pendingMembers, newMember]);
+      setNewMemberName('');
+      setNewMemberEmail('');
+      setHasDuplicateName(false);
+      setShowAddMember(false);
+    } catch (error) {
+      console.error('Failed to add member', error);
+      Alert.alert('Error', 'Failed to add member. Please try again.');
+    } finally {
+      setAddingMember(false);
     }
-
-    const newMember: PendingMember = {
-      id: Date.now().toString(),
-      name: memberName,
-      email: memberEmail,
-    };
-
-    setPendingMembers([...pendingMembers, newMember]);
-    setNewMemberName('');
-    setNewMemberEmail('');
-    setHasDuplicateName(false);
-    setShowAddMember(false);
   };
 
   const removeMember = (memberId: string) => {
@@ -195,12 +210,17 @@ export default function CreateGroupScreen() {
   };
 
   const handleCreate = async () => {
+    if (controlsDisabled) {
+      return;
+    }
+
     if (!groupName.trim()) {
       Alert.alert('Error', 'Please enter a group name');
       return;
     }
 
     setCreating(true);
+    let shouldResetCreating = true;
 
     try {
       const initialMembers = pendingMembers.map((m) => ({
@@ -223,6 +243,7 @@ export default function CreateGroupScreen() {
             }
           }
         }
+        shouldResetCreating = false;
         router.back();
       } else {
         Alert.alert(
@@ -230,8 +251,13 @@ export default function CreateGroupScreen() {
           'Failed to create group. Check console for details.',
         );
       }
+    } catch (error) {
+      console.error('Failed to create group', error);
+      Alert.alert('Error', 'Failed to create group. Please try again.');
     } finally {
-      setCreating(false);
+      if (shouldResetCreating) {
+        setCreating(false);
+      }
     }
   };
 
@@ -241,6 +267,7 @@ export default function CreateGroupScreen() {
         <TouchableOpacity
           onPress={() => router.back()}
           style={styles.closeButton}
+          disabled={controlsDisabled}
         >
           <X color="#111827" size={24} />
         </TouchableOpacity>
@@ -252,6 +279,7 @@ export default function CreateGroupScreen() {
         style={styles.keyboardAvoidingView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+        pointerEvents={controlsDisabled ? 'none' : 'auto'}
       >
         <View style={styles.scrollContainer}>
           <ScrollView
@@ -269,6 +297,7 @@ export default function CreateGroupScreen() {
                 onBlur={() => setGroupName((name) => name.trim())}
                 placeholder="e.g., Trip to Paris"
                 placeholderTextColor="#9ca3af"
+                editable={!controlsDisabled}
               />
             </View>
 
@@ -312,9 +341,9 @@ export default function CreateGroupScreen() {
                 <TouchableOpacity
                   style={[
                     styles.addMemberToggle,
-                    currentUserLoading && styles.addMemberToggleDisabled,
+                    addMemberControlsDisabled && styles.addMemberToggleDisabled,
                   ]}
-                  disabled={currentUserLoading}
+                  disabled={addMemberControlsDisabled}
                   onPress={() => setShowAddMember(!showAddMember)}
                 >
                   <Plus color="#2563eb" size={20} />
@@ -378,6 +407,7 @@ export default function CreateGroupScreen() {
                     }}
                     placeholder="Member name"
                     placeholderTextColor="#9ca3af"
+                    editable={!controlsDisabled}
                   />
                   {showSuggestions && filteredSuggestions.length > 0 && (
                     <View style={styles.suggestionsContainer}>
@@ -427,6 +457,7 @@ export default function CreateGroupScreen() {
                     placeholderTextColor="#9ca3af"
                     keyboardType="email-address"
                     autoCapitalize="none"
+                    editable={!controlsDisabled}
                   />
 
                   <Text style={styles.formHint}>
@@ -450,9 +481,10 @@ export default function CreateGroupScreen() {
                     <TouchableOpacity
                       style={[
                         styles.formAddButton,
-                        currentUserLoading && styles.formAddButtonDisabled,
+                        addMemberControlsDisabled &&
+                          styles.formAddButtonDisabled,
                       ]}
-                      disabled={currentUserLoading}
+                      disabled={addMemberControlsDisabled}
                       onPress={handleAddMember}
                     >
                       <Text style={styles.formAddButtonText}>Add Member</Text>
@@ -480,13 +512,17 @@ export default function CreateGroupScreen() {
           <TouchableOpacity
             style={[
               styles.createButton,
-              creating && styles.createButtonDisabled,
+              controlsDisabled && styles.createButtonDisabled,
             ]}
             onPress={handleCreate}
-            disabled={creating}
+            disabled={controlsDisabled}
           >
             <Text style={styles.createButtonText}>
-              {creating ? 'Creating...' : 'Create Group'}
+              {creating
+                ? 'Creating...'
+                : addingMember
+                  ? 'Adding...'
+                  : 'Create Group'}
             </Text>
           </TouchableOpacity>
         </View>

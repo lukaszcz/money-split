@@ -23,6 +23,7 @@ export default function ChangePasswordScreen() {
       submitLabel="Change password"
       requireCurrentPassword
       defaultSubmitErrorMessage="Unable to change password"
+      keepLoadingOnSuccess
       onSubmit={handleSubmit}
     />
   );
