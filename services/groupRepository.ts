@@ -62,7 +62,7 @@ export async function ensureUserProfile(name?: string): Promise<User | null> {
 
     if (error) throw error;
 
-    await reconnectGroupMembers();
+    await connectUserToGroups();
 
     return {
       id: data.id,
@@ -907,45 +907,53 @@ export async function deleteUserAccount(): Promise<boolean> {
   }
 }
 
-export async function reconnectGroupMembers(): Promise<number> {
+export async function connectUserToGroups(): Promise<number> {
   try {
     const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user || !user.email) {
-      console.log('No user or email found for reconnection');
+      data: { session },
+    } = await supabase.auth.getSession();
+    const token = session?.access_token;
+
+    if (!token) {
+      console.warn('No session token available for connecting to groups');
       return 0;
     }
 
-    console.log('Attempting to reconnect group members for email:', user.email);
+    console.log('Calling connect-user-to-groups edge function');
 
-    const { data, error } = await supabase
-      .from('group_members')
-      .update({ connected_user_id: user.id })
-      .eq('email', user.email)
-      .is('connected_user_id', null)
-      .select();
+    const { data, error } = await supabase.functions.invoke(
+      'connect-user-to-groups',
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    );
 
     if (error) {
-      console.error('Error reconnecting group members:', error);
-      throw error;
+      console.error('Error connecting user to groups:', error);
+      return 0;
     }
 
-    const connectedCount = data?.length || 0;
-    console.log(`Successfully connected ${connectedCount} group member(s)`);
-
-    // Update known users for each reconnected member
-    if (data && data.length > 0) {
-      for (const member of data) {
-        await updateKnownUsersForMember(member.group_id, member.id);
-      }
+    if (data?.error) {
+      console.error('Error from edge function:', data.error);
+      return 0;
     }
+
+    const connectedCount = data?.connectedCount || 0;
+    console.log(`Successfully connected to ${connectedCount} group(s)`);
 
     return connectedCount;
   } catch (error) {
-    console.error('Failed to reconnect group members:', error);
+    console.error('Failed to connect user to groups:', error);
     return 0;
   }
+}
+
+export async function reconnectGroupMembers(): Promise<number> {
+  // Deprecated: use connectUserToGroups() instead
+  // This function is kept for backwards compatibility but now calls the edge function
+  return connectUserToGroups();
 }
 
 export async function sendInvitationEmail(
