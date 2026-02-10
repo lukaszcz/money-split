@@ -22,6 +22,7 @@ export default function RecoveryPasswordChangeScreen() {
       subtitle="For security reasons, you need to create a permanent password to continue."
       submitLabel="Save new password"
       defaultSubmitErrorMessage="Unable to update password"
+      keepLoadingOnSuccess
       onSubmit={handleSubmit}
     />
   );

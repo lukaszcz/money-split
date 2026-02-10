@@ -23,15 +23,18 @@ describe('groupRepository', () => {
   // Suppress expected console output during tests
   const originalConsoleError = console.error;
   const originalConsoleLog = console.log;
+  const originalConsoleWarn = console.warn;
 
   beforeAll(() => {
     console.error = jest.fn();
     console.log = jest.fn();
+    console.warn = jest.fn();
   });
 
   afterAll(() => {
     console.error = originalConsoleError;
     console.log = originalConsoleLog;
+    console.warn = originalConsoleWarn;
   });
 
   beforeEach(() => {

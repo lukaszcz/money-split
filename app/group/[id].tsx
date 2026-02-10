@@ -131,10 +131,12 @@ export default function GroupDetailScreen() {
             if (!id || typeof id !== 'string') return;
 
             setLeaving(true);
+            let shouldResetLeaving = true;
             setMenuVisible(false);
             try {
               const success = await leaveGroup(id);
               if (success) {
+                shouldResetLeaving = false;
                 router.back();
               } else {
                 Alert.alert(
@@ -143,7 +145,9 @@ export default function GroupDetailScreen() {
                 );
               }
             } finally {
-              setLeaving(false);
+              if (shouldResetLeaving) {
+                setLeaving(false);
+              }
             }
           },
         },

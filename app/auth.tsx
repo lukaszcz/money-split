@@ -24,8 +24,13 @@ export default function AuthScreen() {
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
   const { signIn, signUp } = useAuth();
+  const controlsDisabled = loading;
 
   const handleSubmit = async () => {
+    if (controlsDisabled) {
+      return;
+    }
+
     const trimmedEmail = email.trim();
     const trimmedName = name.trim();
 
@@ -48,18 +53,25 @@ export default function AuthScreen() {
     setInfo('');
     setLoading(true);
 
-    try {
-      if (isLogin) {
+    if (isLogin) {
+      try {
         await signIn(trimmedEmail, password);
         router.replace('/(tabs)/groups');
-      } else {
-        await signUp(trimmedEmail, password, trimmedName);
-        setIsLogin(true);
-        setName('');
-        setPassword('');
-        setEmail(trimmedEmail);
-        setInfo('Check your email and confirm your address before signing in.');
+      } catch (err: any) {
+        setError(err.message || 'An error occurred');
+        setLoading(false);
       }
+
+      return;
+    }
+
+    try {
+      await signUp(trimmedEmail, password, trimmedName);
+      setIsLogin(true);
+      setName('');
+      setPassword('');
+      setEmail(trimmedEmail);
+      setInfo('Check your email and confirm your address before signing in.');
     } catch (err: any) {
       setError(err.message || 'An error occurred');
     } finally {
@@ -99,6 +111,7 @@ export default function AuthScreen() {
                 onBlur={() => setName((currentName) => currentName.trim())}
                 autoCapitalize="words"
                 autoComplete="name"
+                editable={!controlsDisabled}
               />
             ) : null}
             <TextInput
@@ -111,6 +124,7 @@ export default function AuthScreen() {
               autoCapitalize="none"
               keyboardType="email-address"
               autoComplete="email"
+              editable={!controlsDisabled}
             />
 
             <TextInput
@@ -121,14 +135,19 @@ export default function AuthScreen() {
               onChangeText={setPassword}
               secureTextEntry
               autoCapitalize="none"
+              editable={!controlsDisabled}
             />
 
             {isLogin ? (
               <TouchableOpacity
-                style={styles.forgotButton}
+                style={[
+                  styles.forgotButton,
+                  controlsDisabled && styles.inlineButtonDisabled,
+                ]}
                 accessibilityRole="button"
                 accessibilityLabel="Forgot password"
                 onPress={() => router.push('/password-recovery' as Href)}
+                disabled={controlsDisabled}
               >
                 <Text style={styles.forgotText}>Forgot password?</Text>
               </TouchableOpacity>
@@ -140,7 +159,7 @@ export default function AuthScreen() {
             <TouchableOpacity
               style={[styles.button, loading && styles.buttonDisabled]}
               onPress={handleSubmit}
-              disabled={loading}
+              disabled={controlsDisabled}
             >
               {loading ? (
                 <ActivityIndicator color="#fff" />
@@ -152,7 +171,10 @@ export default function AuthScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.switchButton}
+              style={[
+                styles.switchButton,
+                controlsDisabled && styles.inlineButtonDisabled,
+              ]}
               accessibilityRole="button"
               accessibilityLabel={
                 isLogin ? 'Switch to sign up' : 'Switch to sign in'
@@ -162,6 +184,7 @@ export default function AuthScreen() {
                 setError('');
                 setInfo('');
               }}
+              disabled={controlsDisabled}
             >
               <Text style={styles.switchText}>
                 {isLogin
@@ -238,6 +261,9 @@ const styles = StyleSheet.create({
   switchButton: {
     alignItems: 'center',
     marginTop: 8,
+  },
+  inlineButtonDisabled: {
+    opacity: 0.5,
   },
   forgotButton: {
     alignItems: 'flex-end',

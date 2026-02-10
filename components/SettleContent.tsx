@@ -50,6 +50,8 @@ export default function SettleContent({
   const simplifiedRef = useRef(true);
   const [lastUpdated, setLastUpdated] = useState<number | null>(null);
   const preferenceLoadedRef = useRef(false);
+  const [recordingTransfer, setRecordingTransfer] = useState(false);
+  const controlsDisabled = recordingTransfer;
 
   const loadData = useCallback(async () => {
     if (!groupId) return;
@@ -98,6 +100,10 @@ export default function SettleContent({
   }, [loadData]);
 
   const toggleSimplified = () => {
+    if (controlsDisabled) {
+      return;
+    }
+
     if (!group || expenses.length === 0) return;
 
     const newSimplified = !simplified;
@@ -124,7 +130,9 @@ export default function SettleContent({
   };
 
   const handleAddTransfer = async (settlement: Settlement) => {
-    if (!group) return;
+    if (controlsDisabled || !group) return;
+
+    setRecordingTransfer(true);
 
     try {
       const rate = await getExchangeRate(
@@ -170,10 +178,16 @@ export default function SettleContent({
     } catch (recordError) {
       console.error('Failed to record transfer', recordError);
       setError('An error occurred while recording transfer.');
+    } finally {
+      setRecordingTransfer(false);
     }
   };
 
   const startAnimation = () => {
+    if (controlsDisabled) {
+      return;
+    }
+
     if (!group || expenses.length === 0) return;
 
     const steps = computeSimplificationSteps(expenses, group.members);
@@ -264,7 +278,11 @@ export default function SettleContent({
         <View style={styles.emptyState}>
           <Text style={styles.emptyText}>Couldn{"'"}t load settlements</Text>
           <Text style={styles.emptySubtext}>{error}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={loadData}>
+          <TouchableOpacity
+            style={styles.retryButton}
+            onPress={loadData}
+            disabled={controlsDisabled}
+          >
             <Text style={styles.retryButtonText}>Retry</Text>
           </TouchableOpacity>
         </View>
@@ -391,6 +409,7 @@ export default function SettleContent({
               <TouchableOpacity
                 style={styles.simplifyToggle}
                 onPress={toggleSimplified}
+                disabled={controlsDisabled}
               >
                 {simplified ? (
                   <CheckSquare color="#2563eb" size={20} />
@@ -422,6 +441,7 @@ export default function SettleContent({
                 <TouchableOpacity
                   style={styles.transferButton}
                   onPress={() => handleAddTransfer(settlement)}
+                  disabled={controlsDisabled}
                 >
                   <Text style={styles.transferButtonText}>Record payment</Text>
                   <ArrowRight color="#2563eb" size={16} />
@@ -435,6 +455,7 @@ export default function SettleContent({
               <TouchableOpacity
                 style={styles.explainButton}
                 onPress={startAnimation}
+                disabled={controlsDisabled}
               >
                 <Play color="#059669" size={16} />
                 <Text style={styles.explainButtonText}>Explain Debts</Text>

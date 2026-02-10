@@ -19,8 +19,13 @@ export default function PasswordRecoveryScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const controlsDisabled = loading;
 
   const handleSubmit = async () => {
+    if (controlsDisabled) {
+      return;
+    }
+
     const trimmedEmail = email.trim();
 
     if (!trimmedEmail) {
@@ -73,6 +78,7 @@ export default function PasswordRecoveryScreen() {
               autoCapitalize="none"
               keyboardType="email-address"
               autoComplete="email"
+              editable={!controlsDisabled}
             />
 
             {error ? <Text style={styles.errorText}>{error}</Text> : null}
@@ -83,7 +89,7 @@ export default function PasswordRecoveryScreen() {
             <TouchableOpacity
               style={[styles.button, loading && styles.buttonDisabled]}
               onPress={handleSubmit}
-              disabled={loading}
+              disabled={controlsDisabled}
             >
               {loading ? (
                 <ActivityIndicator color="#fff" />
@@ -93,10 +99,14 @@ export default function PasswordRecoveryScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.linkButton}
+              style={[
+                styles.linkButton,
+                controlsDisabled && styles.linkButtonDisabled,
+              ]}
               accessibilityRole="button"
               accessibilityLabel="Back to sign in"
               onPress={() => router.replace('/auth')}
+              disabled={controlsDisabled}
             >
               <Text style={styles.linkText}>Back to sign in</Text>
             </TouchableOpacity>
@@ -158,6 +168,9 @@ const styles = StyleSheet.create({
   linkButton: {
     alignItems: 'center',
     marginTop: 4,
+  },
+  linkButtonDisabled: {
+    opacity: 0.5,
   },
   linkText: {
     fontSize: 14,

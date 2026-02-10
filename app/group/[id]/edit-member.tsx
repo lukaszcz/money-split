@@ -44,6 +44,7 @@ export default function EditMemberScreen() {
   const [otherMembersLoaded, setOtherMembersLoaded] = useState(false);
   const [otherMembersLoadError, setOtherMembersLoadError] = useState(false);
   const [isCurrentUserMember, setIsCurrentUserMember] = useState(false);
+  const controlsDisabled = loading || otherMembersLoading;
 
   const loadOtherMembers = useCallback(async () => {
     if (
@@ -128,6 +129,10 @@ export default function EditMemberScreen() {
   }, [checkForDuplicateName, name]);
 
   const handleUpdateMember = async () => {
+    if (controlsDisabled) {
+      return;
+    }
+
     const trimmedName = name.trim();
     const trimmedEmail = email.trim();
 
@@ -157,6 +162,7 @@ export default function EditMemberScreen() {
     }
 
     setLoading(true);
+    let shouldResetLoading = true;
 
     try {
       let currentOtherMemberNames = otherMemberNames;
@@ -200,7 +206,6 @@ export default function EditMemberScreen() {
 
       if (!memberName) {
         Alert.alert('Error', 'Could not determine member name');
-        setLoading(false);
         return;
       }
 
@@ -215,7 +220,6 @@ export default function EditMemberScreen() {
           'Duplicate Name',
           'A member with this name already exists in the group. Please use a unique name.',
         );
-        setLoading(false);
         return;
       }
 
@@ -227,6 +231,7 @@ export default function EditMemberScreen() {
       );
 
       if (updatedMember) {
+        shouldResetLoading = false;
         router.back();
       } else {
         Alert.alert('Error', 'Failed to update member');
@@ -235,7 +240,9 @@ export default function EditMemberScreen() {
       console.error('Error updating member:', error);
       Alert.alert('Error', 'Failed to update member');
     } finally {
-      setLoading(false);
+      if (shouldResetLoading) {
+        setLoading(false);
+      }
     }
   };
 
@@ -256,7 +263,7 @@ export default function EditMemberScreen() {
     }
 
     // Prevent deleting if already loading
-    if (loading) {
+    if (controlsDisabled) {
       return;
     }
 
@@ -275,11 +282,13 @@ export default function EditMemberScreen() {
           style: 'destructive',
           onPress: async () => {
             setLoading(true);
+            let shouldResetLoading = true;
             try {
               const success = isCurrentUserMember
                 ? await leaveGroup(id)
                 : await deleteGroupMember(memberId);
               if (success) {
+                shouldResetLoading = false;
                 if (isCurrentUserMember) {
                   router.replace('/(tabs)/groups' as any);
                 } else {
@@ -302,7 +311,9 @@ export default function EditMemberScreen() {
                   : 'Failed to delete member',
               );
             } finally {
-              setLoading(false);
+              if (shouldResetLoading) {
+                setLoading(false);
+              }
             }
           },
         },
@@ -333,6 +344,7 @@ export default function EditMemberScreen() {
         <TouchableOpacity
           onPress={() => router.back()}
           style={styles.backButton}
+          disabled={controlsDisabled}
         >
           <ArrowLeft color="#111827" size={24} />
         </TouchableOpacity>
@@ -344,7 +356,7 @@ export default function EditMemberScreen() {
               styles.deleteIconButton,
               loading && styles.deleteIconButtonDisabled,
             ]}
-            disabled={loading}
+            disabled={controlsDisabled}
           >
             <Trash2 color="#dc2626" size={20} />
           </TouchableOpacity>
@@ -378,6 +390,7 @@ export default function EditMemberScreen() {
             hasDuplicateName={hasDuplicateName}
             onNameBlur={(value) => setName(value.trim())}
             onEmailBlur={(value) => setEmail(value.trim())}
+            disabled={controlsDisabled}
           />
         </ScrollView>
 
@@ -385,10 +398,10 @@ export default function EditMemberScreen() {
           <TouchableOpacity
             style={[
               styles.updateButton,
-              (loading || otherMembersLoading) && styles.updateButtonDisabled,
+              controlsDisabled && styles.updateButtonDisabled,
             ]}
             onPress={handleUpdateMember}
-            disabled={loading || otherMembersLoading}
+            disabled={controlsDisabled}
           >
             <Text style={styles.updateButtonText}>
               {otherMembersLoading
