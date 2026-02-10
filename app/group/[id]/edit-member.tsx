@@ -9,7 +9,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Trash2 } from 'lucide-react-native';
 import {
@@ -25,16 +25,19 @@ import {
   leaveGroup,
   KnownUser,
 } from '../../../services/groupRepository';
+import { useAuth } from '../../../contexts/AuthContext';
 import { isValidEmail, isDuplicateMemberName } from '../../../utils/validation';
 import { KnownUserSuggestionInput } from '../../../components/KnownUserSuggestionInput';
 
 export default function EditMemberScreen() {
   const { id, memberId } = useLocalSearchParams();
   const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [originalEmail, setOriginalEmail] = useState('');
   const [loading, setLoading] = useState(false);
+  const [resolvingDeleteAction, setResolvingDeleteAction] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [canDelete, setCanDelete] = useState(false);
   const [checkingDelete, setCheckingDelete] = useState(true);
@@ -44,7 +47,10 @@ export default function EditMemberScreen() {
   const [otherMembersLoaded, setOtherMembersLoaded] = useState(false);
   const [otherMembersLoadError, setOtherMembersLoadError] = useState(false);
   const [isCurrentUserMember, setIsCurrentUserMember] = useState(false);
-  const controlsDisabled = loading || otherMembersLoading;
+  const [checkingCurrentUserMember, setCheckingCurrentUserMember] =
+    useState(true);
+  const controlsDisabled =
+    loading || otherMembersLoading || resolvingDeleteAction;
 
   const loadOtherMembers = useCallback(async () => {
     if (
@@ -74,6 +80,40 @@ export default function EditMemberScreen() {
     }
   }, [id, memberId]);
 
+  const resolveIsCurrentUserMember = useCallback(async () => {
+    if (
+      !id ||
+      typeof id !== 'string' ||
+      !memberId ||
+      typeof memberId !== 'string'
+    ) {
+      setIsCurrentUserMember(false);
+      setCheckingCurrentUserMember(false);
+      return false;
+    }
+
+    if (authLoading) {
+      setCheckingCurrentUserMember(true);
+      return false;
+    }
+
+    if (!user?.id) {
+      setIsCurrentUserMember(false);
+      setCheckingCurrentUserMember(false);
+      return false;
+    }
+
+    setCheckingCurrentUserMember(true);
+    try {
+      const currentMember = await getCurrentUserMemberInGroup(id);
+      const isCurrent = currentMember?.id === memberId;
+      setIsCurrentUserMember(isCurrent);
+      return isCurrent;
+    } finally {
+      setCheckingCurrentUserMember(false);
+    }
+  }, [authLoading, id, memberId, user?.id]);
+
   const loadMember = useCallback(async () => {
     if (!memberId || typeof memberId !== 'string') {
       Alert.alert('Error', 'Invalid member');
@@ -98,9 +138,6 @@ export default function EditMemberScreen() {
       setCanDelete(deletable);
       setCheckingDelete(false);
 
-      const currentMember = await getCurrentUserMemberInGroup(id);
-      setIsCurrentUserMember(currentMember?.id === member.id);
-
       await loadOtherMembers();
     } else {
       Alert.alert('Error', 'Member not found');
@@ -121,6 +158,14 @@ export default function EditMemberScreen() {
   useEffect(() => {
     loadMember();
   }, [loadMember]);
+
+  useEffect(() => {
+    if (initialLoading) {
+      return;
+    }
+
+    resolveIsCurrentUserMember();
+  }, [initialLoading, resolveIsCurrentUserMember]);
 
   useEffect(() => {
     if (name.trim()) {
@@ -263,13 +308,21 @@ export default function EditMemberScreen() {
     }
 
     // Prevent deleting if already loading
-    if (controlsDisabled) {
+    if (controlsDisabled || authLoading || checkingCurrentUserMember) {
       return;
     }
 
+    setResolvingDeleteAction(true);
+    let latestIsCurrentUserMember = false;
+    try {
+      latestIsCurrentUserMember = await resolveIsCurrentUserMember();
+    } finally {
+      setResolvingDeleteAction(false);
+    }
+
     Alert.alert(
-      isCurrentUserMember ? 'Leave Group' : 'Delete Member',
-      isCurrentUserMember
+      latestIsCurrentUserMember ? 'Leave Group' : 'Delete Member',
+      latestIsCurrentUserMember
         ? 'Are you sure you want to leave this group? If you are the last member, the group will be deleted.'
         : 'Are you sure you want to remove this member from the group? This action cannot be undone.',
       [
@@ -278,18 +331,18 @@ export default function EditMemberScreen() {
           style: 'cancel',
         },
         {
-          text: isCurrentUserMember ? 'Leave' : 'Delete',
+          text: latestIsCurrentUserMember ? 'Leave' : 'Delete',
           style: 'destructive',
           onPress: async () => {
             setLoading(true);
             let shouldResetLoading = true;
             try {
-              const success = isCurrentUserMember
+              const success = latestIsCurrentUserMember
                 ? await leaveGroup(id)
                 : await deleteGroupMember(memberId);
               if (success) {
                 shouldResetLoading = false;
-                if (isCurrentUserMember) {
+                if (latestIsCurrentUserMember) {
                   router.replace('/(tabs)/groups' as any);
                 } else {
                   router.back();
@@ -297,7 +350,7 @@ export default function EditMemberScreen() {
               } else {
                 Alert.alert(
                   'Error',
-                  isCurrentUserMember
+                  latestIsCurrentUserMember
                     ? 'Failed to leave group. Please try again.'
                     : 'Failed to delete member. Please try again.',
                 );
@@ -306,7 +359,7 @@ export default function EditMemberScreen() {
               console.error('Error deleting member:', error);
               Alert.alert(
                 'Error',
-                isCurrentUserMember
+                latestIsCurrentUserMember
                   ? 'Failed to leave group'
                   : 'Failed to delete member',
               );
@@ -354,9 +407,19 @@ export default function EditMemberScreen() {
             onPress={handleDeleteMember}
             style={[
               styles.deleteIconButton,
-              loading && styles.deleteIconButtonDisabled,
+              (loading ||
+                resolvingDeleteAction ||
+                authLoading ||
+                checkingCurrentUserMember) &&
+                styles.deleteIconButtonDisabled,
             ]}
-            disabled={controlsDisabled}
+            disabled={
+              controlsDisabled || authLoading || checkingCurrentUserMember
+            }
+            accessibilityRole="button"
+            accessibilityLabel={
+              isCurrentUserMember ? 'Leave group' : 'Delete member'
+            }
           >
             <Trash2 color="#dc2626" size={20} />
           </TouchableOpacity>
@@ -364,7 +427,9 @@ export default function EditMemberScreen() {
         {!isCurrentUserMember && !canDelete && !checkingDelete && (
           <View style={styles.placeholder} />
         )}
-        {checkingDelete && <View style={styles.placeholder} />}
+        {(checkingDelete || checkingCurrentUserMember) && (
+          <View style={styles.placeholder} />
+        )}
       </View>
 
       <KeyboardAvoidingView

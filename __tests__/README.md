@@ -77,6 +77,7 @@ __tests__/
 │   ├── changePassword.test.tsx    # Authenticated password change screen
 │   ├── groups.test.tsx            # Groups screen tests
 │   ├── groupDetail.test.tsx       # Group detail screen tests
+│   ├── editMember.test.tsx        # Edit member screen tests
 │   └── settings.test.tsx          # Settings screen tests
 ├── currencies.test.ts             # Currency utilities
 ├── money.test.ts                  # Money math
