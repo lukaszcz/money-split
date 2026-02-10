@@ -30,7 +30,7 @@ The MoneySplit test suite includes:
 
 ### Test Statistics
 
-- **Total Tests**: 395
+- **Total Tests**: 393
 - **Test Suites**: 25
 - **Coverage Targets**:
   - Lines: 80%
@@ -193,9 +193,9 @@ UI utility tests cover menu positioning logic, including:
 
 ### Service Test Pattern with Mocks
 
-Repository methods that need the current user now accept `currentUserId?: string`
-and fall back to `supabase.auth.getSession()`. In tests, prefer mocking
-`auth.getSession` for those flows.
+Repository methods that need the current user derive it from
+`supabase.auth.getSession()`. In tests, prefer mocking `auth.getSession`
+for those flows.
 
 ```typescript
 import {

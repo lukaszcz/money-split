@@ -12,7 +12,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useEffect, useCallback } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Trash2 } from 'lucide-react-native';
-import { useAuth } from '../../../contexts/AuthContext';
 import {
   getGroupMember,
   updateGroupMember,
@@ -32,7 +31,6 @@ import { KnownUserSuggestionInput } from '../../../components/KnownUserSuggestio
 export default function EditMemberScreen() {
   const { id, memberId } = useLocalSearchParams();
   const router = useRouter();
-  const { user } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [originalEmail, setOriginalEmail] = useState('');
@@ -60,7 +58,7 @@ export default function EditMemberScreen() {
     setOtherMembersLoading(true);
     setOtherMembersLoadError(false);
     try {
-      const members = await getGroupMembers(id, user?.id);
+      const members = await getGroupMembers(id);
       if (!members) {
         setOtherMembersLoadError(true);
         return null;
@@ -74,7 +72,7 @@ export default function EditMemberScreen() {
     } finally {
       setOtherMembersLoading(false);
     }
-  }, [id, memberId, user?.id]);
+  }, [id, memberId]);
 
   const loadMember = useCallback(async () => {
     if (!memberId || typeof memberId !== 'string') {
@@ -100,7 +98,7 @@ export default function EditMemberScreen() {
       setCanDelete(deletable);
       setCheckingDelete(false);
 
-      const currentMember = await getCurrentUserMemberInGroup(id, user?.id);
+      const currentMember = await getCurrentUserMemberInGroup(id);
       setIsCurrentUserMember(currentMember?.id === member.id);
 
       await loadOtherMembers();
@@ -109,7 +107,7 @@ export default function EditMemberScreen() {
       router.back();
     }
     setInitialLoading(false);
-  }, [memberId, id, router, loadOtherMembers, user?.id]);
+  }, [memberId, id, router, loadOtherMembers]);
 
   const checkForDuplicateName = useCallback(
     (nameToCheck: string) => {
@@ -287,7 +285,7 @@ export default function EditMemberScreen() {
             let shouldResetLoading = true;
             try {
               const success = isCurrentUserMember
-                ? await leaveGroup(id, user?.id)
+                ? await leaveGroup(id)
                 : await deleteGroupMember(memberId);
               if (success) {
                 shouldResetLoading = false;

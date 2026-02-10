@@ -10,7 +10,6 @@ import {
 } from 'react-native';
 import { User } from 'lucide-react-native';
 import { getKnownUsers, KnownUser } from '../services/groupRepository';
-import { useAuth } from '../contexts/AuthContext';
 
 interface KnownUserSuggestionInputProps {
   nameValue: string;
@@ -39,7 +38,6 @@ export function KnownUserSuggestionInput({
   emailInputRef,
   disabled = false,
 }: KnownUserSuggestionInputProps) {
-  const { user } = useAuth();
   const [knownUsers, setKnownUsers] = useState<KnownUser[]>([]);
   const [filteredSuggestions, setFilteredSuggestions] = useState<KnownUser[]>(
     [],
@@ -68,9 +66,9 @@ export function KnownUserSuggestionInput({
   );
 
   const loadKnownUsers = useCallback(async () => {
-    const users = await getKnownUsers(user?.id);
+    const users = await getKnownUsers();
     setKnownUsers(users);
-  }, [user?.id]);
+  }, []);
 
   useEffect(() => {
     loadKnownUsers();
