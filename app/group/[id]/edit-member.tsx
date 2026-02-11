@@ -29,6 +29,8 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { isValidEmail, isDuplicateMemberName } from '../../../utils/validation';
 import { KnownUserSuggestionInput } from '../../../components/KnownUserSuggestionInput';
 
+type CurrentUserMemberResolution = 'member' | 'not-member' | 'unknown';
+
 export default function EditMemberScreen() {
   const { id, memberId } = useLocalSearchParams();
   const router = useRouter();
@@ -46,9 +48,11 @@ export default function EditMemberScreen() {
   const [otherMembersLoading, setOtherMembersLoading] = useState(false);
   const [otherMembersLoaded, setOtherMembersLoaded] = useState(false);
   const [otherMembersLoadError, setOtherMembersLoadError] = useState(false);
-  const [isCurrentUserMember, setIsCurrentUserMember] = useState(false);
+  const [currentUserMemberResolution, setCurrentUserMemberResolution] =
+    useState<CurrentUserMemberResolution>('unknown');
   const [checkingCurrentUserMember, setCheckingCurrentUserMember] =
     useState(true);
+  const isCurrentUserMember = currentUserMemberResolution === 'member';
   const controlsDisabled =
     loading || otherMembersLoading || resolvingDeleteAction;
 
@@ -80,35 +84,38 @@ export default function EditMemberScreen() {
     }
   }, [id, memberId]);
 
-  const resolveIsCurrentUserMember = useCallback(async () => {
+  const resolveCurrentUserMemberResolution = useCallback(async () => {
     if (
       !id ||
       typeof id !== 'string' ||
       !memberId ||
       typeof memberId !== 'string'
     ) {
-      setIsCurrentUserMember(false);
       setCheckingCurrentUserMember(false);
-      return false;
+      return 'unknown' as const;
     }
 
     if (authLoading) {
       setCheckingCurrentUserMember(true);
-      return false;
+      return 'unknown' as const;
     }
 
     if (!user?.id) {
-      setIsCurrentUserMember(false);
       setCheckingCurrentUserMember(false);
-      return false;
+      return 'unknown' as const;
     }
 
     setCheckingCurrentUserMember(true);
     try {
       const currentMember = await getCurrentUserMemberInGroup(id);
-      const isCurrent = currentMember?.id === memberId;
-      setIsCurrentUserMember(isCurrent);
-      return isCurrent;
+      if (!currentMember) {
+        return 'unknown' as const;
+      }
+
+      const resolution =
+        currentMember.id === memberId ? 'member' : 'not-member';
+      setCurrentUserMemberResolution(resolution);
+      return resolution;
     } finally {
       setCheckingCurrentUserMember(false);
     }
@@ -164,8 +171,8 @@ export default function EditMemberScreen() {
       return;
     }
 
-    resolveIsCurrentUserMember();
-  }, [initialLoading, resolveIsCurrentUserMember]);
+    resolveCurrentUserMemberResolution();
+  }, [initialLoading, resolveCurrentUserMemberResolution]);
 
   useEffect(() => {
     if (name.trim()) {
@@ -313,12 +320,25 @@ export default function EditMemberScreen() {
     }
 
     setResolvingDeleteAction(true);
-    let latestIsCurrentUserMember = false;
+    const previousResolution = currentUserMemberResolution;
+    let latestResolution: CurrentUserMemberResolution = 'unknown';
     try {
-      latestIsCurrentUserMember = await resolveIsCurrentUserMember();
+      latestResolution = await resolveCurrentUserMemberResolution();
     } finally {
       setResolvingDeleteAction(false);
     }
+
+    const effectiveResolution =
+      latestResolution === 'unknown' ? previousResolution : latestResolution;
+    if (effectiveResolution === 'unknown') {
+      Alert.alert(
+        'Error',
+        'Unable to verify whether this is your member record. Please try again.',
+      );
+      return;
+    }
+
+    const latestIsCurrentUserMember = effectiveResolution === 'member';
 
     Alert.alert(
       latestIsCurrentUserMember ? 'Leave Group' : 'Delete Member',

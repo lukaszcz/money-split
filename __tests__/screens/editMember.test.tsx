@@ -144,4 +144,92 @@ describe('EditMemberScreen', () => {
     ).not.toHaveBeenCalled();
     expect(mockRouter.replace).toHaveBeenCalledWith('/(tabs)/groups');
   });
+
+  it('falls back to previously resolved membership when refresh is inconclusive', async () => {
+    const useAuth = require('../../contexts/AuthContext').useAuth;
+    useAuth.mockReturnValue(
+      createMockAuthContext({
+        loading: false,
+        user: createMockUser({ id: 'user-1' }),
+      }),
+    );
+
+    const repository = require('../../services/groupRepository');
+    repository.getCurrentUserMemberInGroup
+      .mockResolvedValueOnce({
+        id: 'member-1',
+        groupId: 'group-1',
+        name: 'Me',
+        createdAt: '2025-01-01T00:00:00Z',
+      })
+      .mockResolvedValueOnce(null);
+
+    const { getByLabelText } = render(<EditMemberScreen />);
+
+    await waitFor(() => {
+      expect(getByLabelText('Leave group')).toBeTruthy();
+    });
+
+    await act(async () => {
+      fireEvent.press(getByLabelText('Leave group'));
+    });
+
+    await waitFor(() => {
+      expect(
+        alertSpy.mock.calls.some((call) => call[0] === 'Leave Group'),
+      ).toBe(true);
+    });
+
+    const confirmationCall = alertSpy.mock.calls.find(
+      (call) => call[0] === 'Leave Group',
+    );
+    const buttons = confirmationCall?.[2] as
+      | { text?: string; onPress?: () => void | Promise<void> }[]
+      | undefined;
+    const leaveButton = buttons?.find((button) => button.text === 'Leave');
+
+    await act(async () => {
+      await leaveButton?.onPress?.();
+    });
+
+    expect(repository.leaveGroup).toHaveBeenCalledWith('group-1');
+    expect(repository.deleteGroupMember).not.toHaveBeenCalled();
+  });
+
+  it('aborts destructive action when membership cannot be resolved', async () => {
+    const useAuth = require('../../contexts/AuthContext').useAuth;
+    useAuth.mockReturnValue(
+      createMockAuthContext({
+        loading: false,
+        user: createMockUser({ id: 'user-1' }),
+      }),
+    );
+
+    const repository = require('../../services/groupRepository');
+    repository.getCurrentUserMemberInGroup.mockResolvedValue(null);
+
+    const { getByLabelText } = render(<EditMemberScreen />);
+
+    await waitFor(() => {
+      expect(getByLabelText('Delete member')).toBeTruthy();
+    });
+
+    await act(async () => {
+      fireEvent.press(getByLabelText('Delete member'));
+    });
+
+    await waitFor(() => {
+      expect(
+        alertSpy.mock.calls.some(
+          (call) =>
+            call[0] === 'Error' &&
+            call[1] ===
+              'Unable to verify whether this is your member record. Please try again.',
+        ),
+      ).toBe(true);
+    });
+
+    expect(repository.leaveGroup).not.toHaveBeenCalled();
+    expect(repository.deleteGroupMember).not.toHaveBeenCalled();
+  });
 });
