@@ -21,7 +21,7 @@ import {
   canDeleteGroupMember,
   deleteGroupMember,
   getGroupMembers,
-  getCurrentUserMemberInGroup,
+  isCurrentUserMemberInGroup,
   leaveGroup,
   KnownUser,
 } from '../../../services/groupRepository';
@@ -48,6 +48,8 @@ export default function EditMemberScreen() {
   const [otherMembersLoading, setOtherMembersLoading] = useState(false);
   const [otherMembersLoaded, setOtherMembersLoaded] = useState(false);
   const [otherMembersLoadError, setOtherMembersLoadError] = useState(false);
+  const [editedMemberConnectedUserId, setEditedMemberConnectedUserId] =
+    useState<string | undefined>(undefined);
   const [currentUserMemberResolution, setCurrentUserMemberResolution] =
     useState<CurrentUserMemberResolution>('unknown');
   const [checkingCurrentUserMember, setCheckingCurrentUserMember] =
@@ -107,21 +109,21 @@ export default function EditMemberScreen() {
 
     setCheckingCurrentUserMember(true);
     try {
-      const currentMember = await getCurrentUserMemberInGroup(id);
-      if (!currentMember) {
-        const resolution = 'not-member' as const;
-        setCurrentUserMemberResolution(resolution);
-        return resolution;
-      }
-
+      const isGroupMember = await isCurrentUserMemberInGroup(id);
       const resolution =
-        currentMember.id === memberId ? 'member' : 'not-member';
+        isGroupMember && editedMemberConnectedUserId === user.id
+          ? 'member'
+          : 'not-member';
       setCurrentUserMemberResolution(resolution);
       return resolution;
+    } catch (error) {
+      console.error('Error resolving current user member:', error);
+      setCurrentUserMemberResolution('unknown');
+      return 'unknown' as const;
     } finally {
       setCheckingCurrentUserMember(false);
     }
-  }, [authLoading, id, memberId, user?.id]);
+  }, [authLoading, editedMemberConnectedUserId, id, memberId, user?.id]);
 
   const loadMember = useCallback(async () => {
     if (!memberId || typeof memberId !== 'string') {
@@ -141,6 +143,7 @@ export default function EditMemberScreen() {
       setName(member.name);
       setEmail(member.email || '');
       setOriginalEmail(member.email || '');
+      setEditedMemberConnectedUserId(member.connectedUserId);
 
       // Check if member can be deleted
       const deletable = await canDeleteGroupMember(memberId);

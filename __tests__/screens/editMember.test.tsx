@@ -28,7 +28,7 @@ jest.mock('../../services/groupRepository', () => ({
   canDeleteGroupMember: jest.fn(),
   deleteGroupMember: jest.fn(),
   getGroupMembers: jest.fn(),
-  getCurrentUserMemberInGroup: jest.fn(),
+  isCurrentUserMemberInGroup: jest.fn(),
   leaveGroup: jest.fn(),
 }));
 
@@ -64,16 +64,12 @@ describe('EditMemberScreen', () => {
       id: 'member-1',
       groupId: 'group-1',
       name: 'Me',
+      connectedUserId: 'user-1',
       createdAt: '2025-01-01T00:00:00Z',
     });
     repository.canDeleteGroupMember.mockResolvedValue(true);
     repository.getGroupMembers.mockResolvedValue([]);
-    repository.getCurrentUserMemberInGroup.mockResolvedValue({
-      id: 'member-1',
-      groupId: 'group-1',
-      name: 'Me',
-      createdAt: '2025-01-01T00:00:00Z',
-    });
+    repository.isCurrentUserMemberInGroup.mockResolvedValue(true);
     repository.leaveGroup.mockResolvedValue(true);
     repository.deleteGroupMember.mockResolvedValue(true);
 
@@ -105,7 +101,7 @@ describe('EditMemberScreen', () => {
 
     await waitFor(() => {
       expect(
-        require('../../services/groupRepository').getCurrentUserMemberInGroup,
+        require('../../services/groupRepository').isCurrentUserMemberInGroup,
       ).toHaveBeenCalledWith('group-1');
     });
 
@@ -145,7 +141,7 @@ describe('EditMemberScreen', () => {
     expect(mockRouter.replace).toHaveBeenCalledWith('/(tabs)/groups');
   });
 
-  it('falls back to previously resolved membership when refresh is inconclusive', async () => {
+  it('falls back to previously resolved membership when refresh fails', async () => {
     const useAuth = require('../../contexts/AuthContext').useAuth;
     useAuth.mockReturnValue(
       createMockAuthContext({
@@ -155,14 +151,9 @@ describe('EditMemberScreen', () => {
     );
 
     const repository = require('../../services/groupRepository');
-    repository.getCurrentUserMemberInGroup
-      .mockResolvedValueOnce({
-        id: 'member-1',
-        groupId: 'group-1',
-        name: 'Me',
-        createdAt: '2025-01-01T00:00:00Z',
-      })
-      .mockResolvedValueOnce(null);
+    repository.isCurrentUserMemberInGroup
+      .mockResolvedValueOnce(true)
+      .mockRejectedValueOnce(new Error('refresh failed'));
 
     const { getByLabelText } = render(<EditMemberScreen />);
 
@@ -206,7 +197,9 @@ describe('EditMemberScreen', () => {
     );
 
     const repository = require('../../services/groupRepository');
-    repository.getCurrentUserMemberInGroup.mockResolvedValue(null);
+    repository.isCurrentUserMemberInGroup.mockRejectedValue(
+      new Error('lookup failed'),
+    );
 
     const { getByLabelText } = render(<EditMemberScreen />);
 
