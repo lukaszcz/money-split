@@ -81,9 +81,12 @@ jest.mock('react-native', () => {
 
 const originalConsoleError = console.error;
 console.error = (...args) => {
+  const firstArg = typeof args[0] === 'string' ? args[0] : '';
   if (
-    typeof args[0] === 'string' &&
-    args[0].includes('react-test-renderer is deprecated')
+    firstArg.includes('react-test-renderer is deprecated') ||
+    firstArg.includes(
+      'Recovery verification and temporary password assignment failed:',
+    )
   ) {
     return;
   }
@@ -115,6 +118,16 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
   getItem: jest.fn(),
   setItem: jest.fn(),
   removeItem: jest.fn(),
+}));
+
+jest.mock('expo-crypto', () => ({
+  getRandomBytes: jest.fn((byteCount) => {
+    const bytes = new Uint8Array(byteCount);
+    for (let index = 0; index < byteCount; index += 1) {
+      bytes[index] = Math.floor(Math.random() * 256);
+    }
+    return bytes;
+  }),
 }));
 
 jest.mock('./assets/images/moneysplit.jpg', () => 1);

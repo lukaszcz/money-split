@@ -3,17 +3,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import {
-  getAllGroups,
-  getGroupExpenses,
-  getGroupMember,
-  Expense,
+  getActivityFeed,
+  ActivityFeedItem,
 } from '../../services/groupRepository';
 import { formatNumber } from '../../utils/money';
 
-interface ActivityItem extends Expense {
-  groupName: string;
-  payerName: string;
-}
+type ActivityItem = ActivityFeedItem;
 
 export default function ActivityScreen() {
   const [activities, setActivities] = useState<ActivityItem[]>([]);
@@ -21,40 +16,25 @@ export default function ActivityScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   const loadActivities = useCallback(async () => {
-    const groups = await getAllGroups();
-    const allActivities: ActivityItem[] = [];
-
-    for (const group of groups) {
-      const expenses = await getGroupExpenses(group.id);
-
-      for (const expense of expenses) {
-        const payer = await getGroupMember(expense.payerMemberId);
-        allActivities.push({
-          ...expense,
-          groupName: group.name,
-          payerName: payer?.name || 'Unknown',
-        });
-      }
+    try {
+      const allActivities = await getActivityFeed(500, 0);
+      setActivities(allActivities);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
-
-    allActivities.sort(
-      (a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime(),
-    );
-
-    setActivities(allActivities);
-    setLoading(false);
-    setRefreshing(false);
   }, []);
 
   useFocusEffect(
     useCallback(() => {
-      loadActivities();
+      void loadActivities();
     }, [loadActivities]),
   );
 
   const onRefresh = () => {
+    if (loading || refreshing) return;
     setRefreshing(true);
-    loadActivities();
+    void loadActivities();
   };
 
   const formatDate = (dateStr: string) => {

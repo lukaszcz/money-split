@@ -27,34 +27,54 @@ export interface GroupWithMembers extends Group {
   members: GroupMember[];
 }
 
+async function resolveAuthenticatedUser() {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const authUser = session?.user;
+
+  if (!session || !authUser?.id) {
+    throw new Error('No authenticated user');
+  }
+
+  return { authUser, session };
+}
+
+async function resolveAuthenticatedUserId(): Promise<string> {
+  return resolveAuthenticatedUser().then(({ authUser }) => authUser.id);
+}
+
+// Ensures a row exists in the `users` table for the current user
 export async function ensureUserProfile(name?: string): Promise<User | null> {
   try {
-    const {
-      data: { user: authUser },
-    } = await supabase.auth.getUser();
-
-    if (!authUser) {
-      throw new Error('No authenticated user');
-    }
+    const { authUser } = await resolveAuthenticatedUser();
 
     const existingUser = await getUser(authUser.id);
     if (existingUser) {
       return existingUser;
     }
 
+    const resolvedName =
+      name?.trim() ||
+      (typeof authUser?.user_metadata?.name === 'string'
+        ? authUser.user_metadata.name.trim()
+        : '') ||
+      authUser?.email?.split('@')[0] ||
+      'User';
+
     const { data, error } = await supabase
       .from('users')
       .insert({
         id: authUser.id,
-        name: name || authUser.email?.split('@')[0] || 'User',
-        email: authUser.email || null,
+        name: resolvedName,
+        email: authUser?.email || null,
       })
       .select()
       .single();
 
     if (error) throw error;
 
-    await reconnectGroupMembers();
+    await connectUserToGroups();
 
     return {
       id: data.id,
@@ -185,6 +205,8 @@ export async function getGroupMembers(
   groupId: string,
 ): Promise<GroupMember[] | null> {
   try {
+    const resolvedCurrentUserId = await resolveAuthenticatedUserId();
+
     const { data, error } = await supabase
       .from('group_members')
       .select('*')
@@ -196,7 +218,7 @@ export async function getGroupMembers(
       return null;
     }
 
-    return (data || []).map((m) => ({
+    const members = (data || []).map((m) => ({
       id: m.id,
       groupId: m.group_id,
       name: m.name,
@@ -204,6 +226,19 @@ export async function getGroupMembers(
       connectedUserId: m.connected_user_id || undefined,
       createdAt: m.created_at,
     }));
+
+    if (!resolvedCurrentUserId) return members;
+
+    const currentMemberIndex = members.findIndex(
+      (member) => member.connectedUserId === resolvedCurrentUserId,
+    );
+
+    if (currentMemberIndex <= 0) return members;
+
+    const [currentMember] = members.splice(currentMemberIndex, 1);
+    members.unshift(currentMember);
+
+    return members;
   } catch (error) {
     console.error('Failed to get group members:', error);
     return null;
@@ -241,16 +276,14 @@ export async function getCurrentUserMemberInGroup(
   groupId: string,
 ): Promise<GroupMember | null> {
   try {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return null;
+    const resolvedCurrentUserId = await resolveAuthenticatedUserId();
+    if (!resolvedCurrentUserId) return null;
 
     const { data, error } = await supabase
       .from('group_members')
       .select('*')
       .eq('group_id', groupId)
-      .eq('connected_user_id', user.id)
+      .eq('connected_user_id', resolvedCurrentUserId)
       .maybeSingle();
 
     if (error) throw error;
@@ -432,6 +465,56 @@ export interface ExpenseShare {
   memberId: string;
   shareAmountScaled: bigint;
   shareInMainScaled: bigint;
+}
+
+export interface ActivityFeedItem {
+  id: string;
+  groupId: string;
+  groupName: string;
+  description?: string;
+  dateTime: string;
+  currencyCode: string;
+  totalAmountScaled: bigint;
+  payerMemberId: string;
+  payerName: string;
+  paymentType: 'expense' | 'transfer';
+  splitType: 'equal' | 'percentage' | 'exact';
+  createdAt: string;
+}
+
+export async function getActivityFeed(
+  limit = 100,
+  offset = 0,
+): Promise<ActivityFeedItem[]> {
+  try {
+    const normalizedLimit = Math.min(Math.max(limit, 0), 500);
+    const normalizedOffset = Math.max(offset, 0);
+
+    const { data, error } = await supabase.rpc('get_activity_feed', {
+      p_limit: normalizedLimit,
+      p_offset: normalizedOffset,
+    });
+
+    if (error) throw error;
+
+    return (data || []).map((row: any) => ({
+      id: row.id,
+      groupId: row.group_id,
+      groupName: row.group_name,
+      description: row.description || undefined,
+      dateTime: row.date_time,
+      currencyCode: row.currency_code,
+      totalAmountScaled: BigInt(row.total_amount_scaled),
+      payerMemberId: row.payer_member_id || '',
+      payerName: row.payer_name || 'Unknown',
+      paymentType: row.payment_type || 'expense',
+      splitType: row.split_type || 'equal',
+      createdAt: row.created_at,
+    }));
+  } catch (error) {
+    console.error('Failed to get activity feed:', error);
+    return [];
+  }
 }
 
 export async function createExpense(
@@ -814,14 +897,15 @@ export async function deleteGroupMember(memberId: string): Promise<boolean> {
 
 export async function leaveGroup(groupId: string): Promise<boolean> {
   try {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      throw new Error('No authenticated user');
-    }
+    const { authUser } = await resolveAuthenticatedUser();
+    const { data: currentMember, error: currentMemberError } = await supabase
+      .from('group_members')
+      .select('id')
+      .eq('group_id', groupId)
+      .eq('connected_user_id', authUser.id)
+      .maybeSingle();
 
-    const currentMember = await getCurrentUserMemberInGroup(groupId);
+    if (currentMemberError) throw currentMemberError;
     if (!currentMember) {
       throw new Error('You are not a member of this group');
     }
@@ -862,17 +946,9 @@ export async function leaveGroup(groupId: string): Promise<boolean> {
 
 export async function deleteUserAccount(): Promise<boolean> {
   try {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      throw new Error('No authenticated user');
-    }
+    const { session } = await resolveAuthenticatedUser();
 
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    const token = session?.access_token;
+    const token = session.access_token;
 
     if (!token) {
       throw new Error('No session token available');
@@ -899,43 +975,45 @@ export async function deleteUserAccount(): Promise<boolean> {
   }
 }
 
-export async function reconnectGroupMembers(): Promise<number> {
+export async function connectUserToGroups(): Promise<number> {
   try {
     const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user || !user.email) {
-      console.log('No user or email found for reconnection');
+      data: { session },
+    } = await supabase.auth.getSession();
+    const token = session?.access_token;
+
+    if (!token) {
+      console.warn('No session token available for connecting to groups');
       return 0;
     }
 
-    console.log('Attempting to reconnect group members for email:', user.email);
+    console.log('Calling connect-user-to-groups edge function');
 
-    const { data, error } = await supabase
-      .from('group_members')
-      .update({ connected_user_id: user.id })
-      .eq('email', user.email)
-      .is('connected_user_id', null)
-      .select();
+    const { data, error } = await supabase.functions.invoke(
+      'connect-user-to-groups',
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    );
 
     if (error) {
-      console.error('Error reconnecting group members:', error);
-      throw error;
+      console.error('Error connecting user to groups:', error);
+      return 0;
     }
 
-    const connectedCount = data?.length || 0;
-    console.log(`Successfully connected ${connectedCount} group member(s)`);
-
-    // Update known users for each reconnected member
-    if (data && data.length > 0) {
-      for (const member of data) {
-        await updateKnownUsersForMember(member.group_id, member.id);
-      }
+    if (data?.error) {
+      console.error('Error from edge function:', data.error);
+      return 0;
     }
+
+    const connectedCount = data?.connectedCount || 0;
+    console.log(`Successfully connected to ${connectedCount} group(s)`);
 
     return connectedCount;
   } catch (error) {
-    console.error('Failed to reconnect group members:', error);
+    console.error('Failed to connect user to groups:', error);
     return 0;
   }
 }
@@ -974,10 +1052,8 @@ type KnownUserRow = {
 
 export async function getKnownUsers(): Promise<KnownUser[]> {
   try {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
+    const resolvedCurrentUserId = await resolveAuthenticatedUserId();
+    if (!resolvedCurrentUserId) {
       return [];
     }
 
@@ -993,7 +1069,7 @@ export async function getKnownUsers(): Promise<KnownUser[]> {
         )
       `,
       )
-      .eq('user_id', user.id)
+      .eq('user_id', resolvedCurrentUserId)
       .order('last_shared_at', { ascending: false });
 
     if (error) {

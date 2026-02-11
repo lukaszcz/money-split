@@ -36,33 +36,48 @@ This document describes the architecture of the MoneySplit application (React Na
 - Auth: user identity and sessions (Supabase Auth).
 - Database: persistence, constraints, and RLS (migrations in `supabase/migrations/*.sql`).
 - Row-level security policies enforce membership-based access.
-- Edge Functions for group creation, delete-user, cleanup, invitations, exchange rates, and known users tracking (Deno runtime):
+- Edge Functions for group creation, delete-user, cleanup, invitations, user connection, exchange rates, known users tracking, and password recovery (Deno runtime):
   - `supabase/functions/create-group/index.ts`
   - `supabase/functions/delete-user/index.ts`
   - `supabase/functions/cleanup-orphaned-groups/index.ts`
   - `supabase/functions/send-invitation/index.ts`
+  - `supabase/functions/connect-user-to-groups/index.ts`
   - `supabase/functions/get-exchange-rate/index.ts`
   - `supabase/functions/update-known-users/index.ts`
+  - `supabase/functions/password-recovery/index.ts`
+  - `supabase/functions/verify-recovery-password/index.ts`
 
 ## App initialization and auth flow
 
 - The app bootstraps in `app/_layout.tsx`. `AuthProvider` from `contexts/AuthContext.tsx` wraps the app and subscribes to Supabase auth events.
 - On startup, `AuthProvider` calls `supabase.auth.getSession()` and, if signed in, calls `ensureUserProfile()` to provision a local user record in the public `users` table (`services/groupRepository.ts`). It also syncs user preferences from the database to the local AsyncStorage cache (`services/userPreferenceSync.ts`).
-- Routing is guarded by `useSegments()` in `app/_layout.tsx`: unauthenticated users are forced to `app/auth.tsx`, authenticated users are redirected to the Groups tab.
+- Routing is guarded by `useSegments()` in `app/_layout.tsx`: unauthenticated users are forced to `app/auth.tsx` (with `app/password-recovery.tsx` available as a public route), authenticated users are redirected to the Groups tab.
 - Sign in and sign up are handled in `app/auth.tsx` by `useAuth().signIn()` / `signUp()`. On successful sign-in, the app updates `users.last_login` in `contexts/AuthContext.tsx`.
+- After successful sign-up, the app keeps users on `app/auth.tsx` and prompts them to confirm their email address before signing in.
 - Sign-in also triggers a preference sync to refresh cached user preferences for currency order, group order, and settle defaults, and warms the exchange-rate cache for currencies seen in the user's expenses.
+- Password recovery is handled by `app/password-recovery.tsx`, which requests a one-time recovery password from the `password-recovery` edge function.
+- The `password-recovery` edge function stores a hashed recovery password in the `recovery_passwords` table (separate from the user's actual password) and emails the unhashed password to the user.
+- When a user signs in, `contexts/AuthContext.tsx` first attempts normal authentication. If that fails, it calls the `verify-recovery-password` edge function.
+- The `verify-recovery-password` edge function verifies the recovery password and, in the same request, sets a temporary internal password with service-role privileges.
+- The client signs in using that temporary password returned from the edge function.
+- The user is then forced to navigate to `app/recovery-password-change.tsx` to set a new permanent password before accessing the app.
+- Authenticated users can also change their password from settings via `app/change-password.tsx`, which requires entering the current password before calling `supabase.auth.updateUser()`.
 
 ## Client-server communication
 
 - Data access uses the Supabase JS client (`lib/supabase.ts`) from service modules in `services/`.
 - All CRUD operations are executed on the device via Supabase REST endpoints with RLS enforcement on the server.
+- Read-heavy activity feed loading uses a Postgres RPC (`public.get_activity_feed`) called via `supabase.rpc()` from `getActivityFeed()` in `services/groupRepository.ts`.
 - Edge function calls are made with `supabase.functions.invoke()` from `services/groupRepository.ts`:
   - `create-group` is invoked when creating a new group (with bearer token).
   - `cleanup-orphaned-groups` is invoked when a user leaves a group.
   - `delete-user` is invoked when deleting an account (with bearer token).
   - `send-invitation` is invoked when inviting members by email.
   - `update-known-users` is invoked when a member is connected to an authenticated user (with bearer token).
-  - `get-exchange-rate` is invoked in `services/exchangeRateService.ts` on local cache miss/staleness, and is prewarmed at login for known currency pairs.
+  - `connect-user-to-groups` is invoked when a user signs up to connect them to existing group members with matching email.
+- `services/exchangeRateService.ts` invokes `get-exchange-rate` on local cache miss/staleness and prewarms local rates at login for known currency pairs.
+- `services/authService.ts` invokes `password-recovery` to issue one-time recovery passwords by email.
+- `contexts/AuthContext.tsx` invokes `verify-recovery-password` during sign-in to verify recovery-password credentials and provision a temporary password in one server-side step.
 
 ## Data model (current schema + notes)
 
@@ -88,7 +103,7 @@ The canonical schema is defined by the SQL migrations under `supabase/migrations
 - Table: `public.group_members`
 - Columns: `id`, `group_id`, `name`, `email`, `connected_user_id`, `created_at`.
 - Supports members that are not yet connected to an auth user (email-based invitations).
-- Connection and reconnection logic is handled in `ensureUserProfile()` and `reconnectGroupMembers()` (`services/groupRepository.ts`).
+- Connection logic is handled in `ensureUserProfile()` which calls the `connect-user-to-groups` edge function to bypass RLS policies (`services/groupRepository.ts`).
 
 ### expenses
 
@@ -112,6 +127,19 @@ The canonical schema is defined by the SQL migrations under `supabase/migrations
 - Columns: `id`, `base_currency_code`, `quote_currency_code`, `rate_scaled`, `fetched_at`.
 - Cached rates are managed by the `get-exchange-rate` edge function.
 - Clients can read cached rates but cannot insert or update them directly (RLS policies restrict write access).
+
+### recovery_passwords
+
+- Description: Short-lived recovery passwords for account recovery, separate from user passwords to prevent account lockout attacks.
+- Table: `public.recovery_passwords`
+- Columns: `id`, `user_id`, `password_hash`, `expires_at`, `created_at`.
+- One recovery password per user (enforced by unique constraint on `user_id`).
+- Password is bcrypt-hashed before storage.
+- Expires after 5 minutes (`expires_at`).
+- Clients have no direct access (service role only via RLS).
+- Created by the `password-recovery` edge function.
+- Verified and consumed (one-time use) by the `verify-recovery-password` edge function before it sets a temporary sign-in password.
+- Expired passwords are cleaned up automatically when verification is attempted.
 
 ### user_currency_preferences
 
@@ -170,6 +198,10 @@ The RLS policies have evolved through multiple migrations. The most recent polic
 
 - `exchange_rates`
   - Policies allow read access to cached rates; writes are performed by the `get-exchange-rate` edge function using service role permissions.
+
+- `recovery_passwords`
+  - No client access allowed (service role only).
+  - All operations are performed by edge functions (`password-recovery`, `verify-recovery-password`) using service role key.
 
 - `user_currency_preferences`, `user_group_preferences`, and `user_settle_preferences`
   - User can read/insert/update their own preferences.
@@ -236,10 +268,18 @@ Relevant files:
 - Triggered from `deleteUserAccount()` in `services/groupRepository.ts`.
 - Disconnects the user from all `group_members`, deletes the public `users` row, runs cleanup, then deletes the auth user.
 
+### connect-user-to-groups
+
+- File: `supabase/functions/connect-user-to-groups/index.ts`.
+- Triggered from `ensureUserProfile()` in `services/groupRepository.ts` when a user signs up or signs in for the first time.
+- Uses the service role key to bypass RLS policies and connect the user to all `group_members` rows with matching email and NULL `connected_user_id`.
+- Calls the `update-known-users` edge function for each connected member to maintain bidirectional known user relationships.
+- Returns the count of groups the user was connected to.
+
 ### update-known-users
 
 - File: `supabase/functions/update-known-users/index.ts`.
-- Triggered when a member is added to a group or when a member's connection changes (`createGroupMember()`, `updateGroupMember()`, `reconnectGroupMembers()` in `services/groupRepository.ts`).
+- Triggered when a member is added to a group, when a member's connection changes, or when a user is connected to groups (`createGroupMember()`, `updateGroupMember()`, `connectUserToGroups()` in `services/groupRepository.ts`).
 - Updates the `user_known_users` table bidirectionally: adds the new member to existing members' known users lists and adds existing members to the new member's known users list.
 - Only processes members that are connected to authenticated users (have a `connected_user_id`).
 
@@ -250,6 +290,26 @@ Relevant files:
 - Fetches exchange rates from `https://api.exchangerate-api.com` and caches them in the `exchange_rates` table.
 - First checks for cached rates (valid for 12 hours), then fetches fresh rates if needed.
 - Uses service role permissions to write to `exchange_rates`, which clients cannot modify directly.
+
+### password-recovery
+
+- File: `supabase/functions/password-recovery/index.ts`.
+- Triggered from `requestPasswordRecovery()` in `services/authService.ts`.
+- Generates a one-time recovery password, bcrypt-hashes it, and stores it in the `recovery_passwords` table.
+- Sends the unhashed password via Resend email.
+- Prevents duplicate requests: if an unexpired recovery password already exists for the user, returns success without creating a new one.
+- Returns a generic success response regardless of whether the user exists (prevents email enumeration attacks).
+- If email sending fails, the recovery password is deleted from the database to maintain consistency.
+
+### verify-recovery-password
+
+- File: `supabase/functions/verify-recovery-password/index.ts`.
+- Triggered from `signIn()` in `contexts/AuthContext.tsx` when normal authentication fails.
+- Checks if the provided password matches a recovery password in the `recovery_passwords` table.
+- Verifies the password using bcrypt comparison.
+- Checks if the recovery password has expired; if so, deletes it and returns `expired: true`.
+- If verification succeeds, consumes the recovery password (one-time use), sets a temporary internal password using the admin API, and returns `isRecoveryPassword: true` with that temporary password.
+- Returns `isRecoveryPassword: false` for invalid or non-existent recovery passwords.
 
 ## UI design and screen-by-screen behavior
 
@@ -262,8 +322,26 @@ The UI uses a light, card-based aesthetic with consistent spacing and neutral gr
 ### Auth (`app/auth.tsx`)
 
 - Email/password sign-in and sign-up.
-- On success, navigates to `/(tabs)/groups`.
+- On success, navigates to `/(tabs)/groups` unless `useAuth()` marks `requiresRecoveryPasswordChange`, in which case routing is redirected to `app/recovery-password-change.tsx`.
 - Uses `useAuth()` methods from `contexts/AuthContext.tsx`.
+
+### Password recovery (`app/password-recovery.tsx`)
+
+- Explains the recovery flow and requests a recovery email.
+- Calls `requestPasswordRecovery()` in `services/authService.ts` to send a one-time password.
+- Informs the user that they must set a permanent password after signing in with the recovery password.
+
+### Recovery password change (`app/recovery-password-change.tsx`)
+
+- Forced screen shown after a successful recovery-password login.
+- Collects and validates a new permanent password, then calls `completeRecoveryPasswordChange()` from `contexts/AuthContext.tsx`.
+- Clears recovery metadata and unblocks access to the main tabs once the permanent password is saved.
+
+### Change password (`app/change-password.tsx`)
+
+- Optional authenticated screen opened from Settings.
+- Reuses the shared password-update form component (`components/PasswordUpdateForm.tsx`) used by recovery-password-change.
+- Requires current password verification via `changePassword()` in `contexts/AuthContext.tsx`, then updates the password with Supabase Auth.
 
 ### Tabs layout (`app/(tabs)/_layout.tsx`)
 
@@ -278,14 +356,14 @@ The UI uses a light, card-based aesthetic with consistent spacing and neutral gr
 
 ### Activity (`app/(tabs)/activity.tsx`)
 
-- Fetches each group the user is a member of.
-- For each fetched group, fetches its expenses.
-- Displays recent expenses across all fetched groups, newest first.
-- Resolves payer names via `getGroupMember()`.
+- Loads recent activity with a single `getActivityFeed()` call (`services/groupRepository.ts`), which invokes the `public.get_activity_feed` RPC.
+- The RPC joins `expenses`, `groups`, and payer `group_members` rows server-side.
+- Results are already sorted newest-first by `date_time` and filtered by membership (`user_is_group_member((select auth.uid()), group_id)`).
 
 ### Settings (`app/(tabs)/settings.tsx`)
 
 - Displays profile (email, display name) and allows rename via `updateUserName()`.
+- Includes navigation to `app/change-password.tsx` for authenticated password changes.
 - Logout via `useAuth().signOut()`.
 - Account deletion triggers edge function `delete-user` (`deleteUserAccount()` in `services/groupRepository.ts`).
 
@@ -373,8 +451,8 @@ The UI uses a light, card-based aesthetic with consistent spacing and neutral gr
 ## General workflow (end-to-end)
 
 1. User signs up or signs in (`app/auth.tsx` → `contexts/AuthContext.tsx`).
-2. `ensureUserProfile()` creates a `users` row and reconnects matching members.
-3. When reconnecting, `reconnectGroupMembers()` calls `update-known-users` edge function to update known users lists.
+2. `ensureUserProfile()` creates a `users` row and calls the `connect-user-to-groups` edge function to connect the user to any existing group members with matching email.
+3. The `connect-user-to-groups` edge function calls `update-known-users` for each connected member to update known users lists bidirectionally.
 4. User creates a group (`app/create-group.tsx` → `createGroup()` → `create-group` edge function → `groups` + initial `group_members`).
 5. When adding members, `createGroupMember()` calls `update-known-users` edge function to track user relationships bidirectionally.
 6. User adds expenses or transfers (`app/group/[id]/add-expense.tsx` → `createExpense()` + `expense_shares`).
@@ -386,12 +464,14 @@ The UI uses a light, card-based aesthetic with consistent spacing and neutral gr
 ## Key file map
 
 - App entry + routing: `app/_layout.tsx`, `app/(tabs)/_layout.tsx`.
+- Password update screens: `app/change-password.tsx`, `app/recovery-password-change.tsx`.
 - Auth state: `contexts/AuthContext.tsx`.
 - Data access: `services/groupRepository.ts`, `services/exchangeRateService.ts`.
 - Preferences: `services/currencyPreferenceService.ts`, `services/groupPreferenceService.ts`, `services/settlePreferenceService.ts`, `services/userPreferenceSync.ts`, `services/userPreferenceCache.ts`, `hooks/useCurrencyOrder.ts`.
 - Money math: `utils/money.ts`, `utils/currencies.ts`.
 - Input validation logic: `utils/validation.ts` (decimal, integer, percentage, and exact-amount input helpers).
 - Shared expense/transfer form UI: `components/ExpenseFormScreen.tsx`.
+- Shared password update form UI: `components/PasswordUpdateForm.tsx`.
 - Known user autocomplete UI: `components/KnownUserSuggestionInput.tsx`.
 - Shared settle UI: `components/SettleContent.tsx`.
 - Settlement logic: `services/settlementService.ts`.

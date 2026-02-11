@@ -10,6 +10,7 @@ import type { MockAuthContext } from '../utils/mockAuthContext';
 
 jest.mock('expo-router', () => ({
   router: {
+    push: jest.fn(),
     replace: jest.fn(),
   },
 }));
@@ -20,7 +21,7 @@ jest.mock('@/contexts/AuthContext', () => ({
 
 describe('Auth Screen', () => {
   let mockAuthContext: MockAuthContext;
-  let mockRouter: { replace: jest.Mock };
+  let mockRouter: { push: jest.Mock; replace: jest.Mock };
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -72,9 +73,24 @@ describe('Auth Screen', () => {
     });
   });
 
-  it('switches to sign up and creates an account', async () => {
-    mockSignUpSuccess(mockAuthContext);
+  it('disables auth controls immediately after sign in submit', () => {
+    mockAuthContext.signIn.mockImplementation(() => new Promise(() => {}));
 
+    const { getByPlaceholderText, getByText, getByLabelText, queryByText } =
+      render(<AuthScreen />);
+
+    fireEvent.changeText(getByPlaceholderText('Email'), 'test@example.com');
+    fireEvent.changeText(getByPlaceholderText('Password'), 'password123');
+    fireEvent.press(getByText('Sign In'));
+
+    expect(getByPlaceholderText('Email').props.editable).toBe(false);
+    expect(getByPlaceholderText('Password').props.editable).toBe(false);
+    expect(getByLabelText('Forgot password').props.disabled).toBe(true);
+    expect(getByLabelText('Switch to sign up').props.disabled).toBe(true);
+    expect(queryByText('Sign In')).toBeNull();
+  });
+
+  it('shows an error when name is missing on sign up', () => {
     const { getByPlaceholderText, getByText, getByLabelText } = render(
       <AuthScreen />,
     );
@@ -85,15 +101,48 @@ describe('Auth Screen', () => {
     fireEvent.changeText(getByPlaceholderText('Password'), 'password123');
     fireEvent.press(getByText('Sign Up'));
 
+    expect(getByText('Please enter your name')).toBeTruthy();
+    expect(mockAuthContext.signUp).not.toHaveBeenCalled();
+  });
+
+  it('switches to sign up and asks user to confirm email after account creation', async () => {
+    mockSignUpSuccess(mockAuthContext);
+
+    const { getByPlaceholderText, getByText, getByLabelText } = render(
+      <AuthScreen />,
+    );
+
+    fireEvent.press(getByLabelText('Switch to sign up'));
+
+    fireEvent.changeText(getByPlaceholderText('Name'), 'New User');
+    fireEvent.changeText(getByPlaceholderText('Email'), 'new@example.com');
+    fireEvent.changeText(getByPlaceholderText('Password'), 'password123');
+    fireEvent.press(getByText('Sign Up'));
+
     await waitFor(() => {
       expect(mockAuthContext.signUp).toHaveBeenCalledWith(
         'new@example.com',
         'password123',
+        'New User',
       );
     });
 
     await waitFor(() => {
-      expect(mockRouter.replace).toHaveBeenCalledWith('/(tabs)/groups');
+      expect(
+        getByText(
+          'Check your email and confirm your address before signing in.',
+        ),
+      ).toBeTruthy();
     });
+
+    expect(mockRouter.replace).not.toHaveBeenCalled();
+  });
+
+  it('navigates to password recovery', () => {
+    const { getByText } = render(<AuthScreen />);
+
+    fireEvent.press(getByText('Forgot password?'));
+
+    expect(mockRouter.push).toHaveBeenCalledWith('/password-recovery');
   });
 });

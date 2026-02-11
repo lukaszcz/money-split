@@ -34,6 +34,7 @@ export default function AddMemberScreen() {
   const [membersLoading, setMembersLoading] = useState(false);
   const [membersLoaded, setMembersLoaded] = useState(false);
   const [membersLoadError, setMembersLoadError] = useState(false);
+  const controlsDisabled = loading || membersLoading;
 
   const loadExistingMembers = useCallback(async () => {
     if (!id || typeof id !== 'string') return [];
@@ -81,6 +82,10 @@ export default function AddMemberScreen() {
   }, [checkForDuplicateName, name]);
 
   const handleAddMember = async () => {
+    if (controlsDisabled) {
+      return;
+    }
+
     const trimmedName = name.trim();
     const trimmedEmail = email.trim();
 
@@ -105,6 +110,7 @@ export default function AddMemberScreen() {
     }
 
     setLoading(true);
+    let shouldResetLoading = true;
 
     try {
       let currentMemberNames = existingMemberNames;
@@ -153,7 +159,6 @@ export default function AddMemberScreen() {
 
       if (!memberName) {
         Alert.alert('Error', 'Could not determine member name');
-        setLoading(false);
         return;
       }
 
@@ -168,7 +173,6 @@ export default function AddMemberScreen() {
           'Duplicate Name',
           'A member with this name already exists in the group. Please use a unique name.',
         );
-        setLoading(false);
         return;
       }
 
@@ -180,6 +184,7 @@ export default function AddMemberScreen() {
       );
 
       if (member) {
+        shouldResetLoading = false;
         router.back();
       } else {
         Alert.alert('Error', 'Failed to add member');
@@ -188,7 +193,9 @@ export default function AddMemberScreen() {
       console.error('Error adding member:', error);
       Alert.alert('Error', 'Failed to add member');
     } finally {
-      setLoading(false);
+      if (shouldResetLoading) {
+        setLoading(false);
+      }
     }
   };
 
@@ -203,6 +210,7 @@ export default function AddMemberScreen() {
         <TouchableOpacity
           onPress={() => router.back()}
           style={styles.backButton}
+          disabled={controlsDisabled}
         >
           <ArrowLeft color="#111827" size={24} />
         </TouchableOpacity>
@@ -233,6 +241,7 @@ export default function AddMemberScreen() {
             hasDuplicateName={hasDuplicateName}
             onNameBlur={(value) => setName(value.trim())}
             onEmailBlur={(value) => setEmail(value.trim())}
+            disabled={controlsDisabled}
           />
         </ScrollView>
 

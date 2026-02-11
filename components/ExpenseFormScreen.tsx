@@ -90,6 +90,7 @@ export default function ExpenseFormScreen(props: ExpenseFormScreenProps) {
   const isExpenseForm = isEditExpense || (isAdd && paymentType === 'expense');
   const isTransferForm =
     isEditTransfer || (isAdd && paymentType === 'transfer');
+  const controlsDisabled = props.saving;
 
   const title = isAdd
     ? 'Add Payment'
@@ -129,6 +130,10 @@ export default function ExpenseFormScreen(props: ExpenseFormScreenProps) {
   };
 
   const handleSave = () => {
+    if (controlsDisabled) {
+      return;
+    }
+
     if (isExpenseForm && 'onSaveExpense' in props) {
       props.onSaveExpense();
       return;
@@ -144,6 +149,7 @@ export default function ExpenseFormScreen(props: ExpenseFormScreenProps) {
       <TouchableOpacity
         style={styles.currencyButton}
         onPress={() => setShowCurrencyPicker(!showCurrencyPicker)}
+        disabled={controlsDisabled}
       >
         <Text style={styles.currencyButtonText}>{props.currency}</Text>
       </TouchableOpacity>
@@ -185,6 +191,7 @@ export default function ExpenseFormScreen(props: ExpenseFormScreenProps) {
             onChangeText={props.setDescription}
             placeholder="What was this for?"
             placeholderTextColor="#9ca3af"
+            editable={!controlsDisabled}
           />
         </View>
 
@@ -197,6 +204,7 @@ export default function ExpenseFormScreen(props: ExpenseFormScreenProps) {
             placeholder="0.00"
             placeholderTextColor="#9ca3af"
             keyboardType="decimal-pad"
+            editable={!controlsDisabled}
           />
         </View>
 
@@ -356,6 +364,7 @@ export default function ExpenseFormScreen(props: ExpenseFormScreenProps) {
                   placeholder="0"
                   placeholderTextColor="#9ca3af"
                   keyboardType="number-pad"
+                  editable={!controlsDisabled}
                 />
                 <Text style={styles.inputRowUnit}>%</Text>
               </View>
@@ -404,6 +413,7 @@ export default function ExpenseFormScreen(props: ExpenseFormScreenProps) {
                   placeholder="0.00"
                   placeholderTextColor="#9ca3af"
                   keyboardType="decimal-pad"
+                  editable={!controlsDisabled}
                 />
               </View>
             ))}
@@ -427,6 +437,7 @@ export default function ExpenseFormScreen(props: ExpenseFormScreenProps) {
             placeholder="0.00"
             placeholderTextColor="#9ca3af"
             keyboardType="decimal-pad"
+            editable={!controlsDisabled}
           />
         </View>
 
@@ -494,6 +505,7 @@ export default function ExpenseFormScreen(props: ExpenseFormScreenProps) {
             onChangeText={props.setDescription}
             placeholder="Optional note"
             placeholderTextColor="#9ca3af"
+            editable={!controlsDisabled}
           />
         </View>
       </>
@@ -535,6 +547,7 @@ export default function ExpenseFormScreen(props: ExpenseFormScreenProps) {
               paymentType === 'expense' && styles.typeTabActive,
             ]}
             onPress={() => setPaymentType('expense')}
+            disabled={controlsDisabled}
           >
             <Text
               style={[
@@ -551,6 +564,7 @@ export default function ExpenseFormScreen(props: ExpenseFormScreenProps) {
               paymentType === 'transfer' && styles.typeTabActive,
             ]}
             onPress={() => setPaymentType('transfer')}
+            disabled={controlsDisabled}
           >
             <Text
               style={[
@@ -568,6 +582,7 @@ export default function ExpenseFormScreen(props: ExpenseFormScreenProps) {
         style={styles.keyboardAvoidingView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+        pointerEvents={controlsDisabled ? 'none' : 'auto'}
       >
         <View style={styles.scrollContainer}>
           <ScrollView

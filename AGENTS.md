@@ -31,18 +31,21 @@ MoneySplit is a React Native/Expo mobile app for tracking shared expenses and de
 - Avoid brittle tests. Test user workflows, not implementation details.
 - Every major new feature should have associated unit tests.
 - Read `__tests__/README.md` before you update or add tests. Update `__tests__/README.md` after updating or adding tests.
+- Test coverage targets: lines 80%, functions 80%, branches 70%, statements 80%
 
 ## Commit & Pull Request Guidelines
 
 - Commit format: `type: subject` in imperative lowercase (e.g., `feat: add transfer flow`).
 - PR title format same as commit format (`type: subject`).
-- PR descriptions should summarize changes, rationale and impact. Do not include validation or testing summaries.
+- PR descriptions should summarize changes, rationale and impact. Do not summarize validation or testing. Unless the PR updates documentation only, do not describe documentation changes.
 - Keep commits focused; avoid mixing unrelated changes.
 
 ## Security & Configuration
 
 - RLS and schema changes live in `supabase/migrations/`.
 - Edge functions run under `supabase/functions/` and should be referenced in `docs/ARCHITECTURE.md` when changed.
+- Each edge function should check user authorization.
+- Never expose internal server error information to clients. Return a generic error message to clients while keeping detailed logging server-side.
 
 ## Instructions
 
@@ -50,5 +53,5 @@ MoneySplit is a React Native/Expo mobile app for tracking shared expenses and de
 - Avoid code duplication. Abstract common logic into parameterized functions.
 - Always include current date _and_ time in the names of new supabase migration files.
 - In database migrations, always use `(select auth.<function>())` instead of bare `auth.<function>()` to avoid re-evaluating `auth.<function>()` for each row.
-- When adding an edge function, make sure it performs appropriate user authorization.
+- While waiting on an async operation, UI controls should **ALWAYS** be disabled.
 - When finished, verify with `npm run check` that there are no compilation, formatting or test errors.
