@@ -109,7 +109,9 @@ export default function EditMemberScreen() {
     try {
       const currentMember = await getCurrentUserMemberInGroup(id);
       if (!currentMember) {
-        return 'unknown' as const;
+        const resolution = 'not-member' as const;
+        setCurrentUserMemberResolution(resolution);
+        return resolution;
       }
 
       const resolution =
