@@ -272,35 +272,24 @@ export async function getGroupMember(
   }
 }
 
-export async function getCurrentUserMemberInGroup(
+export async function isCurrentUserMemberInGroup(
   groupId: string,
-): Promise<GroupMember | null> {
-  try {
-    const resolvedCurrentUserId = await resolveAuthenticatedUserId();
-    if (!resolvedCurrentUserId) return null;
+): Promise<boolean> {
+  const resolvedCurrentUserId = await resolveAuthenticatedUserId();
 
-    const { data, error } = await supabase
-      .from('group_members')
-      .select('*')
-      .eq('group_id', groupId)
-      .eq('connected_user_id', resolvedCurrentUserId)
-      .maybeSingle();
+  const { data, error } = await supabase
+    .from('group_members')
+    .select('id')
+    .eq('group_id', groupId)
+    .eq('connected_user_id', resolvedCurrentUserId)
+    .maybeSingle();
 
-    if (error) throw error;
-    if (!data) return null;
-
-    return {
-      id: data.id,
-      groupId: data.group_id,
-      name: data.name,
-      email: data.email || undefined,
-      connectedUserId: data.connected_user_id || undefined,
-      createdAt: data.created_at,
-    };
-  } catch (error) {
-    console.error('Failed to get current user member:', error);
-    return null;
+  if (error) {
+    console.error('Failed to check current user group membership:', error);
+    throw error;
   }
+
+  return !!data;
 }
 
 export async function connectUserToGroupMembers(

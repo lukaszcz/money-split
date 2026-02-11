@@ -24,14 +24,14 @@ The MoneySplit test suite includes:
 - **Recovery auth-flow tests** for atomic recovery-password verification and temporary sign-in provisioning in `AuthContext`
 - **Hook tests** for client hooks (currency order, framework ready)
 - **Component tests** for reusable UI components (BottomActionBar)
-- **Screen tests** for UI business logic (auth, groups, settings, password changes)
+- **Screen tests** for UI business logic (auth, groups, settings, password changes), including safe leave-vs-delete routing in edit-member flows
 - **Integration tests** (optional, requires local Supabase)
 - **Exchange-rate cache tests** for AsyncStorage caching, stale fallback behavior, and login prefetch warmup
 
 ### Test Statistics
 
-- **Total Tests**: 393
-- **Test Suites**: 25
+- **Total Tests**: 396
+- **Test Suites**: 26
 - **Coverage Targets**:
   - Lines: 80%
   - Functions: 80%
@@ -77,6 +77,7 @@ __tests__/
 │   ├── changePassword.test.tsx    # Authenticated password change screen
 │   ├── groups.test.tsx            # Groups screen tests
 │   ├── groupDetail.test.tsx       # Group detail screen tests
+│   ├── editMember.test.tsx        # Edit member screen tests
 │   └── settings.test.tsx          # Settings screen tests
 ├── currencies.test.ts             # Currency utilities
 ├── money.test.ts                  # Money math

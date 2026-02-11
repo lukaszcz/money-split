@@ -624,10 +624,10 @@ describe('groupRepository', () => {
     });
   });
 
-  describe('getCurrentUserMemberInGroup', () => {
-    it('should return null when no authenticated user', async () => {
+  describe('isCurrentUserMemberInGroup', () => {
+    it('should throw when no authenticated user', async () => {
       const {
-        getCurrentUserMemberInGroup,
+        isCurrentUserMemberInGroup,
       } = require('../../services/groupRepository');
 
       mockSupabase.auth.getSession.mockResolvedValue({
@@ -635,14 +635,14 @@ describe('groupRepository', () => {
         error: null,
       });
 
-      const result = await getCurrentUserMemberInGroup('group-trip');
-
-      expect(result).toBeNull();
+      await expect(isCurrentUserMemberInGroup('group-trip')).rejects.toThrow(
+        'No authenticated user',
+      );
     });
 
-    it('should return member connected to current user', async () => {
+    it('should return true when member is connected to current user', async () => {
       const {
-        getCurrentUserMemberInGroup,
+        isCurrentUserMemberInGroup,
       } = require('../../services/groupRepository');
       mockSupabase.auth.getSession.mockResolvedValue({
         data: { session: createMockSession({ id: 'user-alice' }) },
@@ -659,14 +659,37 @@ describe('groupRepository', () => {
         }),
       } as any);
 
-      const result = await getCurrentUserMemberInGroup('group-trip');
+      const result = await isCurrentUserMemberInGroup('group-trip');
 
-      expect(result).toEqual(mockMembers.aliceInTrip);
+      expect(result).toBe(true);
     });
 
-    it('should return null on lookup error', async () => {
+    it('should return false when current user has no member in group', async () => {
       const {
-        getCurrentUserMemberInGroup,
+        isCurrentUserMemberInGroup,
+      } = require('../../services/groupRepository');
+      mockSupabase.auth.getSession.mockResolvedValue({
+        data: { session: createMockSession({ id: 'user-alice' }) },
+        error: null,
+      });
+
+      mockSupabase.from.mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        maybeSingle: jest.fn().mockResolvedValue({
+          data: null,
+          error: null,
+        }),
+      } as any);
+
+      const result = await isCurrentUserMemberInGroup('group-trip');
+
+      expect(result).toBe(false);
+    });
+
+    it('should throw on lookup error', async () => {
+      const {
+        isCurrentUserMemberInGroup,
       } = require('../../services/groupRepository');
       mockSupabase.auth.getSession.mockResolvedValue({
         data: { session: createMockSession({ id: 'user-alice' }) },
@@ -682,9 +705,9 @@ describe('groupRepository', () => {
         }),
       } as any);
 
-      const result = await getCurrentUserMemberInGroup('group-trip');
-
-      expect(result).toBeNull();
+      await expect(isCurrentUserMemberInGroup('group-trip')).rejects.toThrow(
+        'Lookup failed',
+      );
     });
   });
 
