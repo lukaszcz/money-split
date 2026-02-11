@@ -30,6 +30,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setRequiresRecoveryPasswordChange,
   ] = useState(false);
 
+  const applySessionState = (nextSession: Session | null) => {
+    setSession(nextSession);
+    setUser(nextSession?.user ?? null);
+  };
+
+  const queuePostSignInSync = (userId: string, source: string) => {
+    // Supabase recommends avoiding async work directly inside onAuthStateChange.
+    setTimeout(() => {
+      (async () => {
+        try {
+          await ensureUserProfile();
+          await syncUserPreferences(userId);
+        } catch (error) {
+          console.error(`Failed to sync user data after ${source}:`, error);
+        }
+      })();
+    }, 0);
+  };
+
   const refreshAuthUser = async (warningPrefix: string) => {
     const { data: refreshedUserData, error: refreshedUserError } =
       await supabase.auth.getUser();
@@ -47,32 +66,62 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session?.user) {
-        await ensureUserProfile();
-        await syncUserPreferences(session.user.id);
+    let isMounted = true;
+
+    const initializeSession = async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (!isMounted) {
+          return;
+        }
+
+        applySessionState(session);
+        // Don't set requiresRecoveryPasswordChange on initial load
+        // It's only set during the signIn flow
+        setLoading(false);
+
+        if (session?.user) {
+          queuePostSignInSync(session.user.id, 'initial session restore');
+        }
+      } catch (error) {
+        console.error('Failed to restore auth session:', error);
+
+        if (!isMounted) {
+          return;
+        }
+
+        applySessionState(null);
+        setLoading(false);
       }
-      setSession(session);
-      setUser(session?.user ?? null);
-      // Don't set requiresRecoveryPasswordChange on initial load
-      // It's only set during the signIn flow
-      setLoading(false);
-    });
+    };
+
+    void initializeSession();
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
-      (async () => {
-        if (event === 'SIGNED_IN' && session?.user) {
-          await ensureUserProfile();
-          await syncUserPreferences(session.user.id);
-        }
-        setSession(session);
-        setUser(session?.user ?? null);
-      })();
+      if (!isMounted) {
+        return;
+      }
+
+      applySessionState(session);
+
+      if (event === 'SIGNED_IN' && session?.user) {
+        queuePostSignInSync(session.user.id, 'auth state change');
+      }
+
+      if (event === 'SIGNED_OUT') {
+        setRequiresRecoveryPasswordChange(false);
+      }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {

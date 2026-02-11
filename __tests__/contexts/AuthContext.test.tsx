@@ -111,8 +111,10 @@ describe('AuthContext', () => {
         }),
       });
       expect(result.current.requiresRecoveryPasswordChange).toBe(false);
-      expect(ensureUserProfile).toHaveBeenCalled();
-      expect(syncUserPreferences).toHaveBeenCalledWith(mockUser.id);
+      await waitFor(() => {
+        expect(ensureUserProfile).toHaveBeenCalled();
+        expect(syncUserPreferences).toHaveBeenCalledWith(mockUser.id);
+      });
     });
 
     it('should not mark existing session for forced password change on init', async () => {
@@ -156,6 +158,44 @@ describe('AuthContext', () => {
 
       expect(result.current.user).toBeNull();
       expect(result.current.session).toBeNull();
+    });
+
+    it('should keep restored session even when post-login sync fails', async () => {
+      const mockSession = createMockSession({
+        id: 'user-123',
+        email: 'test@example.com',
+      });
+      const errorSpy = jest
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
+
+      mockSupabase.auth.getSession.mockResolvedValue({
+        data: { session: mockSession },
+        error: null,
+      });
+      syncUserPreferences.mockRejectedValueOnce(new Error('sync failed'));
+
+      const { useAuth } = require('../../contexts/AuthContext');
+      const { result } = renderHook(() => useAuth(), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      expect(result.current.user?.id).toBe('user-123');
+      expect(result.current.session?.user?.id).toBe('user-123');
+
+      await waitFor(() => {
+        expect(syncUserPreferences).toHaveBeenCalledWith('user-123');
+      });
+
+      expect(errorSpy).toHaveBeenCalledWith(
+        'Failed to sync user data after initial session restore:',
+        expect.any(Error),
+      );
+      errorSpy.mockRestore();
     });
   });
 
@@ -790,7 +830,9 @@ describe('AuthContext', () => {
         expect(result.current.session).toEqual(mockSession);
       });
 
-      expect(ensureUserProfile).toHaveBeenCalled();
+      await waitFor(() => {
+        expect(ensureUserProfile).toHaveBeenCalled();
+      });
     });
 
     it('should update state on SIGNED_OUT event', async () => {
