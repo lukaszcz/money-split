@@ -25,7 +25,7 @@ The MoneySplit test suite includes:
 - **Hook tests** for client hooks (currency order, framework ready)
 - **Component tests** for reusable UI components (BottomActionBar)
 - **Screen tests** for UI business logic (auth, groups, settings, password changes), including safe leave-vs-delete routing in edit-member flows
-- **Client configuration tests** for platform-specific Supabase auth session persistence settings, including SecureStore-backed native auth storage (`lib/supabase.ts`)
+- **Client configuration tests** for platform-specific Supabase auth session persistence settings, including SecureStore token storage and AsyncStorage user payload storage on native (`lib/supabase.ts`)
 - **Integration tests** (optional, requires local Supabase)
 - **Exchange-rate cache tests** for AsyncStorage caching, stale fallback behavior, and login prefetch warmup
 

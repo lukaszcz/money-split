@@ -16,6 +16,11 @@ describe('lib/supabase client configuration', () => {
 
   const loadModule = (platform: 'ios' | 'web') => {
     const createClient = jest.fn().mockReturnValue({ mockClient: true });
+    const asyncStorage = {
+      getItem: jest.fn().mockResolvedValue(null),
+      setItem: jest.fn().mockResolvedValue(undefined),
+      removeItem: jest.fn().mockResolvedValue(undefined),
+    };
     const secureStore = {
       getItemAsync: jest.fn().mockResolvedValue(null),
       setItemAsync: jest.fn().mockResolvedValue(undefined),
@@ -29,18 +34,23 @@ describe('lib/supabase client configuration', () => {
         OS: platform,
       },
     }));
+    jest.doMock(
+      '@react-native-async-storage/async-storage',
+      () => asyncStorage,
+    );
     jest.doMock('expo-secure-store', () => secureStore);
 
     require('../../lib/supabase');
 
     return {
+      asyncStorage,
       createClient,
       secureStore,
     };
   };
 
-  it('uses SecureStore auth persistence on native', async () => {
-    const { createClient, secureStore } = loadModule('ios');
+  it('uses SecureStore auth persistence and AsyncStorage user payload on native', async () => {
+    const { asyncStorage, createClient, secureStore } = loadModule('ios');
     const options = createClient.mock.calls[0]?.[2] as {
       auth: {
         autoRefreshToken: boolean;
@@ -51,6 +61,7 @@ describe('lib/supabase client configuration', () => {
           setItem: (key: string, value: string) => Promise<void>;
           removeItem: (key: string) => Promise<void>;
         };
+        userStorage: typeof asyncStorage;
       };
     };
 
@@ -73,15 +84,21 @@ describe('lib/supabase client configuration', () => {
     expect(secureStore.deleteItemAsync).toHaveBeenCalledWith('token-key', {
       keychainService: 'money-split-auth',
     });
+    expect(options.auth.userStorage).toBe(asyncStorage);
   });
 
   it('keeps URL session detection and omits storage override on web', () => {
     const { createClient } = loadModule('web');
     const options = createClient.mock.calls[0]?.[2] as {
-      auth: { detectSessionInUrl: boolean; storage?: unknown };
+      auth: {
+        detectSessionInUrl: boolean;
+        storage?: unknown;
+        userStorage?: unknown;
+      };
     };
 
     expect(options.auth.detectSessionInUrl).toBe(true);
     expect(options.auth).not.toHaveProperty('storage');
+    expect(options.auth).not.toHaveProperty('userStorage');
   });
 });

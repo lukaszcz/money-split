@@ -50,10 +50,11 @@ This document describes the architecture of the MoneySplit application (React Na
 ## App initialization and auth flow
 
 - The app bootstraps in `app/_layout.tsx`. `AuthProvider` from `contexts/AuthContext.tsx` wraps the app and subscribes to Supabase auth events.
-- Supabase client auth storage is platform-aware in `lib/supabase.ts`: native apps persist sessions in `expo-secure-store` (keychain/keystore-backed encrypted storage), while web uses browser storage and keeps URL session detection enabled.
+- Supabase client auth storage is platform-aware in `lib/supabase.ts`: native apps persist auth tokens in `expo-secure-store` (keychain/keystore-backed encrypted storage) and store the non-sensitive auth user payload in AsyncStorage (`userStorage`) to avoid SecureStore item size warnings; web uses browser storage and keeps URL session detection enabled.
 - On startup, `AuthProvider` calls `supabase.auth.getSession()`, applies the session to local state immediately, then queues profile/preference sync work (`ensureUserProfile()`, `syncUserPreferences()`) so session restoration is never blocked by background sync failures.
 - The `onAuthStateChange` subscription keeps the callback synchronous and queues async sync work separately for `SIGNED_IN` events to avoid Supabase auth callback deadlocks.
 - Routing is guarded by `useSegments()` in `app/_layout.tsx`: unauthenticated users are forced to `app/auth.tsx` (with `app/password-recovery.tsx` available as a public route), authenticated users are redirected to the Groups tab.
+- `app/index.tsx` and `app/+not-found.tsx` are defensive launch routes that immediately redirect users to the correct authenticated/unauthenticated destination (`/(tabs)/groups`, `/recovery-password-change`, or `/auth`) so cold starts and stale route restores do not strand users on a not-found screen.
 - Sign in and sign up are handled in `app/auth.tsx` by `useAuth().signIn()` / `signUp()`. On successful sign-in, the app updates `users.last_login` in `contexts/AuthContext.tsx`.
 - After successful sign-up, the app keeps users on `app/auth.tsx` and prompts them to confirm their email address before signing in.
 - Sign-in also triggers a preference sync to refresh cached user preferences for currency order, group order, and settle defaults, and warms the exchange-rate cache for currencies seen in the user's expenses.
@@ -450,7 +451,10 @@ The UI uses a light, card-based aesthetic with consistent spacing and neutral gr
 
 ### Not Found (`app/+not-found.tsx`)
 
-- Basic fallback route.
+- Defensive fallback route that immediately redirects based on auth state:
+  - Unauthenticated users -> `/auth`
+  - Authenticated users requiring recovery password change -> `/recovery-password-change`
+  - Other authenticated users -> `/(tabs)/groups`
 
 ## General workflow (end-to-end)
 
@@ -467,7 +471,7 @@ The UI uses a light, card-based aesthetic with consistent spacing and neutral gr
 
 ## Key file map
 
-- App entry + routing: `app/_layout.tsx`, `app/(tabs)/_layout.tsx`.
+- App entry + routing: `app/_layout.tsx`, `app/index.tsx`, `app/+not-found.tsx`, `app/(tabs)/_layout.tsx`.
 - Password update screens: `app/change-password.tsx`, `app/recovery-password-change.tsx`.
 - Auth state: `contexts/AuthContext.tsx`.
 - Data access: `services/groupRepository.ts`, `services/exchangeRateService.ts`.

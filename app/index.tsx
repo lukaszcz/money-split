@@ -1,9 +1,9 @@
 import { useEffect } from 'react';
-import { router, Stack } from 'expo-router';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 
-export default function NotFoundScreen() {
+export default function IndexScreen() {
   const { user, loading, requiresRecoveryPasswordChange } = useAuth();
 
   useEffect(() => {
@@ -25,13 +25,9 @@ export default function NotFoundScreen() {
   }, [user, loading, requiresRecoveryPasswordChange]);
 
   return (
-    <>
-      <Stack.Screen options={{ title: 'Oops!' }} />
-      <View style={styles.container}>
-        <ActivityIndicator />
-        <Text style={styles.text}>Redirecting...</Text>
-      </View>
-    </>
+    <View style={styles.container}>
+      <ActivityIndicator size="large" />
+    </View>
   );
 }
 
@@ -40,10 +36,5 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 20,
-  },
-  text: {
-    marginTop: 12,
-    fontSize: 16,
   },
 });
