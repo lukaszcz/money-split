@@ -133,7 +133,7 @@ describe('Known Users functionality', () => {
   });
 
   describe('updateKnownUsersForMember', () => {
-    it('should return false if no session token', async () => {
+    it('should return false if there is no authenticated user', async () => {
       const {
         updateKnownUsersForMember,
       } = require('../../services/groupRepository');
@@ -155,11 +155,7 @@ describe('Known Users functionality', () => {
       } = require('../../services/groupRepository');
 
       mockSupabase.auth.getSession.mockResolvedValue({
-        data: {
-          session: {
-            access_token: 'mock-token',
-          },
-        },
+        data: { session: createMockSession({ id: 'user-123' }) },
         error: null,
       });
 
@@ -175,9 +171,6 @@ describe('Known Users functionality', () => {
         'update-known-users',
         {
           body: { groupId: 'group-123', newMemberId: 'member-456' },
-          headers: {
-            Authorization: 'Bearer mock-token',
-          },
         },
       );
     });
@@ -188,11 +181,7 @@ describe('Known Users functionality', () => {
       } = require('../../services/groupRepository');
 
       mockSupabase.auth.getSession.mockResolvedValue({
-        data: {
-          session: {
-            access_token: 'mock-token',
-          },
-        },
+        data: { session: createMockSession({ id: 'user-123' }) },
         error: null,
       });
 

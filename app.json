@@ -12,14 +12,20 @@
       "supportsTablet": true
     },
     "android": {
-      "softwareKeyboardLayoutMode": "resize"
+      "softwareKeyboardLayoutMode": "resize",
+      "package": "com.anonymous.moneysplit"
     },
     "web": {
       "bundler": "metro",
       "output": "single",
       "favicon": "./assets/images/favicon.jpg"
     },
-    "plugins": ["expo-router", "expo-font", "expo-web-browser"],
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-web-browser",
+      "expo-secure-store"
+    ],
     "experiments": {
       "typedRoutes": true
     }

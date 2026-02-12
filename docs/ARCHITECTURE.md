@@ -25,7 +25,7 @@ This document describes the architecture of the MoneySplit application (React Na
 ### Runs on the device
 
 - Navigation, screens, and UI logic (`app/*.tsx`).
-- Authentication state handling (`contexts/AuthContext.tsx`) with Supabase auth session persistence backed by AsyncStorage on native devices (`lib/supabase.ts`).
+- Authentication state handling (`contexts/AuthContext.tsx`) with Supabase auth session persistence backed by encrypted SecureStore on native devices (`lib/supabase.ts`).
 - Client-side money math and settlement logic (`utils/money.ts`, `services/settlementService.ts`).
 - Exchange rate caching and lookup in AsyncStorage + in-memory map, with edge-function fallback (`services/exchangeRateService.ts`).
 - Data access via Supabase JS SDK (`lib/supabase.ts`, `services/*.ts`).
@@ -50,7 +50,7 @@ This document describes the architecture of the MoneySplit application (React Na
 ## App initialization and auth flow
 
 - The app bootstraps in `app/_layout.tsx`. `AuthProvider` from `contexts/AuthContext.tsx` wraps the app and subscribes to Supabase auth events.
-- Supabase client auth storage is platform-aware in `lib/supabase.ts`: native apps persist sessions in `@react-native-async-storage/async-storage`, while web uses browser storage and keeps URL session detection enabled.
+- Supabase client auth storage is platform-aware in `lib/supabase.ts`: native apps persist sessions in `expo-secure-store` (keychain/keystore-backed encrypted storage), while web uses browser storage and keeps URL session detection enabled.
 - On startup, `AuthProvider` calls `supabase.auth.getSession()`, applies the session to local state immediately, then queues profile/preference sync work (`ensureUserProfile()`, `syncUserPreferences()`) so session restoration is never blocked by background sync failures.
 - The `onAuthStateChange` subscription keeps the callback synchronous and queues async sync work separately for `SIGNED_IN` events to avoid Supabase auth callback deadlocks.
 - Routing is guarded by `useSegments()` in `app/_layout.tsx`: unauthenticated users are forced to `app/auth.tsx` (with `app/password-recovery.tsx` available as a public route), authenticated users are redirected to the Groups tab.
@@ -70,12 +70,14 @@ This document describes the architecture of the MoneySplit application (React Na
 - Data access uses the Supabase JS client (`lib/supabase.ts`) from service modules in `services/`.
 - All CRUD operations are executed on the device via Supabase REST endpoints with RLS enforcement on the server.
 - Read-heavy activity feed loading uses a Postgres RPC (`public.get_activity_feed`) called via `supabase.rpc()` from `getActivityFeed()` in `services/groupRepository.ts`.
-- Edge function calls are made with `supabase.functions.invoke()` from `services/groupRepository.ts`:
-  - `create-group` is invoked when creating a new group (with bearer token).
+- Edge function calls are made with `supabase.functions.invoke()` from `services/groupRepository.ts`.
+- Authenticated invokes use the Supabase client fetch layer, which automatically attaches the current session bearer token.
+- Function flows:
+  - `create-group` is invoked when creating a new group.
   - `cleanup-orphaned-groups` is invoked when a user leaves a group.
-  - `delete-user` is invoked when deleting an account (with bearer token).
+  - `delete-user` is invoked when deleting an account.
   - `send-invitation` is invoked when inviting members by email.
-  - `update-known-users` is invoked when a member is connected to an authenticated user (with bearer token).
+  - `update-known-users` is invoked when a member is connected to an authenticated user.
   - `connect-user-to-groups` is invoked when a user signs up to connect them to existing group members with matching email.
 - `services/exchangeRateService.ts` invokes `get-exchange-rate` on local cache miss/staleness and prewarms local rates at login for known currency pairs.
 - `services/authService.ts` invokes `password-recovery` to issue one-time recovery passwords by email.

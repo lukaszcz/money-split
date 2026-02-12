@@ -16,10 +16,10 @@ describe('lib/supabase client configuration', () => {
 
   const loadModule = (platform: 'ios' | 'web') => {
     const createClient = jest.fn().mockReturnValue({ mockClient: true });
-    const asyncStorage = {
-      getItem: jest.fn(),
-      setItem: jest.fn(),
-      removeItem: jest.fn(),
+    const secureStore = {
+      getItemAsync: jest.fn().mockResolvedValue(null),
+      setItemAsync: jest.fn().mockResolvedValue(undefined),
+      deleteItemAsync: jest.fn().mockResolvedValue(undefined),
     };
 
     jest.doMock('react-native-url-polyfill/auto', () => ({}));
@@ -29,34 +29,50 @@ describe('lib/supabase client configuration', () => {
         OS: platform,
       },
     }));
-    jest.doMock(
-      '@react-native-async-storage/async-storage',
-      () => asyncStorage,
-    );
+    jest.doMock('expo-secure-store', () => secureStore);
 
     require('../../lib/supabase');
 
     return {
       createClient,
-      asyncStorage,
+      secureStore,
     };
   };
 
-  it('uses AsyncStorage auth persistence on native', () => {
-    const { createClient, asyncStorage } = loadModule('ios');
+  it('uses SecureStore auth persistence on native', async () => {
+    const { createClient, secureStore } = loadModule('ios');
+    const options = createClient.mock.calls[0]?.[2] as {
+      auth: {
+        autoRefreshToken: boolean;
+        persistSession: boolean;
+        detectSessionInUrl: boolean;
+        storage: {
+          getItem: (key: string) => Promise<string | null>;
+          setItem: (key: string, value: string) => Promise<void>;
+          removeItem: (key: string) => Promise<void>;
+        };
+      };
+    };
 
-    expect(createClient).toHaveBeenCalledWith(
-      'https://example.supabase.co',
-      'anon-key',
-      expect.objectContaining({
-        auth: expect.objectContaining({
-          autoRefreshToken: true,
-          persistSession: true,
-          detectSessionInUrl: false,
-          storage: asyncStorage,
-        }),
-      }),
+    expect(options.auth.autoRefreshToken).toBe(true);
+    expect(options.auth.persistSession).toBe(true);
+    expect(options.auth.detectSessionInUrl).toBe(false);
+
+    await options.auth.storage.setItem('token-key', 'token-value');
+    await options.auth.storage.getItem('token-key');
+    await options.auth.storage.removeItem('token-key');
+
+    expect(secureStore.setItemAsync).toHaveBeenCalledWith(
+      'token-key',
+      'token-value',
+      { keychainService: 'money-split-auth' },
     );
+    expect(secureStore.getItemAsync).toHaveBeenCalledWith('token-key', {
+      keychainService: 'money-split-auth',
+    });
+    expect(secureStore.deleteItemAsync).toHaveBeenCalledWith('token-key', {
+      keychainService: 'money-split-auth',
+    });
   });
 
   it('keeps URL session detection and omits storage override on web', () => {

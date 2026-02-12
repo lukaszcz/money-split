@@ -27,6 +27,14 @@ export interface GroupWithMembers extends Group {
   members: GroupMember[];
 }
 
+function getSafeErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  return fallback;
+}
+
 async function resolveAuthenticatedUser() {
   const {
     data: { session },
@@ -319,29 +327,19 @@ export async function createGroup(
   initialMembers: { name: string; email?: string }[],
 ): Promise<Group | null> {
   try {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    const token = session?.access_token;
-
-    if (!token) {
-      throw new Error('No session token available');
-    }
-
     const { data, error } = await supabase.functions.invoke('create-group', {
       body: { name, mainCurrencyCode, initialMembers },
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
     });
 
     if (error) {
-      console.error('Create group function error:', error);
-      throw new Error(error.message || 'Failed to create group');
+      const message = getSafeErrorMessage(error, 'Failed to create group');
+      console.error('Create group function error:', message);
+      throw new Error(message);
     }
 
     if (!data?.success || !data?.group) {
-      throw new Error(data?.error || 'Failed to create group');
+      console.error('Create group function returned unsuccessful response');
+      throw new Error('Failed to create group');
     }
 
     return {
@@ -912,18 +910,18 @@ export async function leaveGroup(groupId: string): Promise<boolean> {
         'cleanup-orphaned-groups',
       );
       if (cleanupError) {
-        console.error('Cleanup function failed:', cleanupError);
-        if ('context' in cleanupError) {
-          console.error(
-            'Cleanup function error context:',
-            cleanupError.context,
-          );
-        }
+        console.error(
+          'Cleanup function failed:',
+          getSafeErrorMessage(cleanupError, 'Unknown cleanup error'),
+        );
       } else {
         console.log('Cleanup function succeeded');
       }
     } catch (cleanupError) {
-      console.error('Failed to trigger cleanup:', cleanupError);
+      console.error(
+        'Failed to trigger cleanup:',
+        getSafeErrorMessage(cleanupError, 'Unknown cleanup error'),
+      );
     }
 
     return true;
@@ -935,24 +933,14 @@ export async function leaveGroup(groupId: string): Promise<boolean> {
 
 export async function deleteUserAccount(): Promise<boolean> {
   try {
-    const { session } = await resolveAuthenticatedUser();
+    await resolveAuthenticatedUser();
 
-    const token = session.access_token;
-
-    if (!token) {
-      throw new Error('No session token available');
-    }
-
-    const { error: deleteError } = await supabase.functions.invoke(
-      'delete-user',
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-    );
+    const { error: deleteError } =
+      await supabase.functions.invoke('delete-user');
     if (deleteError) {
-      throw new Error(deleteError.message || 'Failed to delete user account');
+      throw new Error(
+        getSafeErrorMessage(deleteError, 'Failed to delete user account'),
+      );
     }
 
     await supabase.auth.signOut();
@@ -966,13 +954,10 @@ export async function deleteUserAccount(): Promise<boolean> {
 
 export async function connectUserToGroups(): Promise<number> {
   try {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    const token = session?.access_token;
-
-    if (!token) {
-      console.warn('No session token available for connecting to groups');
+    try {
+      await resolveAuthenticatedUser();
+    } catch {
+      console.warn('No authenticated user for connecting to groups');
       return 0;
     }
 
@@ -980,20 +965,18 @@ export async function connectUserToGroups(): Promise<number> {
 
     const { data, error } = await supabase.functions.invoke(
       'connect-user-to-groups',
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
     );
 
     if (error) {
-      console.error('Error connecting user to groups:', error);
+      console.error(
+        'Error connecting user to groups:',
+        getSafeErrorMessage(error, 'Unknown connect-user-to-groups error'),
+      );
       return 0;
     }
 
     if (data?.error) {
-      console.error('Error from edge function:', data.error);
+      console.error('Error from edge function');
       return 0;
     }
 
@@ -1088,13 +1071,10 @@ export async function updateKnownUsersForMember(
   memberId: string,
 ): Promise<boolean> {
   try {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    const token = session?.access_token;
-
-    if (!token) {
-      console.warn('No session token available for updating known users');
+    try {
+      await resolveAuthenticatedUser();
+    } catch {
+      console.warn('No authenticated user for updating known users');
       return false;
     }
 
@@ -1102,31 +1082,19 @@ export async function updateKnownUsersForMember(
       'update-known-users',
       {
         body: { groupId, newMemberId: memberId },
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
       },
     );
 
     if (error) {
-      let errorDetails = '';
-      if (error instanceof Error && 'context' in error) {
-        try {
-          const response = (error as { context?: Response }).context;
-          if (response) {
-            const payload = await response.json();
-            errorDetails = JSON.stringify(payload);
-          }
-        } catch {
-          errorDetails = '';
-        }
-      }
-      console.error('Error updating known users:', error, errorDetails);
+      console.error(
+        'Error updating known users:',
+        getSafeErrorMessage(error, 'Unknown update-known-users error'),
+      );
       return false;
     }
 
     if (data?.error) {
-      console.error('Error updating known users:', data.error);
+      console.error('Error updating known users: function returned an error');
       return false;
     }
 

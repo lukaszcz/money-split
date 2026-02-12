@@ -159,7 +159,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (verifyError) {
       console.error(
         'Recovery verification and temporary password assignment failed:',
-        verifyError,
+        verifyError.message,
       );
       throw new Error(
         'Unable to complete recovery sign-in. Please request a new recovery password.',
