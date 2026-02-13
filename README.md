@@ -70,7 +70,11 @@ The local database can be inspected with Supabase Studio accessible at `http://l
    npm run dev
    ```
 
-## Testing on Android emulator
+## Testing on a phone emulator
+
+Testing with Expo Go is very close but not identical to running the app on a device. Running a dev build on a phone emulator is closer to final user experience.
+
+### Android emulator
 
 1. Install Android Studio and Java SDK
 2. Configure environment variables:
@@ -83,7 +87,11 @@ The local database can be inspected with Supabase Studio accessible at `http://l
 3. Start the Android emulator in Android Studio Device Manager. Verify with `adb devices`.
 4. `npx expo run:android`
 
-Testing with Expo Go is very close but not identical to running the app on a device. Running a dev build on an Android emulator is closer to final user experience.
+### iOS emulator
+
+1. Install Xcode with iOS Simulator
+2. `sudo xcode-select -s /Applications/Xcode.app/Contents/Developer`
+3. `npx expo run:ios`
 
 ## Usage
 

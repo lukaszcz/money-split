@@ -9,11 +9,12 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.agnette.moneysplit"
     },
     "android": {
       "softwareKeyboardLayoutMode": "resize",
-      "package": "com.anonymous.moneysplit"
+      "package": "com.agnette.moneysplit"
     },
     "web": {
       "bundler": "metro",
