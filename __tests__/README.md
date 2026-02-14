@@ -22,7 +22,7 @@ The MoneySplit test suite includes:
 - **Service tests** for data and edge-function access (groupRepository, exchangeRateService, authService), including RPC coverage for `getActivityFeed()` mapping and error handling
 - **Context tests** for React state management (AuthContext)
 - **Recovery auth-flow tests** for atomic recovery-password verification, forced-password-change metadata persistence (`recoveryPasswordMustChange`), and sign-out fallback when metadata persistence fails in `AuthContext`
-- **Hook tests** for client hooks (currency order, framework ready)
+- **Hook tests** for client hooks (auth redirect, currency order, framework ready)
 - **Component tests** for reusable UI components (BottomActionBar)
 - **Screen tests** for UI business logic (auth, groups, settings, password changes), including safe leave-vs-delete routing in edit-member flows
 - **Client configuration tests** for platform-specific Supabase auth session persistence settings, including SecureStore token storage and AsyncStorage user payload storage on native (`lib/supabase.ts`)
@@ -31,8 +31,8 @@ The MoneySplit test suite includes:
 
 ### Test Statistics
 
-- **Total Tests**: 398
-- **Test Suites**: 27
+- **Total Tests**: 411
+- **Test Suites**: 28
 - **Coverage Targets**:
   - Lines: 80%
   - Functions: 80%
@@ -67,6 +67,7 @@ __tests__/
 ├── contexts/
 │   └── AuthContext.test.tsx       # React context tests
 ├── hooks/
+│   ├── useAuthRedirect.test.ts    # Auth/route guard redirect hook
 │   ├── useCurrencyOrder.test.ts   # Currency ordering hook
 │   └── useFrameworkReady.test.ts  # Framework ready hook
 ├── lib/
