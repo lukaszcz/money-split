@@ -168,10 +168,6 @@ export function KnownUserSuggestionInput({
             </ScrollView>
           </View>
         )}
-        <Text style={styles.hint}>
-          Suggestions from users you{"'"}ve shared groups with will appear as
-          you type
-        </Text>
       </View>
 
       <View style={styles.section}>
@@ -188,10 +184,6 @@ export function KnownUserSuggestionInput({
           keyboardType="email-address"
           autoCapitalize="none"
         />
-        <Text style={styles.hint}>
-          If provided, the member will be connected to their account when they
-          register
-        </Text>
       </View>
     </View>
   );
