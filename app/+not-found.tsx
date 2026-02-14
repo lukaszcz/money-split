@@ -1,15 +1,21 @@
-import { Link, Stack } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { useEffect } from 'react';
+import { Stack } from 'expo-router';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { useAuthRedirect } from '@/hooks/useAuthRedirect';
 
 export default function NotFoundScreen() {
+  const { performRedirect } = useAuthRedirect('entry');
+
+  useEffect(() => {
+    performRedirect();
+  }, [performRedirect]);
+
   return (
     <>
       <Stack.Screen options={{ title: 'Oops!' }} />
       <View style={styles.container}>
-        <Text style={styles.text}>Screen not found.</Text>
-        <Link href="/(tabs)/groups" style={styles.link}>
-          <Text>Go to home screen!</Text>
-        </Link>
+        <ActivityIndicator />
+        <Text style={styles.text}>Redirecting...</Text>
       </View>
     </>
   );
@@ -23,11 +29,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   text: {
-    fontSize: 20,
-    fontWeight: 600,
-  },
-  link: {
-    marginTop: 15,
-    paddingVertical: 15,
+    marginTop: 12,
+    fontSize: 16,
   },
 });

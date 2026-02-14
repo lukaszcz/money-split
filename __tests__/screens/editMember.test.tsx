@@ -43,6 +43,7 @@ jest.mock('../../components/KnownUserSuggestionInput', () => ({
 
 describe('EditMemberScreen', () => {
   let alertSpy: jest.SpyInstance;
+  let consoleErrorSpy: jest.SpyInstance;
   let mockRouter: { back: jest.Mock; replace: jest.Mock };
 
   beforeEach(() => {
@@ -74,9 +75,11 @@ describe('EditMemberScreen', () => {
     repository.deleteGroupMember.mockResolvedValue(true);
 
     alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
   });
 
   afterEach(() => {
+    consoleErrorSpy.mockRestore();
     alertSpy.mockRestore();
   });
 

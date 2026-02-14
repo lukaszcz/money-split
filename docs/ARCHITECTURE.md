@@ -25,7 +25,7 @@ This document describes the architecture of the MoneySplit application (React Na
 ### Runs on the device
 
 - Navigation, screens, and UI logic (`app/*.tsx`).
-- Authentication state handling (`contexts/AuthContext.tsx`).
+- Authentication state handling (`contexts/AuthContext.tsx`) with Supabase auth session persistence backed by encrypted SecureStore on native devices (`lib/supabase.ts`).
 - Client-side money math and settlement logic (`utils/money.ts`, `services/settlementService.ts`).
 - Exchange rate caching and lookup in AsyncStorage + in-memory map, with edge-function fallback (`services/exchangeRateService.ts`).
 - Data access via Supabase JS SDK (`lib/supabase.ts`, `services/*.ts`).
@@ -50,8 +50,11 @@ This document describes the architecture of the MoneySplit application (React Na
 ## App initialization and auth flow
 
 - The app bootstraps in `app/_layout.tsx`. `AuthProvider` from `contexts/AuthContext.tsx` wraps the app and subscribes to Supabase auth events.
-- On startup, `AuthProvider` calls `supabase.auth.getSession()` and, if signed in, calls `ensureUserProfile()` to provision a local user record in the public `users` table (`services/groupRepository.ts`). It also syncs user preferences from the database to the local AsyncStorage cache (`services/userPreferenceSync.ts`).
+- Supabase client auth storage is platform-aware in `lib/supabase.ts`: native apps persist auth tokens in `expo-secure-store` (keychain/keystore-backed encrypted storage) and store the non-sensitive auth user payload in AsyncStorage (`userStorage`) to avoid SecureStore item size warnings; web uses browser storage and keeps URL session detection enabled.
+- On startup, `AuthProvider` calls `supabase.auth.getSession()`, applies the session to local state immediately, restores `requiresRecoveryPasswordChange` from `user.user_metadata.recoveryPasswordMustChange`, then queues profile/preference sync work (`ensureUserProfile()`, `syncUserPreferences()`) so session restoration is never blocked by background sync failures.
+- The `onAuthStateChange` subscription keeps the callback synchronous and queues async sync work separately for `SIGNED_IN` events to avoid Supabase auth callback deadlocks.
 - Routing is guarded by `useSegments()` in `app/_layout.tsx`: unauthenticated users are forced to `app/auth.tsx` (with `app/password-recovery.tsx` available as a public route), authenticated users are redirected to the Groups tab.
+- `app/index.tsx` and `app/+not-found.tsx` are defensive launch routes that immediately redirect users to the correct authenticated/unauthenticated destination (`/(tabs)/groups`, `/recovery-password-change`, or `/auth`) so cold starts and stale route restores do not strand users on a not-found screen.
 - Sign in and sign up are handled in `app/auth.tsx` by `useAuth().signIn()` / `signUp()`. On successful sign-in, the app updates `users.last_login` in `contexts/AuthContext.tsx`.
 - After successful sign-up, the app keeps users on `app/auth.tsx` and prompts them to confirm their email address before signing in.
 - Sign-in also triggers a preference sync to refresh cached user preferences for currency order, group order, and settle defaults, and warms the exchange-rate cache for currencies seen in the user's expenses.
@@ -59,7 +62,7 @@ This document describes the architecture of the MoneySplit application (React Na
 - The `password-recovery` edge function stores a hashed recovery password in the `recovery_passwords` table (separate from the user's actual password) and emails the unhashed password to the user.
 - When a user signs in, `contexts/AuthContext.tsx` first attempts normal authentication. If that fails, it calls the `verify-recovery-password` edge function.
 - The `verify-recovery-password` edge function verifies the recovery password and, in the same request, sets a temporary internal password with service-role privileges.
-- The client signs in using that temporary password returned from the edge function.
+- The client signs in using that temporary password returned from the edge function, then persists `user_metadata.recoveryPasswordMustChange = true` via `supabase.auth.updateUser()` so forced password change survives app restarts/session hydration.
 - The user is then forced to navigate to `app/recovery-password-change.tsx` to set a new permanent password before accessing the app.
 - Authenticated users can also change their password from settings via `app/change-password.tsx`, which requires entering the current password before calling `supabase.auth.updateUser()`.
 
@@ -68,12 +71,14 @@ This document describes the architecture of the MoneySplit application (React Na
 - Data access uses the Supabase JS client (`lib/supabase.ts`) from service modules in `services/`.
 - All CRUD operations are executed on the device via Supabase REST endpoints with RLS enforcement on the server.
 - Read-heavy activity feed loading uses a Postgres RPC (`public.get_activity_feed`) called via `supabase.rpc()` from `getActivityFeed()` in `services/groupRepository.ts`.
-- Edge function calls are made with `supabase.functions.invoke()` from `services/groupRepository.ts`:
-  - `create-group` is invoked when creating a new group (with bearer token).
+- Edge function calls are made with `supabase.functions.invoke()` from `services/groupRepository.ts`.
+- Authenticated invokes use the Supabase client fetch layer, which automatically attaches the current session bearer token.
+- Function flows:
+  - `create-group` is invoked when creating a new group.
   - `cleanup-orphaned-groups` is invoked when a user leaves a group.
-  - `delete-user` is invoked when deleting an account (with bearer token).
+  - `delete-user` is invoked when deleting an account.
   - `send-invitation` is invoked when inviting members by email.
-  - `update-known-users` is invoked when a member is connected to an authenticated user (with bearer token).
+  - `update-known-users` is invoked when a member is connected to an authenticated user.
   - `connect-user-to-groups` is invoked when a user signs up to connect them to existing group members with matching email.
 - `services/exchangeRateService.ts` invokes `get-exchange-rate` on local cache miss/staleness and prewarms local rates at login for known currency pairs.
 - `services/authService.ts` invokes `password-recovery` to issue one-time recovery passwords by email.
@@ -335,7 +340,7 @@ The UI uses a light, card-based aesthetic with consistent spacing and neutral gr
 
 - Forced screen shown after a successful recovery-password login.
 - Collects and validates a new permanent password, then calls `completeRecoveryPasswordChange()` from `contexts/AuthContext.tsx`.
-- Clears recovery metadata and unblocks access to the main tabs once the permanent password is saved.
+- Saves the permanent password and clears `user_metadata.recoveryPasswordMustChange`, unblocking access to the main tabs.
 
 ### Change password (`app/change-password.tsx`)
 
@@ -446,7 +451,10 @@ The UI uses a light, card-based aesthetic with consistent spacing and neutral gr
 
 ### Not Found (`app/+not-found.tsx`)
 
-- Basic fallback route.
+- Defensive fallback route that immediately redirects based on auth state:
+  - Unauthenticated users -> `/auth`
+  - Authenticated users requiring recovery password change -> `/recovery-password-change`
+  - Other authenticated users -> `/(tabs)/groups`
 
 ## General workflow (end-to-end)
 
@@ -463,7 +471,7 @@ The UI uses a light, card-based aesthetic with consistent spacing and neutral gr
 
 ## Key file map
 
-- App entry + routing: `app/_layout.tsx`, `app/(tabs)/_layout.tsx`.
+- App entry + routing: `app/_layout.tsx`, `app/index.tsx`, `app/+not-found.tsx`, `app/(tabs)/_layout.tsx`.
 - Password update screens: `app/change-password.tsx`, `app/recovery-password-change.tsx`.
 - Auth state: `contexts/AuthContext.tsx`.
 - Data access: `services/groupRepository.ts`, `services/exchangeRateService.ts`.
