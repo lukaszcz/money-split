@@ -251,7 +251,7 @@ describe('AuthContext', () => {
       expect(updateBuilder.update).toHaveBeenCalledWith(
         expect.objectContaining({ last_login: expect.any(String) }),
       );
-      expect(syncUserPreferences).toHaveBeenCalledWith(mockUser.id);
+      expect(syncUserPreferences).not.toHaveBeenCalled();
       expect(result.current.requiresRecoveryPasswordChange).toBe(false);
     });
 

@@ -182,7 +182,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .from('users')
           .update({ last_login: now })
           .eq('id', userData.user.id);
-        await syncUserPreferences(userData.user.id);
       }
       return;
     }
