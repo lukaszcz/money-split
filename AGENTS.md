@@ -32,6 +32,7 @@ MoneySplit is a React Native/Expo mobile app for tracking shared expenses and de
 - Every major new feature should have associated unit tests.
 - Read `__tests__/README.md` before you update or add tests. Update `__tests__/README.md` after updating or adding tests.
 - Test coverage targets: lines 80%, functions 80%, branches 70%, statements 80%
+- Don't leak expected error output into test run output
 
 ## Commit & Pull Request Guidelines
 

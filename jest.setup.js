@@ -86,6 +86,12 @@ console.error = (...args) => {
     firstArg.includes('react-test-renderer is deprecated') ||
     firstArg.includes(
       'Recovery verification and temporary password assignment failed:',
+    ) ||
+    firstArg.includes(
+      'Failed to mark account for required recovery password change:',
+    ) ||
+    firstArg.includes(
+      'Failed to sign out after recovery metadata update failure:',
     )
   ) {
     return;
@@ -118,6 +124,12 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
   getItem: jest.fn(),
   setItem: jest.fn(),
   removeItem: jest.fn(),
+}));
+
+jest.mock('expo-secure-store', () => ({
+  getItemAsync: jest.fn(),
+  setItemAsync: jest.fn(),
+  deleteItemAsync: jest.fn(),
 }));
 
 jest.mock('expo-crypto', () => ({
