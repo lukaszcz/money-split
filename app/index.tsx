@@ -1,28 +1,13 @@
 import { useEffect } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
-import { router } from 'expo-router';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuthRedirect } from '@/hooks/useAuthRedirect';
 
 export default function IndexScreen() {
-  const { user, loading, requiresRecoveryPasswordChange } = useAuth();
+  const { performRedirect } = useAuthRedirect('entry');
 
   useEffect(() => {
-    if (loading) {
-      return;
-    }
-
-    if (!user) {
-      router.replace('/auth');
-      return;
-    }
-
-    if (requiresRecoveryPasswordChange) {
-      router.replace('/recovery-password-change');
-      return;
-    }
-
-    router.replace('/(tabs)/groups');
-  }, [user, loading, requiresRecoveryPasswordChange]);
+    performRedirect();
+  }, [performRedirect]);
 
   return (
     <View style={styles.container}>

@@ -1,45 +1,18 @@
 import { useEffect } from 'react';
-import { Stack, type Href, useRouter, useSegments } from 'expo-router';
+import { Stack, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
-import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { AuthProvider } from '@/contexts/AuthContext';
+import { useAuthRedirect } from '@/hooks/useAuthRedirect';
 
 function RootLayoutNav() {
-  const { user, loading, requiresRecoveryPasswordChange } = useAuth();
   const segments = useSegments();
-  const router = useRouter();
+  const currentSegment = segments[0] as string | undefined;
+  const { performRedirect } = useAuthRedirect('guard', currentSegment);
 
   useEffect(() => {
-    if (loading) return;
-
-    const currentSegment = segments[0] as string | undefined;
-    const inPublicAuthFlow =
-      currentSegment === 'auth' || currentSegment === 'password-recovery';
-    const inRecoveryPasswordChangeScreen =
-      currentSegment === 'recovery-password-change';
-
-    if (!user && !inPublicAuthFlow) {
-      router.replace('/auth');
-      return;
-    }
-
-    if (
-      user &&
-      requiresRecoveryPasswordChange &&
-      !inRecoveryPasswordChangeScreen
-    ) {
-      router.replace('/recovery-password-change' as Href);
-      return;
-    }
-
-    if (
-      user &&
-      !requiresRecoveryPasswordChange &&
-      (inPublicAuthFlow || inRecoveryPasswordChangeScreen)
-    ) {
-      router.replace('/(tabs)/groups');
-    }
-  }, [user, loading, segments, router, requiresRecoveryPasswordChange]);
+    performRedirect();
+  }, [performRedirect]);
 
   return (
     <Stack screenOptions={{ headerShown: false }}>

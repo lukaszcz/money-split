@@ -1,28 +1,14 @@
 import { useEffect } from 'react';
-import { router, Stack } from 'expo-router';
+import { Stack } from 'expo-router';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuthRedirect } from '@/hooks/useAuthRedirect';
 
 export default function NotFoundScreen() {
-  const { user, loading, requiresRecoveryPasswordChange } = useAuth();
+  const { performRedirect } = useAuthRedirect('entry');
 
   useEffect(() => {
-    if (loading) {
-      return;
-    }
-
-    if (!user) {
-      router.replace('/auth');
-      return;
-    }
-
-    if (requiresRecoveryPasswordChange) {
-      router.replace('/recovery-password-change');
-      return;
-    }
-
-    router.replace('/(tabs)/groups');
-  }, [user, loading, requiresRecoveryPasswordChange]);
+    performRedirect();
+  }, [performRedirect]);
 
   return (
     <>
