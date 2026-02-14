@@ -43,6 +43,7 @@ export function KnownUserSuggestionInput({
     [],
   );
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isNameInputFocused, setIsNameInputFocused] = useState(false);
 
   const filterSuggestions = useCallback(
     (text: string) => {
@@ -76,10 +77,10 @@ export function KnownUserSuggestionInput({
   }, [loadKnownUsers]);
 
   useEffect(() => {
-    if (nameValue) {
+    if (!disabled && isNameInputFocused) {
       filterSuggestions(nameValue);
     }
-  }, [filterSuggestions, nameValue]);
+  }, [disabled, filterSuggestions, isNameInputFocused, nameValue]);
 
   useEffect(() => {
     if (disabled) {
@@ -138,12 +139,14 @@ export function KnownUserSuggestionInput({
           onChangeText={handleNameChange}
           editable={!disabled}
           onBlur={() => {
+            setIsNameInputFocused(false);
             // Delay hiding suggestions to allow tap to register
             setTimeout(() => setShowSuggestions(false), 200);
             onNameBlur?.(nameValue);
           }}
           onFocus={() => {
             if (!disabled) {
+              setIsNameInputFocused(true);
               filterSuggestions(nameValue);
             }
           }}
