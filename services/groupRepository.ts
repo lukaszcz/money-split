@@ -47,7 +47,15 @@ function getSafeErrorMessage(error: unknown, fallback: string): string {
 async function resolveAuthenticatedUser() {
   const {
     data: { session },
+    error,
   } = await supabase.auth.getSession();
+
+  if (error) {
+    throw new Error(
+      getSafeErrorMessage(error, 'Failed to retrieve authenticated session'),
+    );
+  }
+
   const authUser = session?.user;
 
   if (!session || !authUser?.id) {
