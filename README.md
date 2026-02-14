@@ -77,7 +77,7 @@ Testing with Expo Go is very close but not identical to running the app on a dev
 ### Android emulator
 
 1. Install Android Studio and Java SDK
-2. Configure environment variables:
+2. Configure environment variables (macOS example, adjust ANDROID_SDK_ROOT accordingly):
    ```bash
    export ANDROID_SDK_ROOT="$HOME/Library/Android/sdk"
    export ANDROID_HOME="$ANDROID_SDK_ROOT"

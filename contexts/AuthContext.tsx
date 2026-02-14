@@ -99,7 +99,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const {
           data: { session },
+          error,
         } = await supabase.auth.getSession();
+        if (error) {
+          throw error;
+        }
 
         if (!isMountedRef.current) {
           return;
