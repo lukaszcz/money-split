@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { ensureUserProfile } from '@/services/groupRepository';
@@ -27,6 +33,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const isMountedRef = useRef(true);
+  const postSignInSyncTimeout = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
   const [
     requiresRecoveryPasswordChangeState,
     setRequiresRecoveryPasswordChange,
@@ -47,7 +57,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const queuePostSignInSync = (userId: string, source: string) => {
     // Supabase recommends avoiding async work directly inside onAuthStateChange.
-    setTimeout(() => {
+    if (postSignInSyncTimeout.current) {
+      clearTimeout(postSignInSyncTimeout.current);
+    }
+    postSignInSyncTimeout.current = setTimeout(() => {
+      if (!isMountedRef.current) {
+        return;
+      }
       (async () => {
         try {
           await ensureUserProfile();
@@ -77,7 +93,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    let isMounted = true;
+    isMountedRef.current = true;
 
     const initializeSession = async () => {
       try {
@@ -85,7 +101,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           data: { session },
         } = await supabase.auth.getSession();
 
-        if (!isMounted) {
+        if (!isMountedRef.current) {
           return;
         }
 
@@ -99,7 +115,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch (error) {
         console.error('Failed to restore auth session:', error);
 
-        if (!isMounted) {
+        if (!isMountedRef.current) {
           return;
         }
 
@@ -113,7 +129,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
-      if (!isMounted) {
+      if (!isMountedRef.current) {
         return;
       }
 
@@ -136,7 +152,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => {
-      isMounted = false;
+      isMountedRef.current = false;
+      if (postSignInSyncTimeout.current) {
+        clearTimeout(postSignInSyncTimeout.current);
+        postSignInSyncTimeout.current = null;
+      }
       subscription.unsubscribe();
     };
   }, []);
