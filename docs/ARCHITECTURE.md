@@ -51,7 +51,7 @@ This document describes the architecture of the MoneySplit application (React Na
 
 - The app bootstraps in `app/_layout.tsx`. `AuthProvider` from `contexts/AuthContext.tsx` wraps the app and subscribes to Supabase auth events.
 - Supabase client auth storage is platform-aware in `lib/supabase.ts`: native apps persist auth tokens in `expo-secure-store` (keychain/keystore-backed encrypted storage) and store the non-sensitive auth user payload in AsyncStorage (`userStorage`) to avoid SecureStore item size warnings; web uses browser storage and keeps URL session detection enabled.
-- On startup, `AuthProvider` calls `supabase.auth.getSession()`, applies the session to local state immediately, then queues profile/preference sync work (`ensureUserProfile()`, `syncUserPreferences()`) so session restoration is never blocked by background sync failures.
+- On startup, `AuthProvider` calls `supabase.auth.getSession()`, applies the session to local state immediately, restores `requiresRecoveryPasswordChange` from `user.user_metadata.recoveryPasswordMustChange`, then queues profile/preference sync work (`ensureUserProfile()`, `syncUserPreferences()`) so session restoration is never blocked by background sync failures.
 - The `onAuthStateChange` subscription keeps the callback synchronous and queues async sync work separately for `SIGNED_IN` events to avoid Supabase auth callback deadlocks.
 - Routing is guarded by `useSegments()` in `app/_layout.tsx`: unauthenticated users are forced to `app/auth.tsx` (with `app/password-recovery.tsx` available as a public route), authenticated users are redirected to the Groups tab.
 - `app/index.tsx` and `app/+not-found.tsx` are defensive launch routes that immediately redirect users to the correct authenticated/unauthenticated destination (`/(tabs)/groups`, `/recovery-password-change`, or `/auth`) so cold starts and stale route restores do not strand users on a not-found screen.
@@ -62,7 +62,7 @@ This document describes the architecture of the MoneySplit application (React Na
 - The `password-recovery` edge function stores a hashed recovery password in the `recovery_passwords` table (separate from the user's actual password) and emails the unhashed password to the user.
 - When a user signs in, `contexts/AuthContext.tsx` first attempts normal authentication. If that fails, it calls the `verify-recovery-password` edge function.
 - The `verify-recovery-password` edge function verifies the recovery password and, in the same request, sets a temporary internal password with service-role privileges.
-- The client signs in using that temporary password returned from the edge function.
+- The client signs in using that temporary password returned from the edge function, then persists `user_metadata.recoveryPasswordMustChange = true` via `supabase.auth.updateUser()` so forced password change survives app restarts/session hydration.
 - The user is then forced to navigate to `app/recovery-password-change.tsx` to set a new permanent password before accessing the app.
 - Authenticated users can also change their password from settings via `app/change-password.tsx`, which requires entering the current password before calling `supabase.auth.updateUser()`.
 
@@ -340,7 +340,7 @@ The UI uses a light, card-based aesthetic with consistent spacing and neutral gr
 
 - Forced screen shown after a successful recovery-password login.
 - Collects and validates a new permanent password, then calls `completeRecoveryPasswordChange()` from `contexts/AuthContext.tsx`.
-- Clears recovery metadata and unblocks access to the main tabs once the permanent password is saved.
+- Saves the permanent password and clears `user_metadata.recoveryPasswordMustChange`, unblocking access to the main tabs.
 
 ### Change password (`app/change-password.tsx`)
 

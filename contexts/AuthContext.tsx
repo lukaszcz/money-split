@@ -20,6 +20,8 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const RECOVERY_PASSWORD_CHANGE_REQUIRED_METADATA_KEY =
+  'recoveryPasswordMustChange';
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
@@ -33,6 +35,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const applySessionState = (nextSession: Session | null) => {
     setSession(nextSession);
     setUser(nextSession?.user ?? null);
+  };
+
+  const applyRecoveryPasswordRequirement = (nextUser: User | null) => {
+    setRequiresRecoveryPasswordChange(
+      nextUser?.user_metadata?.[
+        RECOVERY_PASSWORD_CHANGE_REQUIRED_METADATA_KEY
+      ] === true,
+    );
   };
 
   const queuePostSignInSync = (userId: string, source: string) => {
@@ -62,6 +72,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (refreshedUserData.user) {
       setUser(refreshedUserData.user);
+      applyRecoveryPasswordRequirement(refreshedUserData.user);
     }
   };
 
@@ -79,8 +90,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         applySessionState(session);
-        // Don't set requiresRecoveryPasswordChange on initial load
-        // It's only set during the signIn flow
+        applyRecoveryPasswordRequirement(session?.user ?? null);
         setLoading(false);
 
         if (session?.user) {
@@ -115,6 +125,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (event === 'SIGNED_OUT') {
         setRequiresRecoveryPasswordChange(false);
+      } else if (
+        event === 'INITIAL_SESSION' ||
+        event === 'TOKEN_REFRESHED' ||
+        event === 'USER_UPDATED' ||
+        event === 'PASSWORD_RECOVERY'
+      ) {
+        applyRecoveryPasswordRequirement(session?.user ?? null);
       }
     });
 
@@ -135,7 +152,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!signInError) {
       const { data: userData } = await supabase.auth.getUser();
       if (userData.user?.id) {
-        setRequiresRecoveryPasswordChange(false);
+        applyRecoveryPasswordRequirement(userData.user);
         const now = new Date().toISOString();
         await supabase
           .from('users')
@@ -198,7 +215,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       );
     }
 
-    // Mark that password change is required
+    const { error: metadataError } = await supabase.auth.updateUser({
+      data: {
+        [RECOVERY_PASSWORD_CHANGE_REQUIRED_METADATA_KEY]: true,
+      },
+    });
+
+    if (metadataError) {
+      console.error(
+        'Failed to mark account for required recovery password change:',
+        metadataError,
+      );
+      const { error: signOutError } = await supabase.auth.signOut();
+      if (signOutError) {
+        console.error(
+          'Failed to sign out after recovery metadata update failure:',
+          signOutError,
+        );
+      }
+      throw new Error(
+        'Unable to complete recovery sign-in. Please request a new recovery password.',
+      );
+    }
+
+    await refreshAuthUser('Recovery sign-in completed');
+    // Ensure the forced flow is enabled even if refreshed metadata is stale.
     setRequiresRecoveryPasswordChange(true);
 
     const { data: userData } = await supabase.auth.getUser();
@@ -215,6 +256,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const completeRecoveryPasswordChange = async (newPassword: string) => {
     const { error } = await supabase.auth.updateUser({
       password: newPassword,
+      data: {
+        [RECOVERY_PASSWORD_CHANGE_REQUIRED_METADATA_KEY]: false,
+      },
     });
 
     if (error) {

@@ -21,7 +21,7 @@ The MoneySplit test suite includes:
 - **Unit tests** for utilities and business logic (money math, settlement algorithms)
 - **Service tests** for data and edge-function access (groupRepository, exchangeRateService, authService), including RPC coverage for `getActivityFeed()` mapping and error handling
 - **Context tests** for React state management (AuthContext)
-- **Recovery auth-flow tests** for atomic recovery-password verification and temporary sign-in provisioning in `AuthContext`
+- **Recovery auth-flow tests** for atomic recovery-password verification, forced-password-change metadata persistence (`recoveryPasswordMustChange`), and sign-out fallback when metadata persistence fails in `AuthContext`
 - **Hook tests** for client hooks (currency order, framework ready)
 - **Component tests** for reusable UI components (BottomActionBar)
 - **Screen tests** for UI business logic (auth, groups, settings, password changes), including safe leave-vs-delete routing in edit-member flows

@@ -117,10 +117,11 @@ describe('AuthContext', () => {
       });
     });
 
-    it('should not mark existing session for forced password change on init', async () => {
+    it('should restore forced password change requirement from session metadata on init', async () => {
       const mockSession = createMockSession({
         id: 'user-123',
         email: 'test@example.com',
+        user_metadata: { recoveryPasswordMustChange: true },
       });
 
       mockSupabase.auth.getSession.mockResolvedValue({
@@ -137,8 +138,7 @@ describe('AuthContext', () => {
         expect(result.current.loading).toBe(false);
       });
 
-      // Recovery password change is only set during sign-in flow, not on init
-      expect(result.current.requiresRecoveryPasswordChange).toBe(false);
+      expect(result.current.requiresRecoveryPasswordChange).toBe(true);
     });
 
     it('should set loading false with no session', async () => {
@@ -352,6 +352,9 @@ describe('AuthContext', () => {
       );
 
       expect(mockSupabase.functions.invoke).toHaveBeenCalledTimes(1);
+      expect(mockSupabase.auth.updateUser).toHaveBeenCalledWith({
+        data: { recoveryPasswordMustChange: true },
+      });
 
       // Should have signed in twice (first fail, second success with temp password)
       expect(mockSupabase.auth.signInWithPassword).toHaveBeenCalledTimes(2);
@@ -393,6 +396,65 @@ describe('AuthContext', () => {
       ).rejects.toThrow(
         'Unable to complete recovery sign-in. Please request a new recovery password.',
       );
+    });
+
+    it('should throw when recovery metadata persistence fails', async () => {
+      const errorSpy = jest
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
+
+      mockSupabase.auth.getSession.mockResolvedValue({
+        data: { session: null },
+        error: null,
+      });
+
+      mockSupabase.auth.signInWithPassword.mockResolvedValueOnce({
+        data: { user: null, session: null },
+        error: new Error('Invalid credentials'),
+      });
+
+      mockSupabase.functions.invoke.mockResolvedValueOnce({
+        data: {
+          isRecoveryPassword: true,
+          temporaryPassword: 'server-generated-temporary-password',
+        },
+        error: null,
+      });
+
+      mockSupabase.auth.signInWithPassword.mockResolvedValueOnce({
+        data: {
+          user: createMockUser({ id: 'user-123', email: 'test@example.com' }),
+          session: createMockSession({
+            id: 'user-123',
+            email: 'test@example.com',
+          }),
+        },
+        error: null,
+      });
+
+      mockSupabase.auth.updateUser.mockResolvedValueOnce({
+        data: { user: null },
+        error: new Error('Unable to update metadata'),
+      });
+
+      const { useAuth } = require('../../contexts/AuthContext');
+      const { result } = renderHook(() => useAuth(), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      await expect(
+        act(async () => {
+          await result.current.signIn('test@example.com', 'recovery-password');
+        }),
+      ).rejects.toThrow(
+        'Unable to complete recovery sign-in. Please request a new recovery password.',
+      );
+
+      errorSpy.mockRestore();
     });
 
     it('should throw expired error when recovery password is expired', async () => {
@@ -468,6 +530,7 @@ describe('AuthContext', () => {
 
       expect(mockSupabase.auth.updateUser).toHaveBeenCalledWith({
         password: 'new-password-123',
+        data: { recoveryPasswordMustChange: false },
       });
       expect(result.current.requiresRecoveryPasswordChange).toBe(false);
     });
@@ -497,7 +560,7 @@ describe('AuthContext', () => {
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
       });
-      expect(result.current.requiresRecoveryPasswordChange).toBe(false);
+      expect(result.current.requiresRecoveryPasswordChange).toBe(true);
 
       await expect(
         act(async () => {
@@ -506,7 +569,7 @@ describe('AuthContext', () => {
           );
         }),
       ).rejects.toThrow('Unable to update password');
-      expect(result.current.requiresRecoveryPasswordChange).toBe(false);
+      expect(result.current.requiresRecoveryPasswordChange).toBe(true);
     });
   });
 
