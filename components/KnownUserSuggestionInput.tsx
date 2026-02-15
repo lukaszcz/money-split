@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -45,6 +45,14 @@ export function KnownUserSuggestionInput({
   );
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isNameInputFocused, setIsNameInputFocused] = useState(false);
+  const hideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearHideTimeout = useCallback(() => {
+    if (hideTimeoutRef.current !== null) {
+      clearTimeout(hideTimeoutRef.current);
+      hideTimeoutRef.current = null;
+    }
+  }, []);
 
   const filterSuggestions = useCallback(
     (text: string) => {
@@ -101,6 +109,12 @@ export function KnownUserSuggestionInput({
     }
   }, [disabled, loading]);
 
+  useEffect(() => {
+    return () => {
+      clearHideTimeout();
+    };
+  }, [clearHideTimeout]);
+
   const handleNameChange = (text: string) => {
     if (disabled || loading) {
       return;
@@ -154,10 +168,15 @@ export function KnownUserSuggestionInput({
           onBlur={() => {
             setIsNameInputFocused(false);
             // Delay hiding suggestions to allow tap to register
-            setTimeout(() => setShowSuggestions(false), 200);
+            clearHideTimeout();
+            hideTimeoutRef.current = setTimeout(() => {
+              setShowSuggestions(false);
+              hideTimeoutRef.current = null;
+            }, 200);
             onNameBlur?.(nameValue);
           }}
           onFocus={() => {
+            clearHideTimeout();
             if (!disabled && !loading) {
               setIsNameInputFocused(true);
               filterSuggestions(nameValue);
