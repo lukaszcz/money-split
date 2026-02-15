@@ -211,7 +211,7 @@ export function KnownUserSuggestionInput({
           style={[styles.input, hasDuplicateEmail && styles.inputError]}
           value={emailValue}
           onChangeText={onEmailChange}
-          editable={!disabled}
+          editable={!disabled && !loading}
           onBlur={() => onEmailBlur?.(emailValue)}
           placeholder="member@example.com"
           placeholderTextColor="#9ca3af"
