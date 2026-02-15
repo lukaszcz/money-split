@@ -25,7 +25,8 @@ The table contains these key columns:
 ## Constraints and Indexes
 
 - Partial unique index `idx_group_members_unique_connected_user` enforces one non-null `connected_user_id` per group (`group_id`, `connected_user_id` where `connected_user_id IS NOT NULL`).
-- Migration `20260215173237_add_unique_connected_user_id_to_group_members.sql` also defines `idx_group_members_unique_email` as a partial unique index on (`group_id`, `connected_user_id`) where `email IS NOT NULL`.
+- Partial unique index `idx_group_members_unique_email` enforces one non-null `email` per group (`group_id`, `email` where `email IS NOT NULL`).
+- Migration `20260215173237_add_unique_connected_user_id_to_group_members.sql` introduced the index name and migration `20260215210837_fix_group_members_unique_email_index.sql` corrected its indexed columns to match the intended constraint.
 
 ## RLS Policies
 

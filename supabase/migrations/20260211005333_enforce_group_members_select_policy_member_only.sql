@@ -13,16 +13,16 @@
   - Use `(select auth.uid())` in the predicate to avoid per-row re-evaluation.
 */
 
-DROP POLICY IF EXISTS "Users can view group members" ON public.group_members
-DROP POLICY IF EXISTS "Users can view members matching their email" ON public.group_members
-DROP POLICY IF EXISTS "Users can view members of groups they belong to" ON public.group_members
-DROP POLICY IF EXISTS "Users can view members of their groups" ON public.group_members
-DROP POLICY IF EXISTS "Users can read members of their groups" ON public.group_members
-DROP POLICY IF EXISTS "Allow public read on group_members" ON public.group_members
+DROP POLICY IF EXISTS "Users can view group members" ON public.group_members;
+DROP POLICY IF EXISTS "Users can view members matching their email" ON public.group_members;
+DROP POLICY IF EXISTS "Users can view members of groups they belong to" ON public.group_members;
+DROP POLICY IF EXISTS "Users can view members of their groups" ON public.group_members;
+DROP POLICY IF EXISTS "Users can read members of their groups" ON public.group_members;
+DROP POLICY IF EXISTS "Allow public read on group_members" ON public.group_members;
 CREATE POLICY "Users can view group members"
   ON public.group_members
   FOR SELECT
   TO authenticated
   USING (
     public.user_is_group_member((select auth.uid()), group_id)
-  )
+  );

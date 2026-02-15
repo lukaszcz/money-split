@@ -109,6 +109,7 @@ The canonical schema is defined by the SQL migrations under `supabase/migrations
 - Columns: `id`, `group_id`, `name`, `email`, `connected_user_id`, `created_at`.
 - Supports members that are not yet connected to an auth user (email-based invitations).
 - A partial unique index enforces one non-null `connected_user_id` per group (`idx_group_members_unique_connected_user`).
+- A partial unique index enforces one non-null `email` per group (`idx_group_members_unique_email`).
 - Connection logic is handled in `ensureUserProfile()` which calls the `connect-user-to-groups` edge function to bypass RLS policies (`services/groupRepository.ts`).
 
 ### expenses
