@@ -19,11 +19,11 @@ import {
   getUserByEmail,
   sendInvitationEmail,
   ensureUserProfile,
-  getKnownUsers,
   KnownUser,
 } from '../services/groupRepository';
 import { useCurrencyOrder } from '../hooks/useCurrencyOrder';
 import { isValidEmail, isDuplicateMemberName } from '../utils/validation';
+import { KnownUserSuggestionInput } from '../components/KnownUserSuggestionInput';
 
 interface PendingMember {
   id: string;
@@ -41,11 +41,6 @@ export default function CreateGroupScreen() {
   const [newMemberName, setNewMemberName] = useState('');
   const [newMemberEmail, setNewMemberEmail] = useState('');
   const [currentUserName, setCurrentUserName] = useState('');
-  const [knownUsers, setKnownUsers] = useState<KnownUser[]>([]);
-  const [filteredSuggestions, setFilteredSuggestions] = useState<KnownUser[]>(
-    [],
-  );
-  const [showSuggestions, setShowSuggestions] = useState(false);
   const [currentUserLoading, setCurrentUserLoading] = useState(true);
   const [hasDuplicateName, setHasDuplicateName] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -69,15 +64,9 @@ export default function CreateGroupScreen() {
     return userProfile?.name ?? '';
   }, []);
 
-  const loadKnownUsers = useCallback(async () => {
-    const users = await getKnownUsers();
-    setKnownUsers(users);
-  }, []);
-
   useEffect(() => {
     loadCurrentUser();
-    loadKnownUsers();
-  }, [loadCurrentUser, loadKnownUsers]);
+  }, [loadCurrentUser]);
 
   useEffect(() => {
     if (!currenciesLoading && orderedCurrencies.length > 0 && !mainCurrency) {
@@ -102,34 +91,12 @@ export default function CreateGroupScreen() {
     return isDuplicate;
   };
 
-  const filterSuggestions = (text: string) => {
-    if (!text || text.length < 2) {
-      setFilteredSuggestions([]);
-      setShowSuggestions(false);
-      return;
-    }
-
-    const searchText = text.toLowerCase().trim();
-    const filtered = knownUsers.filter(
-      (user) =>
-        user.name.toLowerCase().includes(searchText) ||
-        (user.email && user.email.toLowerCase().includes(searchText)),
-    );
-
-    setFilteredSuggestions(filtered);
-    setShowSuggestions(filtered.length > 0);
-  };
-
   const handleSelectSuggestion = (user: KnownUser) => {
-    setNewMemberName(user.name);
-    setNewMemberEmail(user.email || '');
-    setShowSuggestions(false);
-    setFilteredSuggestions([]);
+    checkForDuplicateName(user.name);
   };
 
   const handleMemberNameChange = (text: string) => {
     setNewMemberName(text);
-    filterSuggestions(text);
     checkForDuplicateName(text);
   };
 
@@ -388,81 +355,25 @@ export default function CreateGroupScreen() {
 
               {showAddMember && (
                 <View style={styles.addMemberForm}>
-                  <Text style={styles.formLabel}>Name</Text>
-                  <TextInput
-                    style={[
-                      styles.input,
-                      hasDuplicateName && styles.inputError,
-                    ]}
-                    value={newMemberName}
-                    onChangeText={handleMemberNameChange}
-                    onBlur={() => {
-                      setNewMemberName((name) => name.trim());
-                      setTimeout(() => setShowSuggestions(false), 200);
+                  <KnownUserSuggestionInput
+                    nameValue={newMemberName}
+                    onNameChange={handleMemberNameChange}
+                    emailValue={newMemberEmail}
+                    onEmailChange={setNewMemberEmail}
+                    onSelectUser={handleSelectSuggestion}
+                    hasDuplicateName={hasDuplicateName}
+                    onNameBlur={(value) => {
+                      const trimmedName = value.trim();
+                      setNewMemberName(trimmedName);
+                      checkForDuplicateName(trimmedName);
                     }}
-                    onFocus={() => {
-                      if (newMemberName && filteredSuggestions.length > 0) {
-                        setShowSuggestions(true);
-                      }
-                    }}
-                    placeholder="Member name"
-                    placeholderTextColor="#9ca3af"
-                    editable={!controlsDisabled}
-                  />
-                  {showSuggestions && filteredSuggestions.length > 0 && (
-                    <View style={styles.suggestionsContainer}>
-                      <ScrollView
-                        style={styles.suggestionsList}
-                        keyboardShouldPersistTaps="handled"
-                        nestedScrollEnabled
-                      >
-                        {filteredSuggestions.map((user) => (
-                          <TouchableOpacity
-                            key={user.id}
-                            style={styles.suggestionItem}
-                            onPress={() => handleSelectSuggestion(user)}
-                          >
-                            <View style={styles.suggestionContent}>
-                              <User
-                                size={16}
-                                color="#6b7280"
-                                style={styles.suggestionIcon}
-                              />
-                              <View style={styles.suggestionText}>
-                                <Text style={styles.suggestionName}>
-                                  {user.name}
-                                </Text>
-                                {user.email && (
-                                  <Text style={styles.suggestionEmail}>
-                                    {user.email}
-                                  </Text>
-                                )}
-                              </View>
-                            </View>
-                          </TouchableOpacity>
-                        ))}
-                      </ScrollView>
-                    </View>
-                  )}
-
-                  <Text style={[styles.formLabel, styles.formLabelSpaced]}>
-                    Email (optional)
-                  </Text>
-                  <TextInput
-                    style={styles.input}
-                    value={newMemberEmail}
-                    onChangeText={setNewMemberEmail}
-                    onBlur={() => setNewMemberEmail((email) => email.trim())}
-                    placeholder="member@example.com"
-                    placeholderTextColor="#9ca3af"
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    editable={!controlsDisabled}
+                    onEmailBlur={(value) => setNewMemberEmail(value.trim())}
+                    disabled={addMemberControlsDisabled}
                   />
 
                   <Text style={styles.formHint}>
-                    Start typing to see suggestions from users you&#39;ve shared
-                    groups with
+                    Tap the name field to see suggestions from users you&#39;ve
+                    shared groups with
                   </Text>
 
                   <View style={styles.formButtons}>
@@ -472,8 +383,6 @@ export default function CreateGroupScreen() {
                         setShowAddMember(false);
                         setNewMemberName('');
                         setNewMemberEmail('');
-                        setShowSuggestions(false);
-                        setFilteredSuggestions([]);
                       }}
                     >
                       <Text style={styles.formCancelButtonText}>Cancel</Text>
@@ -709,15 +618,6 @@ const styles = StyleSheet.create({
     borderColor: '#e5e7eb',
     marginTop: 8,
   },
-  formLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#374151',
-    marginBottom: 6,
-  },
-  formLabelSpaced: {
-    marginTop: 12,
-  },
   formHint: {
     fontSize: 12,
     color: '#6b7280',
@@ -761,46 +661,6 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     textAlign: 'center',
     paddingVertical: 16,
-  },
-  suggestionsContainer: {
-    backgroundColor: '#ffffff',
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderTopWidth: 0,
-    borderBottomLeftRadius: 8,
-    borderBottomRightRadius: 8,
-    maxHeight: 150,
-    marginTop: -8,
-    marginBottom: 8,
-  },
-  suggestionsList: {
-    flexGrow: 0,
-  },
-  suggestionItem: {
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
-  },
-  suggestionContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  suggestionIcon: {
-    marginRight: 10,
-  },
-  suggestionText: {
-    flex: 1,
-  },
-  suggestionName: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#111827',
-    marginBottom: 2,
-  },
-  suggestionEmail: {
-    fontSize: 12,
-    color: '#6b7280',
   },
   footer: {
     padding: 16,

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -39,16 +39,33 @@ export function KnownUserSuggestionInput({
   disabled = false,
 }: KnownUserSuggestionInputProps) {
   const [knownUsers, setKnownUsers] = useState<KnownUser[]>([]);
+  const [loading, setLoading] = useState(true);
   const [filteredSuggestions, setFilteredSuggestions] = useState<KnownUser[]>(
     [],
   );
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isNameInputFocused, setIsNameInputFocused] = useState(false);
+  const hideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearHideTimeout = useCallback(() => {
+    if (hideTimeoutRef.current !== null) {
+      clearTimeout(hideTimeoutRef.current);
+      hideTimeoutRef.current = null;
+    }
+  }, []);
 
   const filterSuggestions = useCallback(
     (text: string) => {
-      if (!text || text.length < 2) {
+      if (loading) {
         setFilteredSuggestions([]);
         setShowSuggestions(false);
+        return;
+      }
+
+      // If no text, show all known users
+      if (!text) {
+        setFilteredSuggestions(knownUsers);
+        setShowSuggestions(knownUsers.length > 0);
         return;
       }
 
@@ -62,12 +79,18 @@ export function KnownUserSuggestionInput({
       setFilteredSuggestions(filtered);
       setShowSuggestions(filtered.length > 0);
     },
-    [knownUsers],
+    [knownUsers, loading],
   );
 
   const loadKnownUsers = useCallback(async () => {
-    const users = await getKnownUsers();
-    setKnownUsers(users);
+    setLoading(true);
+
+    try {
+      const users = await getKnownUsers();
+      setKnownUsers(users);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -75,19 +98,25 @@ export function KnownUserSuggestionInput({
   }, [loadKnownUsers]);
 
   useEffect(() => {
-    if (nameValue) {
+    if (!disabled && !loading && isNameInputFocused) {
       filterSuggestions(nameValue);
     }
-  }, [filterSuggestions, nameValue]);
+  }, [disabled, filterSuggestions, isNameInputFocused, loading, nameValue]);
 
   useEffect(() => {
-    if (disabled) {
+    if (disabled || loading) {
       setShowSuggestions(false);
     }
-  }, [disabled]);
+  }, [disabled, loading]);
+
+  useEffect(() => {
+    return () => {
+      clearHideTimeout();
+    };
+  }, [clearHideTimeout]);
 
   const handleNameChange = (text: string) => {
-    if (disabled) {
+    if (disabled || loading) {
       return;
     }
 
@@ -96,7 +125,7 @@ export function KnownUserSuggestionInput({
   };
 
   const handleSelectSuggestion = (user: KnownUser) => {
-    if (disabled) {
+    if (disabled || loading) {
       return;
     }
 
@@ -112,7 +141,7 @@ export function KnownUserSuggestionInput({
     <TouchableOpacity
       style={styles.suggestionItem}
       onPress={() => handleSelectSuggestion(user)}
-      disabled={disabled}
+      disabled={disabled || loading}
     >
       <View style={styles.suggestionContent}>
         <User size={18} color="#6b7280" style={styles.suggestionIcon} />
@@ -135,15 +164,22 @@ export function KnownUserSuggestionInput({
           style={[styles.input, hasDuplicateName && styles.inputError]}
           value={nameValue}
           onChangeText={handleNameChange}
-          editable={!disabled}
+          editable={!disabled && !loading}
           onBlur={() => {
+            setIsNameInputFocused(false);
             // Delay hiding suggestions to allow tap to register
-            setTimeout(() => setShowSuggestions(false), 200);
+            clearHideTimeout();
+            hideTimeoutRef.current = setTimeout(() => {
+              setShowSuggestions(false);
+              hideTimeoutRef.current = null;
+            }, 200);
             onNameBlur?.(nameValue);
           }}
           onFocus={() => {
-            if (!disabled && nameValue && filteredSuggestions.length > 0) {
-              setShowSuggestions(true);
+            clearHideTimeout();
+            if (!disabled && !loading) {
+              setIsNameInputFocused(true);
+              filterSuggestions(nameValue);
             }
           }}
           placeholder="Member name"
@@ -164,10 +200,6 @@ export function KnownUserSuggestionInput({
             </ScrollView>
           </View>
         )}
-        <Text style={styles.hint}>
-          Start typing to see suggestions from users you{"'"}ve shared groups
-          with
-        </Text>
       </View>
 
       <View style={styles.section}>
@@ -184,10 +216,6 @@ export function KnownUserSuggestionInput({
           keyboardType="email-address"
           autoCapitalize="none"
         />
-        <Text style={styles.hint}>
-          If provided, the member will be connected to their account when they
-          register
-        </Text>
       </View>
     </View>
   );
@@ -218,12 +246,6 @@ const styles = StyleSheet.create({
   inputError: {
     borderColor: '#ef4444',
     borderWidth: 2,
-  },
-  hint: {
-    fontSize: 13,
-    color: '#6b7280',
-    marginTop: 8,
-    lineHeight: 18,
   },
   suggestionsContainer: {
     backgroundColor: '#ffffff',
