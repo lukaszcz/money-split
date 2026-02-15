@@ -551,7 +551,10 @@ describe('utils/validation - isDuplicateMemberEmail', () => {
 
   it('should return false when email is undefined', () => {
     expect(
-      isDuplicateMemberEmail(undefined, ['alice@example.com', 'bob@example.com']),
+      isDuplicateMemberEmail(undefined, [
+        'alice@example.com',
+        'bob@example.com',
+      ]),
     ).toBe(false);
   });
 

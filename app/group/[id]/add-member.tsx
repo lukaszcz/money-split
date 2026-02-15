@@ -162,7 +162,10 @@ export default function AddMemberScreen() {
       let connectedUserId: string | undefined;
 
       // Check for duplicate email first (before checking user existence)
-      if (memberEmail && isDuplicateMemberEmail(memberEmail, currentMemberEmails)) {
+      if (
+        memberEmail &&
+        isDuplicateMemberEmail(memberEmail, currentMemberEmails)
+      ) {
         setHasDuplicateEmail(true);
         Alert.alert(
           'Duplicate Email',

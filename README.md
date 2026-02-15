@@ -92,11 +92,3 @@ Testing with Expo Go is very close but not identical to running the app on a dev
 1. Install Xcode with iOS Simulator
 2. `sudo xcode-select -s /Applications/Xcode.app/Contents/Developer`
 3. `npx expo run:ios`
-
-## Usage
-
-1. **Create a group**: Add members and set the main currency
-2. **Add expenses**: Enter amount, currency, payer, and participants
-3. **Choose split method**: Equal, percentage, or exact amounts
-4. **View balances**: See who owes/is owed in the group
-5. **Settle up**: Get transfer instructions (optionally simplified)
