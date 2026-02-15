@@ -91,7 +91,7 @@ The canonical schema is defined by the SQL migrations under `supabase/migrations
 ### users
 
 - Table: `public.users`
-- Columns: `id`, `name`, `email`, `created_at`, `last_login`.
+- Columns: `id`, `name`, `email` (`citext`, normalized to lowercase/trimmed on write), `created_at`, `last_login`.
 - Description: Profile records for authenticated users, mirrored from Supabase Auth.
 - Used by `ensureUserProfile()` and profile updates (`services/groupRepository.ts`).
 
@@ -106,10 +106,10 @@ The canonical schema is defined by the SQL migrations under `supabase/migrations
 
 - Description: Membership roster for each group, including invited members not yet linked to a user.
 - Table: `public.group_members`
-- Columns: `id`, `group_id`, `name`, `email`, `connected_user_id`, `created_at`.
+- Columns: `id`, `group_id`, `name`, `email` (`citext`, normalized to lowercase/trimmed on write), `connected_user_id`, `created_at`.
 - Supports members that are not yet connected to an auth user (email-based invitations).
 - A partial unique index enforces one non-null `connected_user_id` per group (`idx_group_members_unique_connected_user`).
-- A partial unique index enforces one non-null `email` per group (`idx_group_members_unique_email`).
+- A partial unique index enforces one non-null normalized `email` per group (`idx_group_members_unique_email`), case-insensitively.
 - Connection logic is handled in `ensureUserProfile()` which calls the `connect-user-to-groups` edge function to bypass RLS policies (`services/groupRepository.ts`).
 
 ### expenses
@@ -256,6 +256,7 @@ Relevant files:
 - Triggered from `createGroup()` in `services/groupRepository.ts`.
 - Creates a new group with the creator as the first member using service role (bypasses RLS).
 - Also adds any additional initial members provided.
+- Normalizes member and profile emails before querying or storing them.
 - This edge function is required because direct client `INSERT` into `groups` is disallowed and `group_members` INSERT RLS only allows existing members to add new members.
 
 ### send-invitation
@@ -281,6 +282,7 @@ Relevant files:
 - File: `supabase/functions/connect-user-to-groups/index.ts`.
 - Triggered from `ensureUserProfile()` in `services/groupRepository.ts` when a user signs up or signs in for the first time.
 - Uses the service role key to bypass RLS policies and connect the user to all `group_members` rows with matching email and NULL `connected_user_id`.
+- Normalizes the authenticated email before matching against `group_members.email`.
 - Calls the `update-known-users` edge function for each connected member to maintain bidirectional known user relationships.
 - Returns the count of groups the user was connected to.
 
@@ -305,6 +307,7 @@ Relevant files:
 - Triggered from `requestPasswordRecovery()` in `services/authService.ts`.
 - Generates a one-time recovery password, bcrypt-hashes it, and stores it in the `recovery_passwords` table.
 - Sends the unhashed password via Resend email.
+- Normalizes the request email before looking up `public.users`.
 - Prevents duplicate requests: if an unexpired recovery password already exists for the user, returns success without creating a new one.
 - Returns a generic success response regardless of whether the user exists (prevents email enumeration attacks).
 - If email sending fails, the recovery password is deleted from the database to maintain consistency.
@@ -314,6 +317,7 @@ Relevant files:
 - File: `supabase/functions/verify-recovery-password/index.ts`.
 - Triggered from `signIn()` in `contexts/AuthContext.tsx` when normal authentication fails.
 - Checks if the provided password matches a recovery password in the `recovery_passwords` table.
+- Normalizes the request email before looking up `public.users`.
 - Verifies the password using bcrypt comparison.
 - Checks if the recovery password has expired; if so, deletes it and returns `expired: true`.
 - If verification succeeds, consumes the recovery password (one-time use), sets a temporary internal password using the admin API, and returns `isRecoveryPassword: true` with that temporary password.

@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/AuthContext';
 import { type Href, router } from 'expo-router';
 import { isValidEmail } from '@/utils/validation';
+import { normalizeEmail } from '@/utils/email';
 
 export default function AuthScreen() {
   const [isLogin, setIsLogin] = useState(true);
@@ -31,15 +32,15 @@ export default function AuthScreen() {
       return;
     }
 
-    const trimmedEmail = email.trim();
+    const normalizedEmail = normalizeEmail(email);
     const trimmedName = name.trim();
 
-    if (!trimmedEmail || !password) {
+    if (!normalizedEmail || !password) {
       setError('Please enter both email and password');
       return;
     }
 
-    if (!isValidEmail(trimmedEmail)) {
+    if (!isValidEmail(normalizedEmail)) {
       setError('Please enter a valid email address');
       return;
     }
@@ -55,7 +56,7 @@ export default function AuthScreen() {
 
     if (isLogin) {
       try {
-        await signIn(trimmedEmail, password);
+        await signIn(normalizedEmail, password);
         router.replace('/(tabs)/groups');
       } catch (err: any) {
         setError(err.message || 'An error occurred');
@@ -66,11 +67,11 @@ export default function AuthScreen() {
     }
 
     try {
-      await signUp(trimmedEmail, password, trimmedName);
+      await signUp(normalizedEmail, password, trimmedName);
       setIsLogin(true);
       setName('');
       setPassword('');
-      setEmail(trimmedEmail);
+      setEmail(normalizedEmail);
       setInfo('Check your email and confirm your address before signing in.');
     } catch (err: any) {
       setError(err.message || 'An error occurred');
@@ -120,7 +121,7 @@ export default function AuthScreen() {
               placeholderTextColor="#999"
               value={email}
               onChangeText={setEmail}
-              onBlur={() => setEmail((email1) => email1.trim())}
+              onBlur={() => setEmail((email1) => normalizeEmail(email1) ?? '')}
               autoCapitalize="none"
               keyboardType="email-address"
               autoComplete="email"

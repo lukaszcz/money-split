@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { isValidEmail } from '@/utils/validation';
 import { requestPasswordRecovery } from '@/services/authService';
+import { normalizeEmail } from '@/utils/email';
 
 export default function PasswordRecoveryScreen() {
   const [email, setEmail] = useState('');
@@ -26,14 +27,14 @@ export default function PasswordRecoveryScreen() {
       return;
     }
 
-    const trimmedEmail = email.trim();
+    const normalizedEmail = normalizeEmail(email);
 
-    if (!trimmedEmail) {
+    if (!normalizedEmail) {
       setError('Please enter your email address');
       return;
     }
 
-    if (!isValidEmail(trimmedEmail)) {
+    if (!isValidEmail(normalizedEmail)) {
       setError('Please enter a valid email address');
       return;
     }
@@ -43,7 +44,8 @@ export default function PasswordRecoveryScreen() {
     setSuccessMessage('');
 
     try {
-      await requestPasswordRecovery(trimmedEmail);
+      await requestPasswordRecovery(normalizedEmail);
+      setEmail(normalizedEmail);
       setSuccessMessage(
         'Recovery email sent. Check your inbox for a one-time password valid for 5 minutes.',
       );
@@ -74,7 +76,7 @@ export default function PasswordRecoveryScreen() {
               placeholderTextColor="#999"
               value={email}
               onChangeText={setEmail}
-              onBlur={() => setEmail((email1) => email1.trim())}
+              onBlur={() => setEmail((email1) => normalizeEmail(email1) ?? '')}
               autoCapitalize="none"
               keyboardType="email-address"
               autoComplete="email"

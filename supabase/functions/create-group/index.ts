@@ -1,5 +1,6 @@
 import 'jsr:@supabase/functions-js@2/edge-runtime.d.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.58.0';
+import { normalizeEmail } from '../_shared/email.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -123,13 +124,14 @@ Deno.serve(async (req: Request) => {
     // If user profile doesn't exist, create it
     let finalUserProfile = userProfile;
     if (!userProfile) {
+      const normalizedAuthEmail = normalizeEmail(user.email);
       const { data: newProfile, error: createProfileError } =
         await supabaseAdmin
           .from('users')
           .insert({
             id: user.id,
             name: user.email?.split('@')[0] || 'User',
-            email: user.email || null,
+            email: normalizedAuthEmail,
           })
           .select()
           .single();
@@ -180,7 +182,7 @@ Deno.serve(async (req: Request) => {
       .insert({
         group_id: groupId,
         name: finalUserProfile.name,
-        email: finalUserProfile.email || null,
+        email: normalizeEmail(finalUserProfile.email),
         connected_user_id: user.id,
       })
       .select()
@@ -213,14 +215,15 @@ Deno.serve(async (req: Request) => {
 
     // Add initial members
     for (const member of initialMembers || []) {
+      const memberEmail = normalizeEmail(member.email);
       let connectedUserId: string | undefined;
 
       // Check if user with this email already exists
-      if (member.email) {
+      if (memberEmail) {
         const { data: existingUser } = await supabaseAdmin
           .from('users')
           .select('id')
-          .eq('email', member.email)
+          .eq('email', memberEmail)
           .maybeSingle();
 
         if (existingUser) {
@@ -229,14 +232,14 @@ Deno.serve(async (req: Request) => {
       }
 
       const memberName =
-        member.name || (member.email ? member.email.split('@')[0] : 'Unknown');
+        member.name || (memberEmail ? memberEmail.split('@')[0] : 'Unknown');
 
       const { data: newMember, error: memberError } = await supabaseAdmin
         .from('group_members')
         .insert({
           group_id: groupId,
           name: memberName,
-          email: member.email || null,
+          email: memberEmail,
           connected_user_id: connectedUserId || null,
         })
         .select()

@@ -17,7 +17,7 @@ The table contains these key columns:
 
 - **id** - User ID (matches `auth.users.id`)
 - **name** - Display name used throughout the UI
-- **email** - Email address (nullable but typically present)
+- **email** - `citext` email address (nullable but typically present, normalized to lowercase and trimmed on write)
 - **created_at** - Profile creation timestamp
 - **last_login** - Last sign-in timestamp (nullable)
 
@@ -62,6 +62,7 @@ See also: [group_members](group_members.md), [user_currency_preferences](user_cu
 **Auth Mirror:** The ID is identical to Supabase Auth users (`auth.users.id`).
 
 **Email Matching:** Connection to `group_members` uses email matching for invitations and auto-reconnect.
+Email values are normalized and stored as `citext` (see migration `20260215213711_convert_emails_to_citext_and_normalize.sql`) so matching is case-insensitive.
 
 **Account Deletion:** The delete-user edge function removes the public profile and the auth user record.
 

@@ -18,15 +18,15 @@ The table contains these key columns:
 - **id** - Unique identifier for the member record
 - **group_id** - Links to the parent group
 - **name** - Display name within the group
-- **email** - Optional email used for invitations and connection
+- **email** - Optional `citext` email used for invitations and connection (normalized to lowercase and trimmed on write)
 - **connected_user_id** - Optional link to a `users` profile
 - **created_at** - Timestamp when the member was added
 
 ## Constraints and Indexes
 
 - Partial unique index `idx_group_members_unique_connected_user` enforces one non-null `connected_user_id` per group (`group_id`, `connected_user_id` where `connected_user_id IS NOT NULL`).
-- Partial unique index `idx_group_members_unique_email` enforces one non-null `email` per group (`group_id`, `email` where `email IS NOT NULL`).
-- Migration `20260215173237_add_unique_connected_user_id_to_group_members.sql` introduced the index name and migration `20260215210837_fix_group_members_unique_email_index.sql` corrected its indexed columns to match the intended constraint.
+- Partial unique index `idx_group_members_unique_email` enforces one non-null normalized `email` per group (`group_id`, `email` where `email IS NOT NULL`), case-insensitively.
+- Migration `20260215173237_add_unique_connected_user_id_to_group_members.sql` introduced the index name, migration `20260215210837_fix_group_members_unique_email_index.sql` corrected its indexed columns, and migration `20260215213711_convert_emails_to_citext_and_normalize.sql` made the email uniqueness case-insensitive.
 
 ## RLS Policies
 

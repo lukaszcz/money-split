@@ -1,6 +1,7 @@
 import 'jsr:@supabase/functions-js@2/edge-runtime.d.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.58.0';
 import bcrypt from 'npm:bcryptjs@2.4.3';
+import { normalizeEmail } from '../_shared/email.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -41,8 +42,9 @@ Deno.serve(async (req: Request) => {
 
   try {
     const { email, password }: VerifyRecoveryPasswordRequest = await req.json();
+    const normalizedEmail = normalizeEmail(email);
 
-    if (!email || !password) {
+    if (!normalizedEmail || !password) {
       return new Response(
         JSON.stringify({ error: 'Missing email or password' }),
         {
@@ -77,7 +79,7 @@ Deno.serve(async (req: Request) => {
     const { data: publicUser, error: publicUserError } = await supabaseClient
       .from('users')
       .select('id')
-      .eq('email', email)
+      .eq('email', normalizedEmail)
       .maybeSingle();
 
     if (publicUserError || !publicUser) {

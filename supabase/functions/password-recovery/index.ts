@@ -2,6 +2,7 @@ import 'jsr:@supabase/functions-js@2/edge-runtime.d.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.58.0';
 import { Resend } from 'npm:resend@4.0.0';
 import bcrypt from 'npm:bcryptjs@2.4.3';
+import { normalizeEmail } from '../_shared/email.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -51,8 +52,9 @@ Deno.serve(async (req: Request) => {
 
   try {
     const { email }: PasswordRecoveryRequest = await req.json();
+    const normalizedEmail = normalizeEmail(email);
 
-    if (!email) {
+    if (!normalizedEmail) {
       return new Response(JSON.stringify({ error: 'Missing email' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -84,7 +86,7 @@ Deno.serve(async (req: Request) => {
     const { data: publicUser, error: publicUserError } = await supabaseClient
       .from('users')
       .select('id')
-      .eq('email', email)
+      .eq('email', normalizedEmail)
       .single();
 
     if (publicUserError || !publicUser) {
@@ -218,7 +220,7 @@ Deno.serve(async (req: Request) => {
     // Send the recovery password via email
     const { error: emailError } = await resend.emails.send({
       from: 'moneysplit@moneysplit.polapp.pl',
-      to: email,
+      to: normalizedEmail,
       subject: 'Your MoneySplit recovery password',
       html: emailHtml,
     });
