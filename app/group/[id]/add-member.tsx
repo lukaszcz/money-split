@@ -20,7 +20,11 @@ import {
   getGroupMembers,
   KnownUser,
 } from '../../../services/groupRepository';
-import { isValidEmail, isDuplicateMemberName } from '../../../utils/validation';
+import {
+  isValidEmail,
+  isDuplicateMemberName,
+  isDuplicateMemberEmail,
+} from '../../../utils/validation';
 import { KnownUserSuggestionInput } from '../../../components/KnownUserSuggestionInput';
 
 export default function AddMemberScreen() {
@@ -30,14 +34,18 @@ export default function AddMemberScreen() {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [existingMemberNames, setExistingMemberNames] = useState<string[]>([]);
+  const [existingMemberEmails, setExistingMemberEmails] = useState<
+    (string | undefined)[]
+  >([]);
   const [hasDuplicateName, setHasDuplicateName] = useState(false);
+  const [hasDuplicateEmail, setHasDuplicateEmail] = useState(false);
   const [membersLoading, setMembersLoading] = useState(false);
   const [membersLoaded, setMembersLoaded] = useState(false);
   const [membersLoadError, setMembersLoadError] = useState(false);
   const controlsDisabled = loading || membersLoading;
 
   const loadExistingMembers = useCallback(async () => {
-    if (!id || typeof id !== 'string') return [];
+    if (!id || typeof id !== 'string') return null;
     setMembersLoading(true);
     setMembersLoadError(false);
     try {
@@ -47,9 +55,11 @@ export default function AddMemberScreen() {
         return null;
       }
       const names = members.map((m) => m.name);
+      const emails = members.map((m) => m.email);
       setExistingMemberNames(names);
+      setExistingMemberEmails(emails);
       setMembersLoaded(true);
-      return names;
+      return { names, emails };
     } catch (error) {
       console.error('Error loading group members:', error);
       setMembersLoadError(true);
@@ -75,11 +85,29 @@ export default function AddMemberScreen() {
     [existingMemberNames],
   );
 
+  const checkForDuplicateEmail = useCallback(
+    (emailToCheck: string) => {
+      const isDuplicate = isDuplicateMemberEmail(
+        emailToCheck,
+        existingMemberEmails,
+      );
+      setHasDuplicateEmail(isDuplicate);
+      return isDuplicate;
+    },
+    [existingMemberEmails],
+  );
+
   useEffect(() => {
     if (name.trim()) {
       checkForDuplicateName(name);
     }
   }, [checkForDuplicateName, name]);
+
+  useEffect(() => {
+    if (email.trim()) {
+      checkForDuplicateEmail(email);
+    }
+  }, [checkForDuplicateEmail, email]);
 
   const handleAddMember = async () => {
     if (controlsDisabled) {
@@ -114,22 +142,34 @@ export default function AddMemberScreen() {
 
     try {
       let currentMemberNames = existingMemberNames;
+      let currentMemberEmails = existingMemberEmails;
       if (!membersLoaded || membersLoadError) {
-        const refreshedNames = await loadExistingMembers();
-        if (!refreshedNames) {
+        const refreshedData = await loadExistingMembers();
+        if (!refreshedData) {
           Alert.alert(
             'Error',
             'Unable to load existing members. Please try again.',
           );
           return;
         }
-        currentMemberNames = refreshedNames;
+        currentMemberNames = refreshedData.names;
+        currentMemberEmails = refreshedData.emails;
       }
 
       let memberName = trimmedName;
       const memberEmail = trimmedEmail || undefined;
       const nameWasDerived = !memberName && !!memberEmail;
       let connectedUserId: string | undefined;
+
+      // Check for duplicate email first (before checking user existence)
+      if (memberEmail && isDuplicateMemberEmail(memberEmail, currentMemberEmails)) {
+        setHasDuplicateEmail(true);
+        Alert.alert(
+          'Duplicate Email',
+          'A member with this email address already exists in the group.',
+        );
+        return;
+      }
 
       if (memberEmail) {
         const existingUser = await getUserByEmail(memberEmail);
@@ -236,9 +276,13 @@ export default function AddMemberScreen() {
               checkForDuplicateName(text);
             }}
             emailValue={email}
-            onEmailChange={setEmail}
+            onEmailChange={(text) => {
+              setEmail(text);
+              checkForDuplicateEmail(text);
+            }}
             onSelectUser={handleSelectKnownUser}
             hasDuplicateName={hasDuplicateName}
+            hasDuplicateEmail={hasDuplicateEmail}
             onNameBlur={(value) => setName(value.trim())}
             onEmailBlur={(value) => setEmail(value.trim())}
             disabled={controlsDisabled}

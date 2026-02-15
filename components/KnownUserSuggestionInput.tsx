@@ -18,6 +18,7 @@ interface KnownUserSuggestionInputProps {
   onEmailChange: (email: string) => void;
   onSelectUser: (user: KnownUser) => void;
   hasDuplicateName?: boolean;
+  hasDuplicateEmail?: boolean;
   onNameBlur?: (name: string) => void;
   onEmailBlur?: (email: string) => void;
   nameInputRef?: React.RefObject<TextInput>;
@@ -32,6 +33,7 @@ export function KnownUserSuggestionInput({
   onEmailChange,
   onSelectUser,
   hasDuplicateName = false,
+  hasDuplicateEmail = false,
   onNameBlur,
   onEmailBlur,
   nameInputRef,
@@ -206,7 +208,7 @@ export function KnownUserSuggestionInput({
         <Text style={styles.label}>Email (optional)</Text>
         <TextInput
           ref={emailInputRef}
-          style={styles.input}
+          style={[styles.input, hasDuplicateEmail && styles.inputError]}
           value={emailValue}
           onChangeText={onEmailChange}
           editable={!disabled}

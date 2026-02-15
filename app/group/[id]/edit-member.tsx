@@ -26,7 +26,11 @@ import {
   KnownUser,
 } from '../../../services/groupRepository';
 import { useAuth } from '../../../contexts/AuthContext';
-import { isValidEmail, isDuplicateMemberName } from '../../../utils/validation';
+import {
+  isValidEmail,
+  isDuplicateMemberName,
+  isDuplicateMemberEmail,
+} from '../../../utils/validation';
 import { KnownUserSuggestionInput } from '../../../components/KnownUserSuggestionInput';
 
 type CurrentUserMemberResolution = 'member' | 'not-member' | 'unknown';
@@ -44,7 +48,11 @@ export default function EditMemberScreen() {
   const [canDelete, setCanDelete] = useState(false);
   const [checkingDelete, setCheckingDelete] = useState(true);
   const [otherMemberNames, setOtherMemberNames] = useState<string[]>([]);
+  const [otherMemberEmails, setOtherMemberEmails] = useState<
+    (string | undefined)[]
+  >([]);
   const [hasDuplicateName, setHasDuplicateName] = useState(false);
+  const [hasDuplicateEmail, setHasDuplicateEmail] = useState(false);
   const [otherMembersLoading, setOtherMembersLoading] = useState(false);
   const [otherMembersLoaded, setOtherMembersLoaded] = useState(false);
   const [otherMembersLoadError, setOtherMembersLoadError] = useState(false);
@@ -75,12 +83,13 @@ export default function EditMemberScreen() {
         setOtherMembersLoadError(true);
         return null;
       }
-      const otherNames = members
-        .filter((m) => m.id !== memberId)
-        .map((m) => m.name);
+      const otherMembers = members.filter((m) => m.id !== memberId);
+      const otherNames = otherMembers.map((m) => m.name);
+      const otherEmails = otherMembers.map((m) => m.email);
       setOtherMemberNames(otherNames);
+      setOtherMemberEmails(otherEmails);
       setOtherMembersLoaded(true);
-      return otherNames;
+      return { names: otherNames, emails: otherEmails };
     } finally {
       setOtherMembersLoading(false);
     }
@@ -167,6 +176,18 @@ export default function EditMemberScreen() {
     [otherMemberNames],
   );
 
+  const checkForDuplicateEmail = useCallback(
+    (emailToCheck: string) => {
+      const isDuplicate = isDuplicateMemberEmail(
+        emailToCheck,
+        otherMemberEmails,
+      );
+      setHasDuplicateEmail(isDuplicate);
+      return isDuplicate;
+    },
+    [otherMemberEmails],
+  );
+
   useEffect(() => {
     loadMember();
   }, [loadMember]);
@@ -184,6 +205,12 @@ export default function EditMemberScreen() {
       checkForDuplicateName(name);
     }
   }, [checkForDuplicateName, name]);
+
+  useEffect(() => {
+    if (email.trim()) {
+      checkForDuplicateEmail(email);
+    }
+  }, [checkForDuplicateEmail, email]);
 
   const handleUpdateMember = async () => {
     if (controlsDisabled) {
@@ -223,16 +250,18 @@ export default function EditMemberScreen() {
 
     try {
       let currentOtherMemberNames = otherMemberNames;
+      let currentOtherMemberEmails = otherMemberEmails;
       if (!otherMembersLoaded || otherMembersLoadError) {
-        const refreshedNames = await loadOtherMembers();
-        if (!refreshedNames) {
+        const refreshedData = await loadOtherMembers();
+        if (!refreshedData) {
           Alert.alert(
             'Error',
             'Unable to load existing members. Please try again.',
           );
           return;
         }
-        currentOtherMemberNames = refreshedNames;
+        currentOtherMemberNames = refreshedData.names;
+        currentOtherMemberEmails = refreshedData.emails;
       }
 
       let memberName = trimmedName;
@@ -240,6 +269,19 @@ export default function EditMemberScreen() {
       const nameWasDerived = !memberName && !!memberEmail;
       let connectedUserId: string | undefined;
       const emailChanged = memberEmail !== originalEmail;
+
+      // Check for duplicate email first (before checking user existence)
+      if (
+        memberEmail &&
+        isDuplicateMemberEmail(memberEmail, currentOtherMemberEmails)
+      ) {
+        setHasDuplicateEmail(true);
+        Alert.alert(
+          'Duplicate Email',
+          'A member with this email address already exists in the group.',
+        );
+        return;
+      }
 
       if (memberEmail) {
         const existingUser = await getUserByEmail(memberEmail);
@@ -475,9 +517,13 @@ export default function EditMemberScreen() {
               checkForDuplicateName(text);
             }}
             emailValue={email}
-            onEmailChange={setEmail}
+            onEmailChange={(text) => {
+              setEmail(text);
+              checkForDuplicateEmail(text);
+            }}
             onSelectUser={handleSelectKnownUser}
             hasDuplicateName={hasDuplicateName}
+            hasDuplicateEmail={hasDuplicateEmail}
             onNameBlur={(value) => setName(value.trim())}
             onEmailBlur={(value) => setEmail(value.trim())}
             disabled={controlsDisabled}

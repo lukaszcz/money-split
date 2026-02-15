@@ -501,3 +501,135 @@ describe('currencies validation', () => {
     expect(() => getCurrencyName('EUR')).not.toThrow();
   });
 });
+
+describe('utils/validation - isDuplicateMemberName', () => {
+  const { isDuplicateMemberName } = require('../utils/validation');
+
+  it('should return false when name is empty', () => {
+    expect(isDuplicateMemberName('', ['Alice', 'Bob'])).toBe(false);
+  });
+
+  it('should return false when name is whitespace only', () => {
+    expect(isDuplicateMemberName('   ', ['Alice', 'Bob'])).toBe(false);
+  });
+
+  it('should return false when no existing names', () => {
+    expect(isDuplicateMemberName('Alice', [])).toBe(false);
+  });
+
+  it('should return false when name is unique', () => {
+    expect(isDuplicateMemberName('Charlie', ['Alice', 'Bob'])).toBe(false);
+  });
+
+  it('should return true for exact match', () => {
+    expect(isDuplicateMemberName('Alice', ['Alice', 'Bob'])).toBe(true);
+  });
+
+  it('should return true for case-insensitive match', () => {
+    expect(isDuplicateMemberName('alice', ['Alice', 'Bob'])).toBe(true);
+    expect(isDuplicateMemberName('ALICE', ['Alice', 'Bob'])).toBe(true);
+    expect(isDuplicateMemberName('AlIcE', ['Alice', 'Bob'])).toBe(true);
+  });
+
+  it('should ignore empty existing names', () => {
+    expect(isDuplicateMemberName('Alice', ['', '  ', 'Bob'])).toBe(false);
+  });
+
+  it('should handle names with extra whitespace', () => {
+    expect(isDuplicateMemberName('  Alice  ', ['Alice', 'Bob'])).toBe(true);
+  });
+
+  it('should handle undefined values in existing names', () => {
+    expect(
+      isDuplicateMemberName('Alice', ['Bob', undefined as any, 'Charlie']),
+    ).toBe(false);
+  });
+});
+
+describe('utils/validation - isDuplicateMemberEmail', () => {
+  const { isDuplicateMemberEmail } = require('../utils/validation');
+
+  it('should return false when email is undefined', () => {
+    expect(
+      isDuplicateMemberEmail(undefined, ['alice@example.com', 'bob@example.com']),
+    ).toBe(false);
+  });
+
+  it('should return false when email is empty', () => {
+    expect(
+      isDuplicateMemberEmail('', ['alice@example.com', 'bob@example.com']),
+    ).toBe(false);
+  });
+
+  it('should return false when email is whitespace only', () => {
+    expect(
+      isDuplicateMemberEmail('   ', ['alice@example.com', 'bob@example.com']),
+    ).toBe(false);
+  });
+
+  it('should return false when no existing emails', () => {
+    expect(isDuplicateMemberEmail('alice@example.com', [])).toBe(false);
+  });
+
+  it('should return false when email is unique', () => {
+    expect(
+      isDuplicateMemberEmail('charlie@example.com', [
+        'alice@example.com',
+        'bob@example.com',
+      ]),
+    ).toBe(false);
+  });
+
+  it('should return true for exact match', () => {
+    expect(
+      isDuplicateMemberEmail('alice@example.com', [
+        'alice@example.com',
+        'bob@example.com',
+      ]),
+    ).toBe(true);
+  });
+
+  it('should return true for case-insensitive match', () => {
+    expect(
+      isDuplicateMemberEmail('ALICE@EXAMPLE.COM', [
+        'alice@example.com',
+        'bob@example.com',
+      ]),
+    ).toBe(true);
+    expect(
+      isDuplicateMemberEmail('Alice@Example.Com', [
+        'alice@example.com',
+        'bob@example.com',
+      ]),
+    ).toBe(true);
+  });
+
+  it('should ignore undefined existing emails', () => {
+    expect(
+      isDuplicateMemberEmail('alice@example.com', [
+        'bob@example.com',
+        undefined,
+        'charlie@example.com',
+      ]),
+    ).toBe(false);
+  });
+
+  it('should ignore empty existing emails', () => {
+    expect(
+      isDuplicateMemberEmail('alice@example.com', [
+        '',
+        '  ',
+        'bob@example.com',
+      ]),
+    ).toBe(false);
+  });
+
+  it('should handle emails with extra whitespace', () => {
+    expect(
+      isDuplicateMemberEmail('  alice@example.com  ', [
+        'alice@example.com',
+        'bob@example.com',
+      ]),
+    ).toBe(true);
+  });
+});
