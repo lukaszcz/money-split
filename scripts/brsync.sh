@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Creates local tracking branches for remote branches not merged
+# into `origin/main`. Fetches and prunes remotes, then for each remote
+# branch (except `origin/HEAD`) creates a local branch tracking that
+# remote if the local branch does not already exist.
+
 git fetch --prune
 for branch in $(git for-each-ref --format='%(refname:short)' --no-merged=origin/main refs/remotes/origin); do
   if [[ "$branch" == "origin/HEAD" ]]; then
