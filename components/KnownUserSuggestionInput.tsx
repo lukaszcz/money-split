@@ -247,12 +247,6 @@ const styles = StyleSheet.create({
     borderColor: '#ef4444',
     borderWidth: 2,
   },
-  hint: {
-    fontSize: 13,
-    color: '#6b7280',
-    marginTop: 8,
-    lineHeight: 18,
-  },
   suggestionsContainer: {
     backgroundColor: '#ffffff',
     borderWidth: 1,
