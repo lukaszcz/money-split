@@ -112,7 +112,6 @@ Deno.serve(async (req: Request) => {
       return new Response(
         JSON.stringify({
           error: 'Failed to fetch user profile',
-          details: profileError.message,
         }),
         {
           status: 500,
@@ -141,7 +140,6 @@ Deno.serve(async (req: Request) => {
         return new Response(
           JSON.stringify({
             error: 'Failed to create user profile',
-            details: createProfileError.message,
           }),
           {
             status: 500,
@@ -164,7 +162,6 @@ Deno.serve(async (req: Request) => {
       return new Response(
         JSON.stringify({
           error: 'Failed to create group',
-          details: groupError.message,
         }),
         {
           status: 500,
@@ -195,7 +192,6 @@ Deno.serve(async (req: Request) => {
       return new Response(
         JSON.stringify({
           error: 'Failed to add creator as group member',
-          details: creatorError.message,
         }),
         {
           status: 500,
@@ -278,7 +274,6 @@ Deno.serve(async (req: Request) => {
     return new Response(
       JSON.stringify({
         error: 'Internal server error',
-        details: error instanceof Error ? error.message : String(error),
       }),
       {
         status: 500,

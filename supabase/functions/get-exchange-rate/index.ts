@@ -209,7 +209,6 @@ Deno.serve(async (req: Request) => {
       return new Response(
         JSON.stringify({
           error: 'Failed to fetch exchange rate',
-          details: String(error),
         }),
         {
           status: 500,
@@ -222,7 +221,6 @@ Deno.serve(async (req: Request) => {
     return new Response(
       JSON.stringify({
         error: 'Internal server error',
-        details: String(error),
       }),
       {
         status: 500,
