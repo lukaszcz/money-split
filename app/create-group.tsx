@@ -51,8 +51,9 @@ export default function CreateGroupScreen() {
     selectCurrency,
     loading: currenciesLoading,
   } = useCurrencyOrder();
-  const controlsDisabled = creating || addingMember;
-  const addMemberControlsDisabled = controlsDisabled || currentUserLoading;
+  const asyncInFlight = creating || addingMember || currentUserLoading;
+  const addMemberControlsDisabled = asyncInFlight;
+  const createButtonDisabled = asyncInFlight || showAddMember;
 
   const loadCurrentUser = useCallback(async () => {
     setCurrentUserLoading(true);
@@ -177,7 +178,7 @@ export default function CreateGroupScreen() {
   };
 
   const handleCreate = async () => {
-    if (controlsDisabled) {
+    if (createButtonDisabled) {
       return;
     }
 
@@ -234,7 +235,7 @@ export default function CreateGroupScreen() {
         <TouchableOpacity
           onPress={() => router.back()}
           style={styles.closeButton}
-          disabled={controlsDisabled}
+          disabled={asyncInFlight}
         >
           <X color="#111827" size={24} />
         </TouchableOpacity>
@@ -244,9 +245,9 @@ export default function CreateGroupScreen() {
 
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-        pointerEvents={controlsDisabled ? 'none' : 'auto'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
+        pointerEvents={asyncInFlight ? 'none' : 'auto'}
       >
         <View style={styles.scrollContainer}>
           <ScrollView
@@ -264,7 +265,7 @@ export default function CreateGroupScreen() {
                 onBlur={() => setGroupName((name) => name.trim())}
                 placeholder="e.g., Trip to Paris"
                 placeholderTextColor="#9ca3af"
-                editable={!controlsDisabled}
+                editable={!asyncInFlight}
               />
             </View>
 
@@ -421,10 +422,10 @@ export default function CreateGroupScreen() {
           <TouchableOpacity
             style={[
               styles.createButton,
-              controlsDisabled && styles.createButtonDisabled,
+              createButtonDisabled && styles.createButtonDisabled,
             ]}
             onPress={handleCreate}
-            disabled={controlsDisabled}
+            disabled={createButtonDisabled}
           >
             <Text style={styles.createButtonText}>
               {creating
