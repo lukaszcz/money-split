@@ -72,6 +72,6 @@ The application uses this table for:
 
 - Creating profiles on sign-in (`ensureUserProfile()` in `services/groupRepository.ts`)
 - Updating display name (`updateUserName()` in `services/groupRepository.ts`)
-- Connecting invited members by email (`reconnectGroupMembers()` in `services/groupRepository.ts`)
+- Connecting invited members by email (`connectUserToGroups()` in `services/groupRepository.ts`)
 - Tracking last login (`contexts/AuthContext.tsx`)
 - Deleting accounts (edge function `supabase/functions/delete-user/index.ts`)

@@ -27,34 +27,79 @@ export interface GroupWithMembers extends Group {
   members: GroupMember[];
 }
 
+function getSafeErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  if (
+    typeof error === 'object' &&
+    error !== null &&
+    'message' in error &&
+    typeof (error as { message: unknown }).message === 'string'
+  ) {
+    return (error as { message: string }).message;
+  }
+
+  return fallback;
+}
+
+async function resolveAuthenticatedUser() {
+  const {
+    data: { session },
+    error,
+  } = await supabase.auth.getSession();
+
+  if (error) {
+    throw new Error(
+      getSafeErrorMessage(error, 'Failed to retrieve authenticated session'),
+    );
+  }
+
+  const authUser = session?.user;
+
+  if (!session || !authUser?.id) {
+    throw new Error('No authenticated user');
+  }
+
+  return { authUser, session };
+}
+
+async function resolveAuthenticatedUserId(): Promise<string> {
+  return resolveAuthenticatedUser().then(({ authUser }) => authUser.id);
+}
+
+// Ensures a row exists in the `users` table for the current user
 export async function ensureUserProfile(name?: string): Promise<User | null> {
   try {
-    const {
-      data: { user: authUser },
-    } = await supabase.auth.getUser();
-
-    if (!authUser) {
-      throw new Error('No authenticated user');
-    }
+    const { authUser } = await resolveAuthenticatedUser();
 
     const existingUser = await getUser(authUser.id);
     if (existingUser) {
       return existingUser;
     }
 
+    const resolvedName =
+      name?.trim() ||
+      (typeof authUser?.user_metadata?.name === 'string'
+        ? authUser.user_metadata.name.trim()
+        : '') ||
+      authUser?.email?.split('@')[0] ||
+      'User';
+
     const { data, error } = await supabase
       .from('users')
       .insert({
         id: authUser.id,
-        name: name || authUser.email?.split('@')[0] || 'User',
-        email: authUser.email || null,
+        name: resolvedName,
+        email: authUser?.email || null,
       })
       .select()
       .single();
 
     if (error) throw error;
 
-    await reconnectGroupMembers();
+    await connectUserToGroups();
 
     return {
       id: data.id,
@@ -185,6 +230,8 @@ export async function getGroupMembers(
   groupId: string,
 ): Promise<GroupMember[] | null> {
   try {
+    const resolvedCurrentUserId = await resolveAuthenticatedUserId();
+
     const { data, error } = await supabase
       .from('group_members')
       .select('*')
@@ -196,7 +243,7 @@ export async function getGroupMembers(
       return null;
     }
 
-    return (data || []).map((m) => ({
+    const members = (data || []).map((m) => ({
       id: m.id,
       groupId: m.group_id,
       name: m.name,
@@ -204,6 +251,19 @@ export async function getGroupMembers(
       connectedUserId: m.connected_user_id || undefined,
       createdAt: m.created_at,
     }));
+
+    if (!resolvedCurrentUserId) return members;
+
+    const currentMemberIndex = members.findIndex(
+      (member) => member.connectedUserId === resolvedCurrentUserId,
+    );
+
+    if (currentMemberIndex <= 0) return members;
+
+    const [currentMember] = members.splice(currentMemberIndex, 1);
+    members.unshift(currentMember);
+
+    return members;
   } catch (error) {
     console.error('Failed to get group members:', error);
     return null;
@@ -237,37 +297,24 @@ export async function getGroupMember(
   }
 }
 
-export async function getCurrentUserMemberInGroup(
+export async function isCurrentUserMemberInGroup(
   groupId: string,
-): Promise<GroupMember | null> {
-  try {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return null;
+): Promise<boolean> {
+  const resolvedCurrentUserId = await resolveAuthenticatedUserId();
 
-    const { data, error } = await supabase
-      .from('group_members')
-      .select('*')
-      .eq('group_id', groupId)
-      .eq('connected_user_id', user.id)
-      .maybeSingle();
+  const { data, error } = await supabase
+    .from('group_members')
+    .select('id')
+    .eq('group_id', groupId)
+    .eq('connected_user_id', resolvedCurrentUserId)
+    .maybeSingle();
 
-    if (error) throw error;
-    if (!data) return null;
-
-    return {
-      id: data.id,
-      groupId: data.group_id,
-      name: data.name,
-      email: data.email || undefined,
-      connectedUserId: data.connected_user_id || undefined,
-      createdAt: data.created_at,
-    };
-  } catch (error) {
-    console.error('Failed to get current user member:', error);
-    return null;
+  if (error) {
+    console.error('Failed to check current user group membership:', error);
+    throw error;
   }
+
+  return !!data;
 }
 
 export async function connectUserToGroupMembers(
@@ -297,29 +344,19 @@ export async function createGroup(
   initialMembers: { name: string; email?: string }[],
 ): Promise<Group | null> {
   try {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    const token = session?.access_token;
-
-    if (!token) {
-      throw new Error('No session token available');
-    }
-
     const { data, error } = await supabase.functions.invoke('create-group', {
       body: { name, mainCurrencyCode, initialMembers },
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
     });
 
     if (error) {
-      console.error('Create group function error:', error);
-      throw new Error(error.message || 'Failed to create group');
+      const message = getSafeErrorMessage(error, 'Failed to create group');
+      console.error('Create group function error:', message);
+      throw new Error(message);
     }
 
     if (!data?.success || !data?.group) {
-      throw new Error(data?.error || 'Failed to create group');
+      console.error('Create group function returned unsuccessful response');
+      throw new Error('Failed to create group');
     }
 
     return {
@@ -432,6 +469,56 @@ export interface ExpenseShare {
   memberId: string;
   shareAmountScaled: bigint;
   shareInMainScaled: bigint;
+}
+
+export interface ActivityFeedItem {
+  id: string;
+  groupId: string;
+  groupName: string;
+  description?: string;
+  dateTime: string;
+  currencyCode: string;
+  totalAmountScaled: bigint;
+  payerMemberId: string;
+  payerName: string;
+  paymentType: 'expense' | 'transfer';
+  splitType: 'equal' | 'percentage' | 'exact';
+  createdAt: string;
+}
+
+export async function getActivityFeed(
+  limit = 100,
+  offset = 0,
+): Promise<ActivityFeedItem[]> {
+  try {
+    const normalizedLimit = Math.min(Math.max(limit, 0), 500);
+    const normalizedOffset = Math.max(offset, 0);
+
+    const { data, error } = await supabase.rpc('get_activity_feed', {
+      p_limit: normalizedLimit,
+      p_offset: normalizedOffset,
+    });
+
+    if (error) throw error;
+
+    return (data || []).map((row: any) => ({
+      id: row.id,
+      groupId: row.group_id,
+      groupName: row.group_name,
+      description: row.description || undefined,
+      dateTime: row.date_time,
+      currencyCode: row.currency_code,
+      totalAmountScaled: BigInt(row.total_amount_scaled),
+      payerMemberId: row.payer_member_id || '',
+      payerName: row.payer_name || 'Unknown',
+      paymentType: row.payment_type || 'expense',
+      splitType: row.split_type || 'equal',
+      createdAt: row.created_at,
+    }));
+  } catch (error) {
+    console.error('Failed to get activity feed:', error);
+    return [];
+  }
 }
 
 export async function createExpense(
@@ -814,14 +901,15 @@ export async function deleteGroupMember(memberId: string): Promise<boolean> {
 
 export async function leaveGroup(groupId: string): Promise<boolean> {
   try {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      throw new Error('No authenticated user');
-    }
+    const { authUser } = await resolveAuthenticatedUser();
+    const { data: currentMember, error: currentMemberError } = await supabase
+      .from('group_members')
+      .select('id')
+      .eq('group_id', groupId)
+      .eq('connected_user_id', authUser.id)
+      .maybeSingle();
 
-    const currentMember = await getCurrentUserMemberInGroup(groupId);
+    if (currentMemberError) throw currentMemberError;
     if (!currentMember) {
       throw new Error('You are not a member of this group');
     }
@@ -839,18 +927,18 @@ export async function leaveGroup(groupId: string): Promise<boolean> {
         'cleanup-orphaned-groups',
       );
       if (cleanupError) {
-        console.error('Cleanup function failed:', cleanupError);
-        if ('context' in cleanupError) {
-          console.error(
-            'Cleanup function error context:',
-            cleanupError.context,
-          );
-        }
+        console.error(
+          'Cleanup function failed:',
+          getSafeErrorMessage(cleanupError, 'Unknown cleanup error'),
+        );
       } else {
         console.log('Cleanup function succeeded');
       }
     } catch (cleanupError) {
-      console.error('Failed to trigger cleanup:', cleanupError);
+      console.error(
+        'Failed to trigger cleanup:',
+        getSafeErrorMessage(cleanupError, 'Unknown cleanup error'),
+      );
     }
 
     return true;
@@ -862,32 +950,14 @@ export async function leaveGroup(groupId: string): Promise<boolean> {
 
 export async function deleteUserAccount(): Promise<boolean> {
   try {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      throw new Error('No authenticated user');
-    }
+    await resolveAuthenticatedUser();
 
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    const token = session?.access_token;
-
-    if (!token) {
-      throw new Error('No session token available');
-    }
-
-    const { error: deleteError } = await supabase.functions.invoke(
-      'delete-user',
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-    );
+    const { error: deleteError } =
+      await supabase.functions.invoke('delete-user');
     if (deleteError) {
-      throw new Error(deleteError.message || 'Failed to delete user account');
+      throw new Error(
+        getSafeErrorMessage(deleteError, 'Failed to delete user account'),
+      );
     }
 
     await supabase.auth.signOut();
@@ -899,43 +969,40 @@ export async function deleteUserAccount(): Promise<boolean> {
   }
 }
 
-export async function reconnectGroupMembers(): Promise<number> {
+export async function connectUserToGroups(): Promise<number> {
   try {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user || !user.email) {
-      console.log('No user or email found for reconnection');
+    try {
+      await resolveAuthenticatedUser();
+    } catch {
+      console.warn('No authenticated user for connecting to groups');
       return 0;
     }
 
-    console.log('Attempting to reconnect group members for email:', user.email);
+    console.log('Calling connect-user-to-groups edge function');
 
-    const { data, error } = await supabase
-      .from('group_members')
-      .update({ connected_user_id: user.id })
-      .eq('email', user.email)
-      .is('connected_user_id', null)
-      .select();
+    const { data, error } = await supabase.functions.invoke(
+      'connect-user-to-groups',
+    );
 
     if (error) {
-      console.error('Error reconnecting group members:', error);
-      throw error;
+      console.error(
+        'Error connecting user to groups:',
+        getSafeErrorMessage(error, 'Unknown connect-user-to-groups error'),
+      );
+      return 0;
     }
 
-    const connectedCount = data?.length || 0;
-    console.log(`Successfully connected ${connectedCount} group member(s)`);
-
-    // Update known users for each reconnected member
-    if (data && data.length > 0) {
-      for (const member of data) {
-        await updateKnownUsersForMember(member.group_id, member.id);
-      }
+    if (data?.error) {
+      console.error('Error from edge function');
+      return 0;
     }
+
+    const connectedCount = data?.connectedCount || 0;
+    console.log(`Successfully connected to ${connectedCount} group(s)`);
 
     return connectedCount;
   } catch (error) {
-    console.error('Failed to reconnect group members:', error);
+    console.error('Failed to connect user to groups:', error);
     return 0;
   }
 }
@@ -974,10 +1041,8 @@ type KnownUserRow = {
 
 export async function getKnownUsers(): Promise<KnownUser[]> {
   try {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
+    const resolvedCurrentUserId = await resolveAuthenticatedUserId();
+    if (!resolvedCurrentUserId) {
       return [];
     }
 
@@ -993,7 +1058,7 @@ export async function getKnownUsers(): Promise<KnownUser[]> {
         )
       `,
       )
-      .eq('user_id', user.id)
+      .eq('user_id', resolvedCurrentUserId)
       .order('last_shared_at', { ascending: false });
 
     if (error) {
@@ -1023,13 +1088,10 @@ export async function updateKnownUsersForMember(
   memberId: string,
 ): Promise<boolean> {
   try {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    const token = session?.access_token;
-
-    if (!token) {
-      console.warn('No session token available for updating known users');
+    try {
+      await resolveAuthenticatedUser();
+    } catch {
+      console.warn('No authenticated user for updating known users');
       return false;
     }
 
@@ -1037,31 +1099,19 @@ export async function updateKnownUsersForMember(
       'update-known-users',
       {
         body: { groupId, newMemberId: memberId },
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
       },
     );
 
     if (error) {
-      let errorDetails = '';
-      if (error instanceof Error && 'context' in error) {
-        try {
-          const response = (error as { context?: Response }).context;
-          if (response) {
-            const payload = await response.json();
-            errorDetails = JSON.stringify(payload);
-          }
-        } catch {
-          errorDetails = '';
-        }
-      }
-      console.error('Error updating known users:', error, errorDetails);
+      console.error(
+        'Error updating known users:',
+        getSafeErrorMessage(error, 'Unknown update-known-users error'),
+      );
       return false;
     }
 
     if (data?.error) {
-      console.error('Error updating known users:', data.error);
+      console.error('Error updating known users: function returned an error');
       return false;
     }
 

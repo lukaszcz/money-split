@@ -19,18 +19,20 @@ Comprehensive testing infrastructure for the MoneySplit application.
 The MoneySplit test suite includes:
 
 - **Unit tests** for utilities and business logic (money math, settlement algorithms)
-- **Service tests** for data and edge-function access (groupRepository, exchangeRateService)
+- **Service tests** for data and edge-function access (groupRepository, exchangeRateService, authService), including RPC coverage for `getActivityFeed()` mapping and error handling
 - **Context tests** for React state management (AuthContext)
-- **Hook tests** for client hooks (currency order, framework ready)
+- **Recovery auth-flow tests** for atomic recovery-password verification, forced-password-change metadata persistence (`recoveryPasswordMustChange`), and sign-out fallback when metadata persistence fails in `AuthContext`
+- **Hook tests** for client hooks (auth redirect, currency order, framework ready)
 - **Component tests** for reusable UI components (BottomActionBar)
-- **Screen tests** for UI business logic (auth, groups, settings)
+- **Screen tests** for UI business logic (auth, groups, settings, password changes), including safe leave-vs-delete routing in edit-member flows
+- **Client configuration tests** for platform-specific Supabase auth session persistence settings, including SecureStore token storage and AsyncStorage user payload storage on native (`lib/supabase.ts`)
 - **Integration tests** (optional, requires local Supabase)
 - **Exchange-rate cache tests** for AsyncStorage caching, stale fallback behavior, and login prefetch warmup
 
 ### Test Statistics
 
-- **Total Tests**: 360
-- **Test Suites**: 21
+- **Total Tests**: 411
+- **Test Suites**: 28
 - **Coverage Targets**:
   - Lines: 80%
   - Functions: 80%
@@ -56,6 +58,7 @@ __tests__/
 ├── services/
 │   ├── groupRepository.test.ts    # Service layer tests
 │   ├── exchangeRateService.test.ts # Exchange rate cache + edge-function tests
+│   ├── authService.test.ts        # Authentication edge-function tests
 │   ├── currencyPreferenceService.test.ts # Currency preference service
 │   ├── groupPreferenceService.test.ts # Group preference service
 │   └── settlePreferenceService.test.ts # Settle preference storage
@@ -64,14 +67,21 @@ __tests__/
 ├── contexts/
 │   └── AuthContext.test.tsx       # React context tests
 ├── hooks/
+│   ├── useAuthRedirect.test.ts    # Auth/route guard redirect hook
 │   ├── useCurrencyOrder.test.ts   # Currency ordering hook
 │   └── useFrameworkReady.test.ts  # Framework ready hook
+├── lib/
+│   └── supabase.test.ts           # Supabase client platform config
 ├── components/
 │   └── BottomActionBar.test.tsx   # BottomActionBar component tests
 ├── screens/
 │   ├── auth.test.tsx              # Auth screen tests
+│   ├── passwordRecovery.test.tsx  # Password recovery screen tests
+│   ├── recoveryPasswordChange.test.tsx # Forced permanent password setup screen
+│   ├── changePassword.test.tsx    # Authenticated password change screen
 │   ├── groups.test.tsx            # Groups screen tests
 │   ├── groupDetail.test.tsx       # Group detail screen tests
+│   ├── editMember.test.tsx        # Edit member screen tests
 │   └── settings.test.tsx          # Settings screen tests
 ├── currencies.test.ts             # Currency utilities
 ├── money.test.ts                  # Money math
@@ -187,6 +197,10 @@ UI utility tests cover menu positioning logic, including:
 - Consistency and boundary conditions
 
 ### Service Test Pattern with Mocks
+
+Repository methods that need the current user derive it from
+`supabase.auth.getSession()`. In tests, prefer mocking `auth.getSession`
+for those flows.
 
 ```typescript
 import {
@@ -491,6 +505,7 @@ npm run test:coverage -- --coverageReporters=json-summary
 - **Use async/await**: Prefer over callbacks or `.then()`
 - **Wait for conditions**: Use `waitFor` from Testing Library
 - **Handle errors**: Test both success and failure paths
+- **Silence expected console errors**: Filter known-noise logs in `jest.setup.js` or mock `console.error` in targeted tests
 - **Clean up**: Always cleanup async resources
 
 ### 4. Test Data
@@ -736,9 +751,10 @@ it('shows a validation error for missing credentials', () => {
 See these files for complete examples:
 
 - `__tests__/screens/auth.test.tsx` - Authentication flows
+- `__tests__/screens/changePassword.test.tsx` - Authenticated password change flow
 - `__tests__/screens/groups.test.tsx` - Groups list and navigation
 - `__tests__/screens/groupDetail.test.tsx` - Group detail screen, overflow menu, and leave group flows
-- `__tests__/screens/settings.test.tsx` - Profile, logout, delete flows
+- `__tests__/screens/settings.test.tsx` - Profile, password-change navigation, logout, delete flows
 
 ### Tips for Screen Testing
 

@@ -219,6 +219,38 @@ export type Database = {
         };
         Relationships: [];
       };
+      recovery_passwords: {
+        Row: {
+          id: string;
+          user_id: string;
+          password_hash: string;
+          expires_at: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          password_hash: string;
+          expires_at: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          password_hash?: string;
+          expires_at?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'recovery_passwords_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: true;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       user_currency_preferences: {
         Row: {
           id: string;
@@ -344,7 +376,26 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
-      [_ in never]: never;
+      get_activity_feed: {
+        Args: {
+          p_limit?: number;
+          p_offset?: number;
+        };
+        Returns: {
+          id: string;
+          group_id: string;
+          group_name: string;
+          description: string | null;
+          date_time: string;
+          currency_code: string;
+          total_amount_scaled: number;
+          payer_member_id: string | null;
+          payer_name: string;
+          payment_type: string;
+          split_type: string;
+          created_at: string;
+        }[];
+      };
     };
     Enums: {
       [_ in never]: never;

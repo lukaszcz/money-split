@@ -1,29 +1,26 @@
 import { useEffect } from 'react';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Stack, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
-import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { AuthProvider } from '@/contexts/AuthContext';
+import { useAuthRedirect } from '@/hooks/useAuthRedirect';
 
 function RootLayoutNav() {
-  const { user, loading } = useAuth();
   const segments = useSegments();
-  const router = useRouter();
+  const currentSegment = segments[0] as string | undefined;
+  const { performRedirect } = useAuthRedirect('guard', currentSegment);
 
   useEffect(() => {
-    if (loading) return;
-
-    const inAuthGroup = segments[0] === 'auth';
-
-    if (!user && !inAuthGroup) {
-      router.replace('/auth');
-    } else if (user && inAuthGroup) {
-      router.replace('/(tabs)/groups');
-    }
-  }, [user, loading, segments, router]);
+    performRedirect();
+  }, [performRedirect]);
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="index" />
       <Stack.Screen name="auth" />
+      <Stack.Screen name="password-recovery" />
+      <Stack.Screen name="recovery-password-change" />
+      <Stack.Screen name="change-password" />
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="+not-found" />
     </Stack>

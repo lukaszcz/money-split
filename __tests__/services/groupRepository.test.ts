@@ -23,15 +23,18 @@ describe('groupRepository', () => {
   // Suppress expected console output during tests
   const originalConsoleError = console.error;
   const originalConsoleLog = console.log;
+  const originalConsoleWarn = console.warn;
 
   beforeAll(() => {
     console.error = jest.fn();
     console.log = jest.fn();
+    console.warn = jest.fn();
   });
 
   afterAll(() => {
     console.error = originalConsoleError;
     console.log = originalConsoleLog;
+    console.warn = originalConsoleWarn;
   });
 
   beforeEach(() => {
@@ -58,8 +61,8 @@ describe('groupRepository', () => {
         email: 'test@example.com',
       });
 
-      mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: mockUser },
+      mockSupabase.auth.getSession.mockResolvedValue({
+        data: { session: createMockSession(mockUser) },
         error: null,
       });
 
@@ -76,7 +79,7 @@ describe('groupRepository', () => {
       const result = await ensureUserProfile();
 
       expect(result).toEqual(mockUsers.alice);
-      expect(mockSupabase.auth.getUser).toHaveBeenCalled();
+      expect(mockSupabase.auth.getSession).toHaveBeenCalled();
       expect(mockSupabase.from).toHaveBeenCalledWith('users');
     });
 
@@ -87,8 +90,8 @@ describe('groupRepository', () => {
         email: 'new@example.com',
       });
 
-      mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: mockUser },
+      mockSupabase.auth.getSession.mockResolvedValue({
+        data: { session: createMockSession(mockUser) },
         error: null,
       });
 
@@ -145,8 +148,8 @@ describe('groupRepository', () => {
     it('should return null when no authenticated user', async () => {
       const { ensureUserProfile } = require('../../services/groupRepository');
 
-      mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: null },
+      mockSupabase.auth.getSession.mockResolvedValue({
+        data: { session: null },
         error: null,
       });
 
@@ -162,8 +165,8 @@ describe('groupRepository', () => {
         email: 'new@example.com',
       });
 
-      mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: mockUser },
+      mockSupabase.auth.getSession.mockResolvedValue({
+        data: { session: createMockSession(mockUser) },
         error: null,
       });
 
@@ -218,8 +221,8 @@ describe('groupRepository', () => {
         email: undefined,
       });
 
-      mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: mockUser },
+      mockSupabase.auth.getSession.mockResolvedValue({
+        data: { session: createMockSession(mockUser) },
         error: null,
       });
 
@@ -537,6 +540,37 @@ describe('groupRepository', () => {
 
       expect(result).toBeNull();
     });
+
+    it('should move current user member to the front', async () => {
+      const { getGroupMembers } = require('../../services/groupRepository');
+
+      mockSupabase.auth.getSession.mockResolvedValue({
+        data: { session: createMockSession({ id: 'user-bob' }) },
+        error: null,
+      });
+
+      const mockDbMembers = [
+        createMockDatabaseRow(mockMembers.aliceInTrip),
+        createMockDatabaseRow(mockMembers.bobInTrip),
+        createMockDatabaseRow(mockMembers.unconnectedInTrip),
+      ];
+
+      mockSupabase.from.mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        order: jest
+          .fn()
+          .mockResolvedValue({ data: mockDbMembers, error: null }),
+      } as any);
+
+      const result = await getGroupMembers('group-trip');
+
+      expect(result).toEqual([
+        mockMembers.bobInTrip,
+        mockMembers.aliceInTrip,
+        mockMembers.unconnectedInTrip,
+      ]);
+    });
   });
 
   describe('getGroupMember', () => {
@@ -590,30 +624,28 @@ describe('groupRepository', () => {
     });
   });
 
-  describe('getCurrentUserMemberInGroup', () => {
-    it('should return null when no authenticated user', async () => {
+  describe('isCurrentUserMemberInGroup', () => {
+    it('should throw when no authenticated user', async () => {
       const {
-        getCurrentUserMemberInGroup,
+        isCurrentUserMemberInGroup,
       } = require('../../services/groupRepository');
 
-      mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: null },
+      mockSupabase.auth.getSession.mockResolvedValue({
+        data: { session: null },
         error: null,
       });
 
-      const result = await getCurrentUserMemberInGroup('group-trip');
-
-      expect(result).toBeNull();
+      await expect(isCurrentUserMemberInGroup('group-trip')).rejects.toThrow(
+        'No authenticated user',
+      );
     });
 
-    it('should return member connected to current user', async () => {
+    it('should return true when member is connected to current user', async () => {
       const {
-        getCurrentUserMemberInGroup,
+        isCurrentUserMemberInGroup,
       } = require('../../services/groupRepository');
-      const mockUser = createMockUser({ id: 'user-alice' });
-
-      mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: mockUser },
+      mockSupabase.auth.getSession.mockResolvedValue({
+        data: { session: createMockSession({ id: 'user-alice' }) },
         error: null,
       });
 
@@ -627,19 +659,40 @@ describe('groupRepository', () => {
         }),
       } as any);
 
-      const result = await getCurrentUserMemberInGroup('group-trip');
+      const result = await isCurrentUserMemberInGroup('group-trip');
 
-      expect(result).toEqual(mockMembers.aliceInTrip);
+      expect(result).toBe(true);
     });
 
-    it('should return null on lookup error', async () => {
+    it('should return false when current user has no member in group', async () => {
       const {
-        getCurrentUserMemberInGroup,
+        isCurrentUserMemberInGroup,
       } = require('../../services/groupRepository');
-      const mockUser = createMockUser({ id: 'user-alice' });
+      mockSupabase.auth.getSession.mockResolvedValue({
+        data: { session: createMockSession({ id: 'user-alice' }) },
+        error: null,
+      });
 
-      mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: mockUser },
+      mockSupabase.from.mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        maybeSingle: jest.fn().mockResolvedValue({
+          data: null,
+          error: null,
+        }),
+      } as any);
+
+      const result = await isCurrentUserMemberInGroup('group-trip');
+
+      expect(result).toBe(false);
+    });
+
+    it('should throw on lookup error', async () => {
+      const {
+        isCurrentUserMemberInGroup,
+      } = require('../../services/groupRepository');
+      mockSupabase.auth.getSession.mockResolvedValue({
+        data: { session: createMockSession({ id: 'user-alice' }) },
         error: null,
       });
 
@@ -652,9 +705,9 @@ describe('groupRepository', () => {
         }),
       } as any);
 
-      const result = await getCurrentUserMemberInGroup('group-trip');
-
-      expect(result).toBeNull();
+      await expect(isCurrentUserMemberInGroup('group-trip')).rejects.toThrow(
+        'Lookup failed',
+      );
     });
   });
 
@@ -730,11 +783,6 @@ describe('groupRepository', () => {
     it('should create group via edge function', async () => {
       const { createGroup } = require('../../services/groupRepository');
 
-      mockSupabase.auth.getSession.mockResolvedValue({
-        data: { session: { access_token: 'mock-token' } },
-        error: null,
-      });
-
       mockSupabase.functions.invoke.mockResolvedValue({
         data: {
           success: true,
@@ -760,18 +808,12 @@ describe('groupRepository', () => {
             mainCurrencyCode: 'USD',
             initialMembers: [],
           },
-          headers: { Authorization: 'Bearer mock-token' },
         },
       );
     });
 
     it('should pass initial members to edge function', async () => {
       const { createGroup } = require('../../services/groupRepository');
-
-      mockSupabase.auth.getSession.mockResolvedValue({
-        data: { session: { access_token: 'mock-token' } },
-        error: null,
-      });
 
       mockSupabase.functions.invoke.mockResolvedValue({
         data: {
@@ -799,31 +841,12 @@ describe('groupRepository', () => {
             mainCurrencyCode: 'USD',
             initialMembers: [{ name: 'Bob', email: 'bob@example.com' }],
           },
-          headers: { Authorization: 'Bearer mock-token' },
         },
       );
     });
 
-    it('should return null when no session token', async () => {
-      const { createGroup } = require('../../services/groupRepository');
-
-      mockSupabase.auth.getSession.mockResolvedValue({
-        data: { session: null },
-        error: null,
-      });
-
-      const result = await createGroup('Test Group', 'USD', []);
-
-      expect(result).toBeNull();
-    });
-
     it('should return null when edge function returns error', async () => {
       const { createGroup } = require('../../services/groupRepository');
-
-      mockSupabase.auth.getSession.mockResolvedValue({
-        data: { session: { access_token: 'mock-token' } },
-        error: null,
-      });
 
       mockSupabase.functions.invoke.mockResolvedValue({
         data: null,
@@ -837,11 +860,6 @@ describe('groupRepository', () => {
 
     it('should return null when edge function returns unsuccessful response', async () => {
       const { createGroup } = require('../../services/groupRepository');
-
-      mockSupabase.auth.getSession.mockResolvedValue({
-        data: { session: { access_token: 'mock-token' } },
-        error: null,
-      });
 
       mockSupabase.functions.invoke.mockResolvedValue({
         data: { success: false, error: 'Failed to create group' },
@@ -2195,10 +2213,8 @@ describe('groupRepository', () => {
   describe('leaveGroup', () => {
     it('should disconnect user from group and trigger cleanup', async () => {
       const { leaveGroup } = require('../../services/groupRepository');
-      const mockUser = createMockUser({ id: 'user-alice' });
-
-      mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: mockUser },
+      mockSupabase.auth.getSession.mockResolvedValue({
+        data: { session: createMockSession({ id: 'user-alice' }) },
         error: null,
       });
 
@@ -2237,10 +2253,8 @@ describe('groupRepository', () => {
 
     it('should return false when user is not a member', async () => {
       const { leaveGroup } = require('../../services/groupRepository');
-      const mockUser = createMockUser({ id: 'user-alice' });
-
-      mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: mockUser },
+      mockSupabase.auth.getSession.mockResolvedValue({
+        data: { session: createMockSession({ id: 'user-alice' }) },
         error: null,
       });
 
@@ -2258,8 +2272,8 @@ describe('groupRepository', () => {
     it('should return false when no authenticated user', async () => {
       const { leaveGroup } = require('../../services/groupRepository');
 
-      mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: null },
+      mockSupabase.auth.getSession.mockResolvedValue({
+        data: { session: null },
         error: null,
       });
 
@@ -2270,10 +2284,8 @@ describe('groupRepository', () => {
 
     it('should return false when leaving the group fails', async () => {
       const { leaveGroup } = require('../../services/groupRepository');
-      const mockUser = createMockUser({ id: 'user-alice' });
-
-      mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: mockUser },
+      mockSupabase.auth.getSession.mockResolvedValue({
+        data: { session: createMockSession({ id: 'user-alice' }) },
         error: null,
       });
 
@@ -2306,10 +2318,8 @@ describe('groupRepository', () => {
 
     it('should return true even if cleanup function fails with context', async () => {
       const { leaveGroup } = require('../../services/groupRepository');
-      const mockUser = createMockUser({ id: 'user-alice' });
-
-      mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: mockUser },
+      mockSupabase.auth.getSession.mockResolvedValue({
+        data: { session: createMockSession({ id: 'user-alice' }) },
         error: null,
       });
 
@@ -2348,15 +2358,8 @@ describe('groupRepository', () => {
   describe('deleteUserAccount', () => {
     it('should call delete-user edge function and sign out', async () => {
       const { deleteUserAccount } = require('../../services/groupRepository');
-      const mockUser = createMockUser({ id: 'user-alice' });
-
-      mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: mockUser },
-        error: null,
-      });
-
       mockSupabase.auth.getSession.mockResolvedValue({
-        data: { session: { access_token: 'test-token' } },
+        data: { session: createMockSession({ id: 'user-alice' }) },
         error: null,
       });
 
@@ -2366,42 +2369,17 @@ describe('groupRepository', () => {
       const result = await deleteUserAccount();
 
       expect(result).toBe(true);
-      expect(mockSupabase.functions.invoke).toHaveBeenCalledWith(
-        'delete-user',
-        {
-          headers: { Authorization: 'Bearer test-token' },
-        },
-      );
+      expect(mockSupabase.functions.invoke).toHaveBeenCalledWith('delete-user');
       expect(mockSupabase.auth.signOut).toHaveBeenCalled();
     });
 
     it('should return false when no authenticated user', async () => {
       const { deleteUserAccount } = require('../../services/groupRepository');
 
-      mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: null },
-        error: null,
-      });
-
-      const result = await deleteUserAccount();
-
-      expect(result).toBe(false);
-    });
-
-    it('should return false when no session token is available', async () => {
-      const { deleteUserAccount } = require('../../services/groupRepository');
-      const mockUser = createMockUser({ id: 'user-alice' });
-
-      mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: mockUser },
-        error: null,
-      });
-
       mockSupabase.auth.getSession.mockResolvedValue({
         data: { session: null },
         error: null,
       });
-
       const result = await deleteUserAccount();
 
       expect(result).toBe(false);
@@ -2409,15 +2387,8 @@ describe('groupRepository', () => {
 
     it('should return false when delete-user function fails', async () => {
       const { deleteUserAccount } = require('../../services/groupRepository');
-      const mockUser = createMockUser({ id: 'user-alice' });
-
-      mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: mockUser },
-        error: null,
-      });
-
       mockSupabase.auth.getSession.mockResolvedValue({
-        data: { session: { access_token: 'test-token' } },
+        data: { session: createMockSession({ id: 'user-alice' }) },
         error: null,
       });
 
@@ -2432,15 +2403,8 @@ describe('groupRepository', () => {
 
     it('should return false when delete-user error has no message', async () => {
       const { deleteUserAccount } = require('../../services/groupRepository');
-      const mockUser = createMockUser({ id: 'user-alice' });
-
-      mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: mockUser },
-        error: null,
-      });
-
       mockSupabase.auth.getSession.mockResolvedValue({
-        data: { session: { access_token: 'test-token' } },
+        data: { session: createMockSession({ id: 'user-alice' }) },
         error: null,
       });
 
@@ -2454,90 +2418,119 @@ describe('groupRepository', () => {
     });
   });
 
-  describe('reconnectGroupMembers', () => {
-    it('should reconnect unconnected members by email', async () => {
-      const {
-        reconnectGroupMembers,
-      } = require('../../services/groupRepository');
-      const mockUser = createMockUser({
-        id: 'user-alice',
-        email: 'alice@example.com',
-      });
-
-      mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: mockUser },
+  describe('connectUserToGroups', () => {
+    it('should call connect-user-to-groups edge function', async () => {
+      const { connectUserToGroups } = require('../../services/groupRepository');
+      mockSupabase.functions.invoke.mockResolvedValue({
+        data: { connectedCount: 1 },
         error: null,
       });
 
-      const updateBuilder = {
-        update: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        is: jest.fn().mockReturnThis(),
-        select: jest.fn().mockResolvedValue({
-          data: [createMockDatabaseRow(mockMembers.aliceInTrip)],
-          error: null,
-        }),
-      };
-
-      mockSupabase.from.mockReturnValue(updateBuilder as any);
-
-      const result = await reconnectGroupMembers();
+      const result = await connectUserToGroups();
 
       expect(result).toBe(1);
-      expect(updateBuilder.update).toHaveBeenCalledWith({
-        connected_user_id: 'user-alice',
-      });
-      expect(updateBuilder.eq).toHaveBeenCalledWith(
-        'email',
-        'alice@example.com',
+      expect(mockSupabase.functions.invoke).toHaveBeenCalledWith(
+        'connect-user-to-groups',
       );
     });
 
-    it('should return 0 when no user email', async () => {
-      const {
-        reconnectGroupMembers,
-      } = require('../../services/groupRepository');
-      const mockUser = createMockUser({ id: 'user-alice', email: undefined });
-
-      mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: mockUser },
+    it('should return 0 when no authenticated user is available', async () => {
+      const { connectUserToGroups } = require('../../services/groupRepository');
+      mockSupabase.auth.getSession.mockResolvedValue({
+        data: { session: null },
         error: null,
       });
 
-      const result = await reconnectGroupMembers();
+      const result = await connectUserToGroups();
+
+      expect(result).toBe(0);
+      expect(mockSupabase.functions.invoke).not.toHaveBeenCalled();
+    });
+
+    it('should return 0 when edge function fails', async () => {
+      const { connectUserToGroups } = require('../../services/groupRepository');
+      mockSupabase.functions.invoke.mockResolvedValue({
+        data: null,
+        error: new Error('Connect failed'),
+      });
+
+      const result = await connectUserToGroups();
 
       expect(result).toBe(0);
     });
 
-    it('should return 0 when update fails', async () => {
-      const {
-        reconnectGroupMembers,
-      } = require('../../services/groupRepository');
-      const mockUser = createMockUser({
-        id: 'user-alice',
-        email: 'alice@example.com',
-      });
-
-      mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: mockUser },
+    it('should return 0 when edge function returns error payload', async () => {
+      const { connectUserToGroups } = require('../../services/groupRepository');
+      mockSupabase.functions.invoke.mockResolvedValue({
+        data: { error: 'Function-level error' },
         error: null,
       });
 
-      const updateBuilder = {
-        update: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        is: jest.fn().mockReturnThis(),
-        select: jest.fn().mockResolvedValue({
-          data: null,
-          error: new Error('Update failed'),
-        }),
-      };
-
-      mockSupabase.from.mockReturnValue(updateBuilder as any);
-
-      const result = await reconnectGroupMembers();
+      const result = await connectUserToGroups();
 
       expect(result).toBe(0);
+    });
+  });
+
+  describe('getActivityFeed', () => {
+    it('should map activity rows returned by RPC', async () => {
+      const { getActivityFeed } = require('../../services/groupRepository');
+
+      mockSupabase.rpc.mockResolvedValue({
+        data: [
+          {
+            id: 'expense-1',
+            group_id: 'group-trip',
+            group_name: 'Trip',
+            description: 'Dinner',
+            date_time: '2026-02-10T12:00:00.000Z',
+            currency_code: 'USD',
+            total_amount_scaled: '123450',
+            payer_member_id: 'member-alice-trip',
+            payer_name: 'Alice',
+            payment_type: 'expense',
+            split_type: 'equal',
+            created_at: '2026-02-10T12:01:00.000Z',
+          },
+        ],
+        error: null,
+      });
+
+      const result = await getActivityFeed(50, 10);
+
+      expect(mockSupabase.rpc).toHaveBeenCalledWith('get_activity_feed', {
+        p_limit: 50,
+        p_offset: 10,
+      });
+      expect(result).toEqual([
+        {
+          id: 'expense-1',
+          groupId: 'group-trip',
+          groupName: 'Trip',
+          description: 'Dinner',
+          dateTime: '2026-02-10T12:00:00.000Z',
+          currencyCode: 'USD',
+          totalAmountScaled: 123450n,
+          payerMemberId: 'member-alice-trip',
+          payerName: 'Alice',
+          paymentType: 'expense',
+          splitType: 'equal',
+          createdAt: '2026-02-10T12:01:00.000Z',
+        },
+      ]);
+    });
+
+    it('should return empty array when RPC fails', async () => {
+      const { getActivityFeed } = require('../../services/groupRepository');
+
+      mockSupabase.rpc.mockResolvedValue({
+        data: null,
+        error: new Error('RPC failed'),
+      });
+
+      const result = await getActivityFeed();
+
+      expect(result).toEqual([]);
     });
   });
 

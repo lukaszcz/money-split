@@ -32,7 +32,7 @@ ts-jest[ts-jest-transformer] (WARN) Define `ts-jest` config under `globals` is d
   - Group operations (createGroup, getGroup, getAllGroups)
   - Member management (createGroupMember, updateGroupMember, getCurrentUserMember)
   - Expense CRUD (createExpense, updateExpense, deleteExpense, getExpense, getGroupExpenses)
-  - Advanced operations (leaveGroup, deleteUserAccount, reconnectGroupMembers, sendInvitationEmail)
+  - Advanced operations (leaveGroup, deleteUserAccount, connectUserToGroups, sendInvitationEmail)
 
 - `__tests__/contexts/AuthContext.test.tsx` - 13 tests covering authentication
   - Initialization and loading states

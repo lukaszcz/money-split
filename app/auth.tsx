@@ -12,19 +12,27 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/AuthContext';
-import { router } from 'expo-router';
+import { type Href, router } from 'expo-router';
 import { isValidEmail } from '@/utils/validation';
 
 export default function AuthScreen() {
   const [isLogin, setIsLogin] = useState(true);
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [info, setInfo] = useState('');
   const { signIn, signUp } = useAuth();
+  const controlsDisabled = loading;
 
   const handleSubmit = async () => {
+    if (controlsDisabled) {
+      return;
+    }
+
     const trimmedEmail = email.trim();
+    const trimmedName = name.trim();
 
     if (!trimmedEmail || !password) {
       setError('Please enter both email and password');
@@ -36,16 +44,34 @@ export default function AuthScreen() {
       return;
     }
 
-    setLoading(true);
+    if (!isLogin && !trimmedName) {
+      setError('Please enter your name');
+      return;
+    }
+
     setError('');
+    setInfo('');
+    setLoading(true);
+
+    if (isLogin) {
+      try {
+        await signIn(trimmedEmail, password);
+        router.replace('/(tabs)/groups');
+      } catch (err: any) {
+        setError(err.message || 'An error occurred');
+        setLoading(false);
+      }
+
+      return;
+    }
 
     try {
-      if (isLogin) {
-        await signIn(trimmedEmail, password);
-      } else {
-        await signUp(trimmedEmail, password);
-      }
-      router.replace('/(tabs)/groups');
+      await signUp(trimmedEmail, password, trimmedName);
+      setIsLogin(true);
+      setName('');
+      setPassword('');
+      setEmail(trimmedEmail);
+      setInfo('Check your email and confirm your address before signing in.');
     } catch (err: any) {
       setError(err.message || 'An error occurred');
     } finally {
@@ -75,6 +101,19 @@ export default function AuthScreen() {
           </Text>
 
           <View style={styles.form}>
+            {!isLogin ? (
+              <TextInput
+                style={styles.input}
+                placeholder="Name"
+                placeholderTextColor="#999"
+                value={name}
+                onChangeText={setName}
+                onBlur={() => setName((currentName) => currentName.trim())}
+                autoCapitalize="words"
+                autoComplete="name"
+                editable={!controlsDisabled}
+              />
+            ) : null}
             <TextInput
               style={styles.input}
               placeholder="Email"
@@ -85,6 +124,7 @@ export default function AuthScreen() {
               autoCapitalize="none"
               keyboardType="email-address"
               autoComplete="email"
+              editable={!controlsDisabled}
             />
 
             <TextInput
@@ -95,14 +135,31 @@ export default function AuthScreen() {
               onChangeText={setPassword}
               secureTextEntry
               autoCapitalize="none"
+              editable={!controlsDisabled}
             />
 
+            {isLogin ? (
+              <TouchableOpacity
+                style={[
+                  styles.forgotButton,
+                  controlsDisabled && styles.inlineButtonDisabled,
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel="Forgot password"
+                onPress={() => router.push('/password-recovery' as Href)}
+                disabled={controlsDisabled}
+              >
+                <Text style={styles.forgotText}>Forgot password?</Text>
+              </TouchableOpacity>
+            ) : null}
+
             {error ? <Text style={styles.errorText}>{error}</Text> : null}
+            {info ? <Text style={styles.infoText}>{info}</Text> : null}
 
             <TouchableOpacity
               style={[styles.button, loading && styles.buttonDisabled]}
               onPress={handleSubmit}
-              disabled={loading}
+              disabled={controlsDisabled}
             >
               {loading ? (
                 <ActivityIndicator color="#fff" />
@@ -114,7 +171,10 @@ export default function AuthScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.switchButton}
+              style={[
+                styles.switchButton,
+                controlsDisabled && styles.inlineButtonDisabled,
+              ]}
               accessibilityRole="button"
               accessibilityLabel={
                 isLogin ? 'Switch to sign up' : 'Switch to sign in'
@@ -122,7 +182,9 @@ export default function AuthScreen() {
               onPress={() => {
                 setIsLogin(!isLogin);
                 setError('');
+                setInfo('');
               }}
+              disabled={controlsDisabled}
             >
               <Text style={styles.switchText}>
                 {isLogin
@@ -200,6 +262,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 8,
   },
+  inlineButtonDisabled: {
+    opacity: 0.5,
+  },
+  forgotButton: {
+    alignItems: 'flex-end',
+  },
+  forgotText: {
+    fontSize: 14,
+    color: '#007AFF',
+    fontWeight: '600',
+  },
   switchText: {
     fontSize: 14,
     color: '#666',
@@ -210,6 +283,11 @@ const styles = StyleSheet.create({
   },
   errorText: {
     color: '#ff3b30',
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  infoText: {
+    color: '#2f7d32',
     fontSize: 14,
     textAlign: 'center',
   },

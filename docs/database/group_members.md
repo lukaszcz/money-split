@@ -42,7 +42,7 @@ Row-level security balances membership control and invitation/reconnection flows
 1. A user creates a group and adds a friend by email
 2. A member row is created with `email` set and `connected_user_id` empty
 3. An invitation email is sent
-4. When the friend signs up, `reconnectGroupMembers()` links their account
+4. When the friend signs up, `connectUserToGroups()` links their account
 
 ## Relationship to Other Tables
 
@@ -73,7 +73,7 @@ The application uses this table for:
 
 - Creating members (`createGroupMember()` in `services/groupRepository.ts`)
 - Listing members (`getGroupMembers()` in `services/groupRepository.ts`)
-- Connecting members on signup (`ensureUserProfile()` and `reconnectGroupMembers()` in `services/groupRepository.ts`)
+- Connecting members on signup (`ensureUserProfile()` and `connectUserToGroups()` in `services/groupRepository.ts`)
 - Updating members (`updateGroupMember()` in `services/groupRepository.ts`)
 - Leaving groups (`leaveGroup()` sets `connected_user_id` to null)
 - Guarding member deletion (`canDeleteGroupMember()` / `deleteGroupMember()` in `services/groupRepository.ts`)

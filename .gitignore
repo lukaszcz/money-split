@@ -5,6 +5,8 @@ node_modules/
 .expo/
 dist/
 web-build/
+android/
+ios/
 expo-env.d.ts
 
 # native
@@ -40,6 +42,7 @@ yarn-error.*
 # Supabase
 supabase/.temp/
 supabase/.branches/
+deno.lock
 
 # Test coverage
 coverage

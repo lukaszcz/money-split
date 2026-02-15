@@ -11,9 +11,17 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useState, useEffect, useCallback } from 'react';
-import { LogOut, User, Edit2, Check, X, Trash2 } from 'lucide-react-native';
+import {
+  LogOut,
+  User,
+  Edit2,
+  Check,
+  X,
+  Trash2,
+  KeyRound,
+} from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
-import { router } from 'expo-router';
+import { router, type Href } from 'expo-router';
 import {
   getUser,
   updateUserName,
@@ -26,6 +34,9 @@ export default function SettingsScreen() {
   const [editingName, setEditingName] = useState(false);
   const [tempName, setTempName] = useState<string>('');
   const [deletingAccount, setDeletingAccount] = useState(false);
+  const [savingName, setSavingName] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+  const controlsDisabled = deletingAccount || savingName || signingOut;
 
   const loadUserProfile = useCallback(async () => {
     if (!user?.id) return;
@@ -41,29 +52,39 @@ export default function SettingsScreen() {
   }, [loadUserProfile]);
 
   const handleSaveName = async () => {
-    if (!user?.id || !tempName.trim()) return;
+    if (controlsDisabled || !user?.id || !tempName.trim()) return;
 
+    setSavingName(true);
     try {
       const result = await updateUserName(user.id, tempName.trim());
       if (result) {
         setUserName(result.name);
         setEditingName(false);
-        Alert.alert('Success', 'Name updated successfully');
       } else {
         Alert.alert('Error', 'Failed to update name');
       }
     } catch (error) {
       console.error('Failed to update name', error);
       Alert.alert('Error', 'Failed to update name');
+    } finally {
+      setSavingName(false);
     }
   };
 
   const handleCancelEdit = () => {
+    if (controlsDisabled) {
+      return;
+    }
+
     setTempName(userName);
     setEditingName(false);
   };
 
   const handleLogout = async () => {
+    if (controlsDisabled) {
+      return;
+    }
+
     Alert.alert('Logout', 'Are you sure you want to logout?', [
       {
         text: 'Cancel',
@@ -73,12 +94,19 @@ export default function SettingsScreen() {
         text: 'Logout',
         style: 'destructive',
         onPress: async () => {
+          setSigningOut(true);
+          let shouldResetSigningOut = true;
           try {
             await signOut();
+            shouldResetSigningOut = false;
             router.replace('/auth');
           } catch (error) {
             console.error('Failed to logout', error);
             Alert.alert('Error', 'Failed to logout');
+          } finally {
+            if (shouldResetSigningOut) {
+              setSigningOut(false);
+            }
           }
         },
       },
@@ -86,6 +114,10 @@ export default function SettingsScreen() {
   };
 
   const handleDeleteAccount = () => {
+    if (controlsDisabled) {
+      return;
+    }
+
     Alert.alert(
       'Delete Account',
       'Are you absolutely sure you want to delete your account? This will:\n\n• Disconnect you from groups you are a member of\n• Permanently erase all your data\n\nThis action cannot be undone.',
@@ -111,10 +143,20 @@ export default function SettingsScreen() {
                   style: 'destructive',
                   onPress: async () => {
                     setDeletingAccount(true);
-                    const success = await deleteUserAccount();
-                    if (success) {
-                      router.replace('/auth');
-                    } else {
+                    try {
+                      const success = await deleteUserAccount();
+                      if (success) {
+                        router.replace('/auth');
+                        return;
+                      }
+
+                      setDeletingAccount(false);
+                      Alert.alert(
+                        'Error',
+                        'Failed to delete account. Please try again later.',
+                      );
+                    } catch (error) {
+                      console.error('Failed to delete account', error);
                       setDeletingAccount(false);
                       Alert.alert(
                         'Error',
@@ -133,7 +175,7 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView>
+      <ScrollView scrollEnabled={!controlsDisabled}>
         <View style={styles.header}>
           <Text style={styles.title}>Settings</Text>
         </View>
@@ -163,21 +205,30 @@ export default function SettingsScreen() {
                     onBlur={() => setTempName((name) => name.trim())}
                     placeholder="Enter your name"
                     autoFocus
+                    editable={!controlsDisabled}
                   />
                   <View style={styles.nameEditButtons}>
                     <TouchableOpacity
-                      style={styles.nameEditButton}
+                      style={[
+                        styles.nameEditButton,
+                        controlsDisabled && styles.buttonDisabled,
+                      ]}
                       accessibilityRole="button"
                       accessibilityLabel="Save display name"
                       onPress={handleSaveName}
+                      disabled={controlsDisabled}
                     >
                       <Check color="#059669" size={20} />
                     </TouchableOpacity>
                     <TouchableOpacity
-                      style={styles.nameEditButton}
+                      style={[
+                        styles.nameEditButton,
+                        controlsDisabled && styles.buttonDisabled,
+                      ]}
                       accessibilityRole="button"
                       accessibilityLabel="Cancel display name edit"
                       onPress={handleCancelEdit}
+                      disabled={controlsDisabled}
                     >
                       <X color="#6b7280" size={20} />
                     </TouchableOpacity>
@@ -192,6 +243,7 @@ export default function SettingsScreen() {
                     accessibilityRole="button"
                     accessibilityLabel="Edit display name"
                     onPress={() => setEditingName(true)}
+                    disabled={controlsDisabled}
                   >
                     <Edit2 color="#2563eb" size={18} />
                   </TouchableOpacity>
@@ -200,10 +252,30 @@ export default function SettingsScreen() {
             </View>
 
             <TouchableOpacity
-              style={styles.logoutButton}
+              style={[
+                styles.changePasswordButton,
+                controlsDisabled && styles.buttonDisabled,
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Change password"
+              onPress={() => router.push('/change-password' as Href)}
+              disabled={controlsDisabled}
+            >
+              <KeyRound color="#2563eb" size={20} />
+              <Text style={styles.changePasswordButtonText}>
+                Change password
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.logoutButton,
+                controlsDisabled && styles.buttonDisabled,
+              ]}
               accessibilityRole="button"
               accessibilityLabel="Logout"
               onPress={handleLogout}
+              disabled={controlsDisabled}
             >
               <LogOut color="#ef4444" size={20} />
               <Text style={styles.logoutButtonText}>Logout</Text>
@@ -220,10 +292,14 @@ export default function SettingsScreen() {
             </Text>
 
             <TouchableOpacity
-              style={styles.deleteAccountButton}
+              style={[
+                styles.deleteAccountButton,
+                controlsDisabled && styles.buttonDisabled,
+              ]}
               accessibilityRole="button"
               accessibilityLabel="Delete account"
               onPress={handleDeleteAccount}
+              disabled={controlsDisabled}
             >
               <Trash2 color="#ffffff" size={20} />
               <Text style={styles.deleteAccountButtonText}>
@@ -247,7 +323,7 @@ export default function SettingsScreen() {
       </ScrollView>
 
       <Modal
-        visible={deletingAccount}
+        visible={deletingAccount || signingOut}
         transparent
         animationType="fade"
         presentationStyle="overFullScreen"
@@ -255,7 +331,9 @@ export default function SettingsScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <ActivityIndicator size="large" color="#2563eb" />
-            <Text style={styles.modalText}>Deleting your account...</Text>
+            <Text style={styles.modalText}>
+              {deletingAccount ? 'Deleting your account...' : 'Signing out...'}
+            </Text>
             <Text style={styles.modalSubtext}>This may take a few moments</Text>
           </View>
         </View>
@@ -400,6 +478,23 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: 8,
   },
+  changePasswordButton: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: '#eff6ff',
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+    marginBottom: 12,
+  },
+  changePasswordButtonText: {
+    color: '#2563eb',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
   nameSection: {
     marginBottom: 16,
     paddingBottom: 16,
@@ -448,6 +543,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#f3f4f6',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  buttonDisabled: {
+    opacity: 0.5,
   },
   dangerWarning: {
     fontSize: 14,
