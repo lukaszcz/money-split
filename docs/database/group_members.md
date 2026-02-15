@@ -22,27 +22,28 @@ The table contains these key columns:
 - **connected_user_id** - Optional link to a `users` profile
 - **created_at** - Timestamp when the member was added
 
+## Constraints and Indexes
+
+- Partial unique index `idx_group_members_unique_connected_user` enforces one non-null `connected_user_id` per group (`group_id`, `connected_user_id` where `connected_user_id IS NOT NULL`).
+- Migration `20260215173237_add_unique_connected_user_id_to_group_members.sql` also defines `idx_group_members_unique_email` as a partial unique index on (`group_id`, `connected_user_id`) where `email IS NOT NULL`.
+
 ## RLS Policies
 
-Row-level security balances membership control and invitation/reconnection flows:
+Row-level security is membership-based:
 
-- **SELECT** is allowed when:
-  - the user is already a connected member of the group, or
-  - the row email matches the authenticated user email (`email = get_user_email_by_id((select auth.uid()))`), so invited users can reconnect.
-- **INSERT** is allowed when:
-  - `connected_user_id = (select auth.uid())` (user adds themselves), or
-  - the user is already a group member.
-- **UPDATE** is allowed for group members (`USING` + `WITH CHECK` on group membership).
+- **SELECT** is allowed only when the authenticated user is already a connected member of the group (`user_is_group_member((select auth.uid()), group_id)`).
+- **INSERT** is allowed only for existing group members (`user_is_group_member((select auth.uid()), group_id)`).
+- **UPDATE** is allowed only for group members (`USING` + `WITH CHECK` on group membership).
 - **DELETE** is allowed only for group members and only if `NOT member_is_involved_in_expenses(id)` (member has no non-zero shares and is not an expense payer).
 
 ## How It Works in Practice
 
 **Example scenario:**
 
-1. A user creates a group and adds a friend by email
-2. A member row is created with `email` set and `connected_user_id` empty
-3. An invitation email is sent
-4. When the friend signs up, `connectUserToGroups()` links their account
+1. A user creates a group and adds a friend by email.
+2. A member row is created with `email` set and `connected_user_id` empty.
+3. An invitation email is sent.
+4. When the friend signs up, the `connect-user-to-groups` edge function links their account to matching unconnected member rows.
 
 ## Relationship to Other Tables
 
@@ -61,11 +62,11 @@ See also: [groups](groups.md), [expenses](expenses.md), [expense_shares](expense
 
 **Member-Centric Model:** Members are separate entities so groups can include people without accounts.
 
-**Email Reconnection:** Policies allow users to view and connect records that match their email.
+**Email Reconnection:** Reconnection is handled by the `connect-user-to-groups` edge function using service-role access.
 
 **Disconnect Flow:** Leaving a group sets `connected_user_id` to null while keeping historical expense/share data.
 
-**RLS:** Access is based on membership plus email-based reconnection support.
+**RLS:** Client reads and writes are limited to existing members of the group.
 
 ## Usage in Code
 

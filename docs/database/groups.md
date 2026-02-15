@@ -21,21 +21,21 @@ The table contains these key columns:
 
 ## RLS Policies
 
-Row-level security scopes access to group membership and allows safe creation:
+Row-level security scopes access to group membership while keeping client-side creation disabled:
 
-- **SELECT** is allowed when the authenticated user is a member of the group via `user_is_group_member((select auth.uid()), id)`. A special case also allows selecting groups with no connected members yet (`NOT group_has_connected_members(id)`), which is required during create/cleanup windows.
-- **INSERT** is allowed for any authenticated user (`WITH CHECK (true)`).
+- **SELECT** is allowed when the authenticated user is a member of the group via `user_is_group_member((select auth.uid()), id)`. A special case also allows selecting groups with no connected members (`NOT group_has_connected_members(id)`), which supports create/cleanup windows.
+- **INSERT** has no authenticated-client policy. Direct client `INSERT` is denied by RLS.
 - **UPDATE** is allowed only for group members (`user_is_group_member((select auth.uid()), id)`).
-- **DELETE** is allowed only when the group has no connected members (`NOT group_has_connected_members(id)`), enabling cleanup of orphaned groups.
+- **DELETE** is allowed only when the group has no connected members (`NOT group_has_connected_members(id)`), enabling orphan cleanup.
 
 ## How It Works in Practice
 
 **Example scenario:**
 
-1. A user creates a group and selects a main currency
-2. A group row is inserted
-3. The creator is added as a `group_members` row
-4. Expenses and shares are linked to the group
+1. A user creates a group and selects a main currency.
+2. The app invokes the `create-group` edge function.
+3. The function inserts a group row with service-role permissions.
+4. The function adds the creator (and optional additional members) to `group_members`.
 
 ## Relationship to Other Tables
 
@@ -54,7 +54,7 @@ See also: [group_members](group_members.md), [expenses](expenses.md)
 
 **Soft Delete:** Groups are deleted only when no members remain connected. Cleanup is handled by an edge function.
 
-**RLS:** Policies allow read/update for members and delete only when there are no connected members.
+**Creation Path:** Group creation runs through `create-group`; direct client writes to `groups` are blocked by RLS.
 
 ## Usage in Code
 

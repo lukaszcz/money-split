@@ -18,19 +18,21 @@ The table contains these key columns:
 
 ## RLS Policies
 
-Current policies allow authenticated users to manage the cache:
+Current policies allow authenticated clients to read cached rates but not mutate them:
 
-- **SELECT** - Allowed (`USING (true)`)
-- **INSERT** - Allowed (`WITH CHECK (true)`)
-- **UPDATE** - Allowed (`USING (true) WITH CHECK (true)`)
-- **DELETE** - No delete policy
+- **SELECT** - Allowed (`USING (true)` for authenticated users)
+- **INSERT** - No policy (client writes denied by RLS)
+- **UPDATE** - No policy (client writes denied by RLS)
+- **DELETE** - No policy
+
+Writes are performed by the `get-exchange-rate` edge function using service-role permissions.
 
 ## How It Works in Practice
 
-1. The client checks for `base -> quote` in `exchange_rates`.
-2. If the cached row is fresh (12-hour TTL), it is reused.
-3. If stale/missing, the client fetches from `https://api.exchangerate-api.com/v4/latest/{base}`.
-4. The row is upserted and then used for conversion.
+1. The client checks local memory + AsyncStorage cache first (`services/exchangeRateService.ts`, 4-hour TTL).
+2. If local cache is stale/missing, the client calls `get-exchange-rate`.
+3. The edge function checks `exchange_rates` (12-hour TTL for DB cache).
+4. If stale/missing, the edge function fetches from `https://api.exchangerate-api.com/v4/latest/{base}` and upserts the row.
 
 ## Relationship to Other Tables
 
@@ -39,3 +41,4 @@ Current policies allow authenticated users to manage the cache:
 ## Usage in Code
 
 - `services/exchangeRateService.ts` (`getExchangeRate`)
+- `supabase/functions/get-exchange-rate/index.ts`

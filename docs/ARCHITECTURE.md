@@ -108,6 +108,7 @@ The canonical schema is defined by the SQL migrations under `supabase/migrations
 - Table: `public.group_members`
 - Columns: `id`, `group_id`, `name`, `email`, `connected_user_id`, `created_at`.
 - Supports members that are not yet connected to an auth user (email-based invitations).
+- A partial unique index enforces one non-null `connected_user_id` per group (`idx_group_members_unique_connected_user`).
 - Connection logic is handled in `ensureUserProfile()` which calls the `connect-user-to-groups` edge function to bypass RLS policies (`services/groupRepository.ts`).
 
 ### expenses
@@ -193,7 +194,7 @@ The RLS policies have evolved through multiple migrations. The most recent polic
   - Policies established or refined in `supabase/migrations/20260204120000_fix_group_members_delete_policy_performance.sql` and `supabase/migrations/20260207212748_disable_direct_groups_insert.sql`.
 
 - `group_members`
-  - Select: members can view members of their groups; users can also view unconnected members with matching email (needed for reconnection).
+  - Select: only existing group members can view members of that group (`user_is_group_member((select auth.uid()), group_id)`).
   - Insert: only existing group members can add new members (`user_is_group_member((select auth.uid()), group_id)`). The first member is added by the `create-group` edge function using the service role key to bypass RLS.
   - Update: members can update member details within groups they belong to; updates are also used for connect/disconnect flows.
   - Delete: any group member can delete another member only if that member is not involved in expenses (no non-zero shares and not referenced as `payer_member_id`).
@@ -237,8 +238,9 @@ Relevant files:
 
 - `services/exchangeRateService.ts` first checks an in-memory cache, then AsyncStorage (`exchange_rate_cache_v1`), before calling `get-exchange-rate`.
 - On login, `syncUserPreferences()` calls `prefetchExchangeRatesOnLogin()` to prewarm local rates for currency pairs derived from existing expenses and group main currencies.
+- Local app cache entries expire after 4 hours (`services/exchangeRateService.ts` `CACHE_DURATION_MS`).
 - The edge function first tries to read a cached rate from `exchange_rates`.
-- Cached rates expire after 12 hours (`CACHE_DURATION_MS`).
+- Database cache entries in `exchange_rates` expire after 12 hours (`supabase/functions/get-exchange-rate/index.ts` `CACHE_DURATION_MS`).
 - If missing or stale, the edge function fetches from `https://api.exchangerate-api.com/v4/latest/{base}`.
 - The rate is scaled (4dp) and upserted into `exchange_rates` by the edge function using service role permissions.
 - Clients cannot write to `exchange_rates` directly (RLS policies restrict insert/update access).

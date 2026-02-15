@@ -52,9 +52,10 @@ users (public profile)
   |-- user_known_users.user_id
   |-- user_known_users.known_user_id
   |-- user_settle_preferences.user_id
+  |-- recovery_passwords.user_id (recovery flow)
 ```
 
-See also: [group_members](group_members.md), [user_currency_preferences](user_currency_preferences.md), [user_group_preferences](user_group_preferences.md), [user_known_users](user_known_users.md), [user_settle_preferences](user_settle_preferences.md)
+See also: [group_members](group_members.md), [user_currency_preferences](user_currency_preferences.md), [user_group_preferences](user_group_preferences.md), [user_known_users](user_known_users.md), [user_settle_preferences](user_settle_preferences.md), [recovery_passwords](recovery_passwords.md)
 
 ## Key Implementation Details
 
