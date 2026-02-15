@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { normalizeEmail } from '../utils/email';
 
 export interface User {
   id: string;
@@ -92,7 +93,7 @@ export async function ensureUserProfile(name?: string): Promise<User | null> {
       .insert({
         id: authUser.id,
         name: resolvedName,
-        email: authUser?.email || null,
+        email: normalizeEmail(authUser?.email) || null,
       })
       .select()
       .single();
@@ -138,10 +139,15 @@ export async function getUser(userId: string): Promise<User | null> {
 
 export async function getUserByEmail(email: string): Promise<User | null> {
   try {
+    const normalizedEmail = normalizeEmail(email);
+    if (!normalizedEmail) {
+      return null;
+    }
+
     const { data, error } = await supabase
       .from('users')
       .select('*')
-      .eq('email', email)
+      .eq('email', normalizedEmail)
       .maybeSingle();
 
     if (error) throw error;
@@ -192,12 +198,14 @@ export async function createGroupMember(
   connectedUserId?: string,
 ): Promise<GroupMember | null> {
   try {
+    const normalizedEmail = normalizeEmail(email);
+
     const { data, error } = await supabase
       .from('group_members')
       .insert({
         group_id: groupId,
         name,
-        email: email || null,
+        email: normalizedEmail || null,
         connected_user_id: connectedUserId || null,
       })
       .select()
@@ -322,10 +330,15 @@ export async function connectUserToGroupMembers(
   email: string,
 ): Promise<number> {
   try {
+    const normalizedEmail = normalizeEmail(email);
+    if (!normalizedEmail) {
+      return 0;
+    }
+
     const { data, error } = await supabase
       .from('group_members')
       .update({ connected_user_id: userId })
-      .eq('email', email)
+      .eq('email', normalizedEmail)
       .is('connected_user_id', null)
       .select();
 
@@ -344,8 +357,17 @@ export async function createGroup(
   initialMembers: { name: string; email?: string }[],
 ): Promise<Group | null> {
   try {
+    const normalizedInitialMembers = initialMembers.map((member) => ({
+      ...member,
+      email: normalizeEmail(member.email),
+    }));
+
     const { data, error } = await supabase.functions.invoke('create-group', {
-      body: { name, mainCurrencyCode, initialMembers },
+      body: {
+        name,
+        mainCurrencyCode,
+        initialMembers: normalizedInitialMembers,
+      },
     });
 
     if (error) {
@@ -812,6 +834,8 @@ export async function updateGroupMember(
   connectedUserId?: string,
 ): Promise<GroupMember | null> {
   try {
+    const normalizedEmail = normalizeEmail(email);
+
     // Get the current member to check if connected_user_id is changing
     const currentMember = await getGroupMember(memberId);
     const connectionChanged =
@@ -823,7 +847,7 @@ export async function updateGroupMember(
       .from('group_members')
       .update({
         name,
-        email: email || null,
+        email: normalizedEmail || null,
         connected_user_id: connectedUserId || null,
       })
       .eq('id', memberId)
@@ -1012,8 +1036,13 @@ export async function sendInvitationEmail(
   groupName: string,
 ): Promise<boolean> {
   try {
+    const normalizedEmail = normalizeEmail(email);
+    if (!normalizedEmail) {
+      return false;
+    }
+
     const { error } = await supabase.functions.invoke('send-invitation', {
-      body: { email, groupName },
+      body: { email: normalizedEmail, groupName },
     });
 
     if (error) throw error;

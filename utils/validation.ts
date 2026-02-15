@@ -311,3 +311,28 @@ export function isDuplicateMemberName(
     (existingName) => existingName.toLowerCase() === trimmedName.toLowerCase(),
   );
 }
+
+/**
+ * Checks if a member email is a duplicate of any existing member emails.
+ * Comparison is case-insensitive.
+ * @param emailToCheck The email to check for duplicates
+ * @param existingEmails Array of existing member emails to compare against
+ * @returns true if the email is a duplicate, false otherwise
+ */
+export function isDuplicateMemberEmail(
+  emailToCheck: string | undefined,
+  existingEmails: (string | undefined)[],
+): boolean {
+  const trimmedEmail = emailToCheck?.trim();
+  if (!trimmedEmail) {
+    return false;
+  }
+
+  // Filter out empty/undefined emails upfront for efficiency
+  const validEmails = existingEmails.filter((email) => email?.trim());
+
+  return validEmails.some(
+    (existingEmail) =>
+      existingEmail!.toLowerCase() === trimmedEmail.toLowerCase(),
+  );
+}

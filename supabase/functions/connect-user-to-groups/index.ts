@@ -1,5 +1,6 @@
 import 'jsr:@supabase/functions-js@2/edge-runtime.d.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.58.0';
+import { normalizeEmail } from '../_shared/email.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -74,7 +75,16 @@ Deno.serve(async (req: Request) => {
     }
 
     const userId = user.id;
-    const userEmail = user.email;
+    const userEmail = normalizeEmail(user.email);
+    if (!userEmail) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized or missing email' }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      );
+    }
 
     console.log(
       `Attempting to connect user ${userId} (${userEmail}) to group members`,

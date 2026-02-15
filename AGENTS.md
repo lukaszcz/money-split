@@ -41,12 +41,10 @@ MoneySplit is a React Native/Expo mobile app for tracking shared expenses and de
 - PR descriptions should summarize changes, rationale and impact. Do not summarize validation or testing. Unless the PR updates documentation only, do not describe documentation changes.
 - Keep commits focused; avoid mixing unrelated changes.
 
-## Security & Configuration
+## Security Guidelines
 
-- RLS and schema changes live in `supabase/migrations/`.
-- Edge functions run under `supabase/functions/` and should be referenced in `docs/ARCHITECTURE.md` when changed.
 - Each edge function should check user authorization.
-- Never expose internal server error information to clients. Return a generic error message to clients while keeping detailed logging server-side.
+- Never expose internal server error details to clients. Return a generic error message to clients while keeping detailed logging server-side.
 
 ## Instructions
 

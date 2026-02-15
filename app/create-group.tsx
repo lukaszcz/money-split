@@ -51,7 +51,8 @@ export default function CreateGroupScreen() {
     selectCurrency,
     loading: currenciesLoading,
   } = useCurrencyOrder();
-  const asyncInFlight = creating || addingMember || currentUserLoading;
+  const asyncInFlight =
+    creating || addingMember || currentUserLoading || currenciesLoading;
   const addMemberControlsDisabled = asyncInFlight;
   const createButtonDisabled = asyncInFlight || showAddMember;
 

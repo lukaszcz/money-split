@@ -9,6 +9,7 @@ import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { ensureUserProfile } from '@/services/groupRepository';
 import { syncUserPreferences } from '@/services/userPreferenceSync';
+import { normalizeEmail } from '@/utils/email';
 
 interface AuthContextType {
   session: Session | null;
@@ -166,9 +167,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signIn = async (email: string, password: string) => {
+    const normalizedEmail = normalizeEmail(email);
+    if (!normalizedEmail) {
+      throw new Error('Please enter a valid email address');
+    }
+
     // First, try normal sign-in
     const { error: signInError } = await supabase.auth.signInWithPassword({
-      email,
+      email: normalizedEmail,
       password,
     });
 
@@ -193,7 +199,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         expired?: boolean;
         temporaryPassword?: string;
       }>('verify-recovery-password', {
-        body: { email, password },
+        body: { email: normalizedEmail, password },
       });
 
     if (verifyError) {
@@ -227,7 +233,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // The recovery edge function already verified the recovery password and
     // atomically set a temporary password server-side.
     const { error: tempSignInError } = await supabase.auth.signInWithPassword({
-      email,
+      email: normalizedEmail,
       password: verifyData.temporaryPassword,
     });
 
@@ -297,12 +303,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     currentPassword: string,
     newPassword: string,
   ) => {
-    if (!user?.email) {
+    const normalizedUserEmail = normalizeEmail(user?.email);
+    if (!normalizedUserEmail) {
       throw new Error('Unable to verify your current password');
     }
 
     const { error: verifyError } = await supabase.auth.signInWithPassword({
-      email: user.email,
+      email: normalizedUserEmail,
       password: currentPassword,
     });
 
@@ -322,8 +329,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signUp = async (email: string, password: string, name: string) => {
+    const normalizedEmail = normalizeEmail(email);
+    if (!normalizedEmail) {
+      throw new Error('Please enter a valid email address');
+    }
+
     const { error } = await supabase.auth.signUp({
-      email,
+      email: normalizedEmail,
       password,
       options: {
         data: {

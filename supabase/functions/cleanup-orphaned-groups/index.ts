@@ -72,7 +72,6 @@ Deno.serve(async (req: Request) => {
       return new Response(
         JSON.stringify({
           error: 'Failed to fetch groups',
-          details: fetchError.message,
         }),
         {
           status: 500,
@@ -126,14 +125,9 @@ Deno.serve(async (req: Request) => {
     );
   } catch (error) {
     console.error('Error in cleanup-orphaned-groups function:', error);
-    const errorMessage =
-      error instanceof Error ? error.message : 'Unknown error';
-    return new Response(
-      JSON.stringify({ error: 'Internal server error', details: errorMessage }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      },
-    );
+    return new Response(JSON.stringify({ error: 'Internal server error' }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 });
