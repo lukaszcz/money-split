@@ -11,3 +11,10 @@ WHERE connected_user_id IS NOT NULL;
 -- Add a comment explaining the constraint
 COMMENT ON INDEX public.idx_group_members_unique_connected_user IS
 'Ensures each connected user can only appear once per group. NULL values (unconnected members) are allowed.';
+
+CREATE UNIQUE INDEX idx_group_members_unique_email
+ON public.group_members (group_id, connected_user_id)
+WHERE email IS NOT NULL;
+
+COMMENT ON INDEX public.idx_group_members_unique_email IS
+'Ensures each email can only appear once per group. NULL values are allowed.';
