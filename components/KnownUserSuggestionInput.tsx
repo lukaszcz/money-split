@@ -39,6 +39,7 @@ export function KnownUserSuggestionInput({
   disabled = false,
 }: KnownUserSuggestionInputProps) {
   const [knownUsers, setKnownUsers] = useState<KnownUser[]>([]);
+  const [loading, setLoading] = useState(true);
   const [filteredSuggestions, setFilteredSuggestions] = useState<KnownUser[]>(
     [],
   );
@@ -47,6 +48,12 @@ export function KnownUserSuggestionInput({
 
   const filterSuggestions = useCallback(
     (text: string) => {
+      if (loading) {
+        setFilteredSuggestions([]);
+        setShowSuggestions(false);
+        return;
+      }
+
       // If no text, show all known users
       if (!text) {
         setFilteredSuggestions(knownUsers);
@@ -64,12 +71,18 @@ export function KnownUserSuggestionInput({
       setFilteredSuggestions(filtered);
       setShowSuggestions(filtered.length > 0);
     },
-    [knownUsers],
+    [knownUsers, loading],
   );
 
   const loadKnownUsers = useCallback(async () => {
-    const users = await getKnownUsers();
-    setKnownUsers(users);
+    setLoading(true);
+
+    try {
+      const users = await getKnownUsers();
+      setKnownUsers(users);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -77,19 +90,19 @@ export function KnownUserSuggestionInput({
   }, [loadKnownUsers]);
 
   useEffect(() => {
-    if (!disabled && isNameInputFocused) {
+    if (!disabled && !loading && isNameInputFocused) {
       filterSuggestions(nameValue);
     }
-  }, [disabled, filterSuggestions, isNameInputFocused, nameValue]);
+  }, [disabled, filterSuggestions, isNameInputFocused, loading, nameValue]);
 
   useEffect(() => {
-    if (disabled) {
+    if (disabled || loading) {
       setShowSuggestions(false);
     }
-  }, [disabled]);
+  }, [disabled, loading]);
 
   const handleNameChange = (text: string) => {
-    if (disabled) {
+    if (disabled || loading) {
       return;
     }
 
@@ -98,7 +111,7 @@ export function KnownUserSuggestionInput({
   };
 
   const handleSelectSuggestion = (user: KnownUser) => {
-    if (disabled) {
+    if (disabled || loading) {
       return;
     }
 
@@ -114,7 +127,7 @@ export function KnownUserSuggestionInput({
     <TouchableOpacity
       style={styles.suggestionItem}
       onPress={() => handleSelectSuggestion(user)}
-      disabled={disabled}
+      disabled={disabled || loading}
     >
       <View style={styles.suggestionContent}>
         <User size={18} color="#6b7280" style={styles.suggestionIcon} />
@@ -137,7 +150,7 @@ export function KnownUserSuggestionInput({
           style={[styles.input, hasDuplicateName && styles.inputError]}
           value={nameValue}
           onChangeText={handleNameChange}
-          editable={!disabled}
+          editable={!disabled && !loading}
           onBlur={() => {
             setIsNameInputFocused(false);
             // Delay hiding suggestions to allow tap to register
@@ -145,7 +158,7 @@ export function KnownUserSuggestionInput({
             onNameBlur?.(nameValue);
           }}
           onFocus={() => {
-            if (!disabled) {
+            if (!disabled && !loading) {
               setIsNameInputFocused(true);
               filterSuggestions(nameValue);
             }
